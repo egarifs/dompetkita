@@ -2018,8 +2018,10 @@
       }
 
       function passwordResetRedirectUrl() {
-        const url = new URL(location.href);
-        url.search = "?reset-password=1";
+        const configuredUrl = appConfig.resetPasswordRedirectUrl || appConfig.publicUrl || appConfig.appUrl || "";
+        const baseUrl = configuredUrl || `${location.origin}${location.pathname}`;
+        const url = new URL(baseUrl, location.href);
+        url.searchParams.set("reset-password", "1");
         url.hash = "";
         return url.toString();
       }
@@ -2255,11 +2257,27 @@
         const client = setupCloudClient();
         if (!client) return false;
         const params = new URLSearchParams(location.search);
+        const hashParams = new URLSearchParams(location.hash.replace(/^#/, ""));
         const code = params.get("code");
+        const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
         try {
-          if (code) await client.auth.exchangeCodeForSession(code);
+          if (code) {
+            const { error } = await client.auth.exchangeCodeForSession(code);
+            if (error) throw error;
+          } else if (accessToken && refreshToken) {
+            const { error } = await client.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            if (error) throw error;
+          }
+
+          const { data, error } = await client.auth.getSession();
+          if (error || !data?.session) throw error || new Error("Sesi reset password tidak tersedia.");
         } catch {
           showLogin();
+          clearPasswordResetUrl();
           alert("Link reset password tidak valid atau sudah kedaluwarsa. Minta link baru dari menu Lupa password.");
           return true;
         }
