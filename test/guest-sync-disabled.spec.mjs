@@ -1,0 +1,21 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage();
+const out = [];
+const dialogs = [];
+const errors = [];
+page.on('dialog', async d => { dialogs.push(d.message()); await d.accept(); });
+page.on('pageerror', e => errors.push(String(e)));
+
+await page.goto('http://127.0.0.1:4173/index.html', { waitUntil: 'domcontentloaded', timeout: 60000 });
+await page.click('#skipSplashButton');
+await page.waitForSelector('#authScreen:not(.hidden)');
+await page.click('#guestLoginButton');
+await page.waitForSelector('#appShell:not(.hidden)');
+await page.click('[data-view="account"]');
+await page.waitForSelector('#accountView.active');
+await page.click('#syncNowButton');
+await page.waitForTimeout(1000);
+out.push('guest-sync-clicked');
+await browser.close();
+console.log(JSON.stringify({ out, dialogs, errors }, null, 2));

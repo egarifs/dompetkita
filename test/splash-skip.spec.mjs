@@ -1,0 +1,14 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage();
+const out = [];
+const errors = [];
+page.on('pageerror', e => errors.push(String(e)));
+await page.goto('http://127.0.0.1:4173/index.html', { waitUntil: 'networkidle' });
+out.push('loaded');
+await page.click('#skipSplashButton');
+await page.waitForSelector('#authScreen:not(.hidden)', { timeout: 10000 });
+out.push('skip->auth-visible');
+await page.screenshot({ path: 'test/artifacts/splash-skip.spec.png', fullPage: true });
+await browser.close();
+console.log(JSON.stringify({ out, errors, screenshot: 'test/artifacts/splash-skip.spec.png' }, null, 2));

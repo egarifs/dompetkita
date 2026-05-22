@@ -1,0 +1,620 @@
+﻿<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pencatatan Keuangan</title>
+    <meta name="description" content="Aplikasi pencatatan keuangan pribadi untuk transaksi, anggaran, laporan, hutang, dan piutang." />
+    <meta name="theme-color" content="#176b5b" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Keuangan" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/icon.svg" />
+        <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <section class="splash-screen" id="splashScreen">
+      <div class="splash-card">
+        <div class="splash-mark" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <path d="M4 18.5V7.2C4 5.4 5.4 4 7.2 4h9.6C18.6 4 20 5.4 20 7.2v11.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            <path d="M7.5 9.5h9M7.5 13h5.4M4 18.5h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h1>Catatan kecil hari ini, keputusan besar besok.</h1>
+        <p class="splash-quote" id="splashQuote">Memuat quote...</p>
+        <p class="form-status" id="splashQuoteSource">Sumber: Quote lokal</p>
+        <p class="splash-copy">Mencatat keuangan membantu kamu tahu uang masuk, uang keluar, dan kebiasaan belanja yang perlu diperbaiki.</p>
+        <div class="splash-points">
+          <div class="splash-point">
+            <strong>Lebih sadar pengeluaran</strong>
+            <span>Kamu bisa melihat kategori yang paling sering menghabiskan uang.</span>
+          </div>
+          <div class="splash-point">
+            <strong>Target lebih mudah dicapai</strong>
+            <span>Anggaran, tabungan, hutang, dan tagihan jadi lebih mudah dipantau.</span>
+          </div>
+          <div class="splash-point">
+            <strong>Keputusan lebih tenang</strong>
+            <span>Data keuangan membuat rencana bulanan tidak hanya berdasarkan perkiraan.</span>
+          </div>
+        </div>
+        <div class="row-actions">
+          <button class="button" id="skipSplashButton" type="button">Skip</button>
+          <button class="button primary" id="continueToLoginButton" type="button">Mulai Mencatat</button>
+        </div>
+        <p class="form-status" id="splashReadStatus">Quote ditampilkan sebentar agar bisa dibaca.</p>
+      </div>
+    </section>
+
+    <section class="auth-screen hidden" id="authScreen">
+      <div class="auth-card">
+        <div class="auth-header">
+          <div class="brand-mark" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M4 18.5V7.2C4 5.4 5.4 4 7.2 4h9.6C18.6 4 20 5.4 20 7.2v11.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              <path d="M7.5 9.5h9M7.5 13h5.4M4 18.5h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </div>
+          <div>
+            <h1>Masuk Akun</h1>
+            <p>Gunakan email dan password untuk membuka aplikasi.</p>
+          </div>
+        </div>
+        <form class="form" id="loginForm">
+          <div class="field">
+            <label for="loginUsername">Email</label>
+            <input id="loginUsername" type="email" autocomplete="email" required />
+          </div>
+          <div class="field">
+            <label for="loginPassword">Password</label>
+            <div class="password-wrap">
+              <input id="loginPassword" type="password" autocomplete="current-password" required />
+              <button class="password-toggle" type="button" data-toggle-password="loginPassword" aria-label="Tampilkan password">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <label class="remember-row" for="rememberLogin">
+            <input id="rememberLogin" type="checkbox" />
+            Ingatkan saya
+          </label>
+          <div class="auth-actions">
+            <button class="button primary" type="submit">Masuk</button>
+            <div class="auth-secondary hidden">
+              <button class="button" id="registerButton" type="button">Registrasi</button>
+              <button class="button" id="googleLoginButton" type="button">Masuk Google</button>
+            </div>
+            <button class="button" id="guestLoginButton" type="button">Masuk sebagai Tamu</button>
+            <button class="auth-link hidden" id="forgotPasswordButton" type="button">Lupa password?</button>
+            <button class="auth-link" id="accessRequestButton" type="button">Belum punya akun? Daftar di sini.</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <div class="app-shell hidden" id="appShell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M4 18.5V7.2C4 5.4 5.4 4 7.2 4h9.6C18.6 4 20 5.4 20 7.2v11.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              <path d="M7.5 9.5h9M7.5 13h5.4M4 18.5h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </div>
+          <div>
+            <h1>Pencatatan Keuangan</h1>
+            <p id="todayText">Hari ini</p>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="Menu utama">
+          <button class="nav-button active" type="button" data-view="home">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 10.5 12 4l8 6.5V20H6.5A2.5 2.5 0 0 1 4 17.5v-7Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+              <path d="M9 20v-6h6v6" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+            </svg>
+            <span data-i18n="nav.home">Beranda</span>
+          </button>
+          <button class="nav-button" type="button" data-view="reports">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 19V5M5 19h15M9 16v-5M13 16V8M17 16v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+            <span data-i18n="nav.reports">Laporan</span>
+          </button>
+          <div class="add-block" id="addBlock">
+            <button class="nav-button" id="addMenuButton" type="button">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+              <span data-i18n="nav.add">Tambah</span>
+            </button>
+            <div class="add-menu" id="addMenu">
+              <button class="add-choice" type="button" data-open-form="transaction" data-i18n="nav.addTransaction">Tambah Transaksi</button>
+              <button class="add-choice" type="button" data-open-form="debt" data-i18n="nav.addDebt">Tambah Hutang Piutang</button>
+            </div>
+          </div>
+          <button class="nav-button" type="button" data-view="budgets">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18a2 2 0 0 1 2 2v12H6.5A2.5 2.5 0 0 1 4 16.5v-9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+              <path d="M16 12h4v4h-4a2 2 0 0 1 0-4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+            </svg>
+            <span data-i18n="nav.budgets">Anggaran</span>
+          </button>
+          <button class="nav-button" type="button" data-view="account">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4.5 20a7.5 7.5 0 0 1 15 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+            <span data-i18n="nav.account">Akun</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <button class="button" id="exportJsonButton" type="button">Backup JSON</button>
+          <label class="button" for="importJsonFile">Impor JSON</label>
+          <input class="hidden" id="importJsonFile" type="file" accept="application/json" />
+          <button class="button danger" id="clearDataButton" type="button" data-admin-only>Kosongkan Data</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="page-title">
+            <h2 id="pageHeading">Beranda Keuangan</h2>
+            <p id="pageSubtitle">Pantau pengeluaran bulan berjalan, saldo, dan sisa anggaran.</p>
+          </div>
+          <div class="top-actions">
+            <button class="button hidden" id="installAppButton" type="button">Pasang App</button>
+            <button class="button" id="loadDemoButton" type="button">Muat Contoh</button>
+            <button class="button primary" type="button" data-open-form="transaction">Transaksi Baru</button>
+          </div>
+        </header>
+
+        <section class="view active" id="homeView">
+          <div class="stats-grid" aria-label="Ringkasan keuangan">
+            <article class="stat-card">
+              <div class="stat-label">
+                Pengeluaran Bulan Ini
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 3v18M17 8.5a3.5 3.5 0 0 0-3.5-2h-3A2.5 2.5 0 0 0 8 9c0 1.4 1.1 2.1 2.7 2.5l2.9.7c1.5.4 2.4 1.1 2.4 2.4A2.9 2.9 0 0 1 13.1 17h-3.2A3.9 3.9 0 0 1 6 14.8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+              </div>
+              <strong class="stat-value" id="monthExpense">Rp0</strong>
+              <span class="stat-sub" id="expenseTrend">Belum ada pembanding</span>
+            </article>
+            <article class="stat-card">
+              <div class="stat-label">Pendapatan Bulan Ini <button class="icon-button" id="toggleMonthIncomeVisibilityButton" type="button" aria-label="Tampilkan nominal pendapatan" title="Tampilkan/Sembunyikan nominal">👁</button></div>
+              <strong class="stat-value" id="monthIncome">Rp0</strong>
+              <span class="stat-sub">Semua pemasukan tercatat</span>
+            </article>
+            <article class="stat-card">
+              <div class="stat-label">Total Saldo <button class="icon-button" id="toggleTotalBalanceVisibilityButton" type="button" aria-label="Tampilkan total saldo" title="Tampilkan/Sembunyikan nominal">👁</button></div>
+              <strong class="stat-value" id="totalBalance">Rp0</strong>
+              <span class="stat-sub">Pendapatan dikurangi pengeluaran</span>
+            </article>
+            <article class="stat-card">
+              <div class="stat-label">Sisa Anggaran <button class="icon-button" id="toggleRemainingBudgetVisibilityButton" type="button" aria-label="Tampilkan sisa anggaran" title="Tampilkan/Sembunyikan nominal">👁</button></div>
+              <strong class="stat-value" id="remainingBudget">Rp0</strong>
+              <span class="stat-sub" id="budgetStatus">Belum ada anggaran</span>
+            </article>
+            <article class="stat-card">
+              <div class="stat-label">Hutang Piutang <button class="icon-button" id="toggleDebtSummaryVisibilityButton" type="button" aria-label="Tampilkan hutang piutang" title="Tampilkan/Sembunyikan nominal">👁</button></div>
+              <strong class="stat-value" id="debtSummary">Rp0</strong>
+              <span class="stat-sub">Bersih belum lunas</span>
+            </article>
+          </div>
+
+          <div class="content-grid" data-home-section="chartBudget">
+            <section class="panel">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <h3>Grafik Saldo dan Anggaran</h3>
+                  <p>Pergerakan total saldo dan sisa anggaran selama bulan berjalan.</p>
+                </div>
+              </div>
+              <div class="chart-wrap">
+                <div class="chart-box" id="balanceChart"></div>
+                <div class="chart-legend">
+                  <span class="legend-item"><i class="legend-dot" style="background: var(--primary)"></i>Total saldo</span>
+                  <span class="legend-item"><i class="legend-dot" style="background: var(--violet)"></i>Sisa anggaran</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel" data-home-section="budgetMonth">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <h3>Anggaran Bulan Ini</h3>
+                  <p>Ringkasan pemakaian anggaran per kategori.</p>
+                </div>
+              </div>
+              <div class="budget-list" id="homeBudgetList"></div>
+            </section>
+          </div>
+
+          <section class="panel" style="margin-top: 14px" data-home-section="insight">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h3>Insight</h3>
+                <p>Analisis otomatis dari pola pemasukan, pengeluaran, budget, dan tabungan.</p>
+              </div>
+            </div>
+            <div class="debt-list" id="insightList"></div>
+          </section>
+
+          <section class="panel" style="margin-top: 14px" data-home-section="latestTransactions">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h3>Transaksi Terbaru</h3>
+                <p>Beberapa transaksi terakhir dengan kategori, tanggal, deskripsi, dan nominal.</p>
+              </div>
+              <button class="button" type="button" data-view="reports">Lihat Semua</button>
+            </div>
+            <div class="table-wrap" id="latestTransactions"></div>
+          </section>
+
+          <section class="panel" style="margin-top: 14px" data-home-section="savings">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h3>Tabungan</h3>
+                <p>Pantau tujuan tabungan dan progres pencapaiannya.</p>
+              </div>
+              <div class="row-actions">
+                <button class="button" type="button" data-open-form="savingsGoal">Tambah Tujuan</button>
+                <button class="button" id="viewAllSavingsButton" type="button">Lihat Semua</button>
+              </div>
+            </div>
+            <div class="budget-list" id="homeSavingsList"></div>
+          </section>
+
+          <section class="panel" style="margin-top: 14px" data-home-section="billReminder">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h3>Reminder Tagihan</h3>
+                <p>Tagihan terdekat dan status pembayarannya.</p>
+              </div>
+              <button class="button primary" type="button" data-open-form="billReminder">Tambah Tagihan</button>
+            </div>
+            <div class="debt-list" id="billReminderList"></div>
+          </section>
+        </section>
+
+        <section class="view" id="savingsView">
+          <section class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h3>Semua Tabungan</h3>
+                <p>Kelola semua tujuan tabungan dan catatan setoran atau penarikan.</p>
+              </div>
+              <button class="button primary" type="button" data-open-form="savingsGoal">Tambah Tujuan</button>
+            </div>
+            <div class="budget-list" id="allSavingsList"></div>
+          </section>
+        </section>
+
+        <section class="view" id="reportsView">
+          <div class="report-grid">
+            <section class="panel">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <h3>Semua Transaksi</h3>
+                  <p>Filter dan cek seluruh catatan pemasukan maupun pengeluaran.</p>
+                </div>
+                <button class="button" id="exportCsvButton" type="button">Ekspor CSV</button>
+              </div>
+              <div class="table-tools">
+                <input id="searchInput" type="search" placeholder="Cari deskripsi atau kategori" />
+                <select id="monthFilter" aria-label="Filter bulan"></select>
+                <select id="typeFilter" aria-label="Filter tipe">
+                  <option value="all">Semua tipe</option>
+                  <option value="expense">Pengeluaran</option>
+                  <option value="income">Pemasukan</option>
+                </select>
+              </div>
+              <div class="table-wrap" id="allTransactions"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <h3>Pengeluaran per Kategori</h3>
+                  <p>Distribusi pengeluaran pada bulan yang dipilih.</p>
+                </div>
+              </div>
+              <div class="report-bars" id="categoryBreakdown"></div>
+            </section>
+          </div>
+
+          <section class="panel" style="margin-top: 14px">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h3>Pengeluaran per Hari</h3>
+                <p>Jumlah transaksi dan total pengeluaran untuk setiap tanggal.</p>
+              </div>
+            </div>
+            <div class="table-wrap" id="dailyExpenseList"></div>
+          </section>
+        </section>
+
+        <section class="view" id="budgetsView">
+          <div class="budget-page-grid">
+            <section class="panel">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <h3>Atur Anggaran</h3>
+                  <p>Tentukan batas pengeluaran bulanan per kategori.</p>
+                </div>
+              </div>
+              <form class="form" id="budgetForm">
+                <div class="field">
+                  <label for="budgetCategory">Kategori</label>
+                  <select id="budgetCategory"></select>
+                </div>
+                <div class="field">
+                  <label for="budgetLimit">Batas anggaran</label>
+                  <input id="budgetLimit" type="number" min="0" step="1000" placeholder="1500000" required />
+                </div>
+                <button class="button primary" type="submit">Simpan Anggaran</button>
+              </form>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <h3>Daftar Anggaran</h3>
+                  <p>Bandingkan batas anggaran dengan pengeluaran bulan berjalan.</p>
+                </div>
+              </div>
+              <div class="budget-list" id="budgetPageList"></div>
+            </section>
+          </div>
+
+          <section class="panel" style="margin-top: 14px">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h3>Hutang dan Piutang</h3>
+                <p>Catatan kewajiban dan tagihan yang belum atau sudah selesai.</p>
+              </div>
+              <div class="row-actions">
+                <button class="button" id="debtHistoryButton" type="button">Riwayat</button>
+                <button class="button" type="button" data-open-form="debt">Tambah Hutang Piutang</button>
+              </div>
+            </div>
+            <div class="debt-list" id="debtList"></div>
+          </section>
+        </section>
+
+        <section class="view" id="accountView">
+          <div class="account-grid">
+            <aside class="account-stack">
+              <section class="panel profile-card">
+                <div class="profile-main">
+                  <div class="profile-photo" id="profilePhoto">A</div>
+                  <div>
+                    <div class="profile-name" id="profileName">Admin</div>
+                    <div class="profile-email" id="profileEmail">admin@keuangan.local</div>
+                    <div class="compact-list">
+                      <span class="pill" id="profileRole">Admin</span>
+                      <span class="pill" id="profilePinStatus">PIN belum aktif</span>
+                      <span class="pill" id="profileSyncStatus">Lokal</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-header">
+                  <div class="panel-title">
+                    <h3 data-i18n="account.title">Akun</h3>
+                    <p data-i18n="account.subtitle">Data, mode tampilan, dan transaksi berulang.</p>
+                  </div>
+                </div>
+                <div class="settings-list">
+                  <div class="settings-item">
+                    <div>
+                      <strong data-i18n="account.cloudSync">Sinkronisasi Cloud</strong>
+                      <span id="syncStatus">Mode lokal aktif.</span>
+                    </div>
+                    <button class="button" id="syncNowButton" type="button">Sync</button>
+                  </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong data-i18n="account.exportExcel">Export data to Excel</strong>
+                      <span data-i18n="account.exportExcelDesc">Unduh transaksi, anggaran, hutang piutang, dan transaksi berulang.</span>
+                    </div>
+                    <button class="button" id="exportExcelButton" type="button">Export</button>
+                  </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong data-i18n="account.recurring">Transaksi Berulang</strong>
+                      <span id="recurringSummary">Belum ada transaksi berulang.</span>
+                    </div>
+                    <button class="button" type="button" data-open-form="recurring" data-i18n="common.add">Tambah</button>
+                  </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong data-i18n="account.language">Bahasa</strong>
+                      <span data-i18n="account.languageDesc">Ubah bahasa tampilan aplikasi.</span>
+                    </div>
+                    <select id="languageSelect" aria-label="Bahasa">
+                      <option value="id">Indonesia</option>
+                      <option value="en">English</option>
+                    </select>
+                  </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong data-i18n="account.darkMode">Dark Mode</strong>
+                      <span data-i18n="account.darkModeDesc">Ubah tampilan menjadi mode gelap.</span>
+                    </div>
+                    <label class="switch" aria-label="Dark Mode">
+                      <input id="darkModeToggle" type="checkbox" />
+                      <span></span>
+                    </label>
+                  </div>
+                </div>
+              </section>
+            </aside>
+
+            <div class="account-stack">
+              <section class="panel">
+                <div class="panel-header">
+                  <div class="panel-title">
+                    <h3>Transaksi Berulang</h3>
+                    <p>Jadwalkan transaksi yang sering terjadi dan terapkan ke bulan berjalan.</p>
+                  </div>
+                  <button class="button" id="applyRecurringButton" type="button">Terapkan Bulan Ini</button>
+                </div>
+                <div class="debt-list" id="recurringList"></div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-header">
+                  <div class="panel-title">
+                    <h3>Pengaturan Fitur</h3>
+                    <p>Pengingat harian, dompet, kategori, dan PIN.</p>
+                  </div>
+                </div>
+                <div class="settings-list">
+                  <div class="settings-item">
+                    <div>
+                      <strong>Pengingat Harian</strong>
+                      <span id="reminderStatus">Belum aktif</span>
+                    </div>
+                    <button class="button" type="button" data-open-form="reminder">Atur</button>
+                  </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong>Reminder Tagihan</strong>
+                      <span id="billReminderSummary">Belum ada tagihan.</span>
+                    </div>
+                    <button class="button" type="button" data-open-form="billReminder">Tambah</button>
+                  </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong>Dompet</strong>
+                      <span id="walletSummary">Tunai, Bank</span>
+                    </div>
+                    <button class="button" type="button" data-open-form="wallet">Kelola</button>
+                  </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong>Kategori</strong>
+                      <span id="categorySummary">Kategori default aktif.</span>
+                    </div>
+                    <button class="button" type="button" data-open-form="category">Kelola</button>
+                  </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong>Urutan Menu Dashboard</strong>
+                      <span id="dashboardMenuSummary">Beranda, Laporan, Anggaran, Akun</span>
+                    </div>
+                    <button class="button" type="button" data-open-form="dashboardMenu">Kelola</button>
+                  </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong>PIN</strong>
+                      <span id="pinSummary">PIN belum aktif.</span>
+                    </div>
+                    <button class="button" type="button" data-open-form="pin">Atur</button>
+                  </div>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-header">
+                  <div class="panel-title">
+                    <h3>Lainnya</h3>
+                    <p>Kirim saran, hapus akun, atau keluar dari aplikasi.</p>
+                  </div>
+                </div>
+                <div class="settings-list">
+                  <div class="settings-item">
+                    <div>
+                      <strong>Kirim Saran</strong>
+                      <span>Tulis masukan untuk pengembangan aplikasi.</span>
+                    </div>
+                    <button class="button" type="button" data-open-form="feedback">Kirim</button>
+                  </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong>Thanks</strong>
+                      <span>Lihat rekening dukungan pengembangan aplikasi.</span>
+                    </div>
+                    <button class="button" type="button" data-open-form="thanks">Buka</button>
+                  </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong>Reset Data Bulanan</strong>
+                      <span>Hapus data berdasarkan bulan yang dipilih.</span>
+                    </div>
+                    <button class="button danger" type="button" data-open-form="monthlyReset">Reset</button>
+                  </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong>Hapus Akun</strong>
+                      <span>Hapus akun login yang sedang digunakan.</span>
+                    </div>
+                    <button class="button danger" id="deleteAccountButton" type="button">Hapus</button>
+                  </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong>Logout</strong>
+                      <span>Keluar dari sesi aplikasi di perangkat ini.</span>
+                    </div>
+                    <button class="button" id="logoutButton" type="button">Logout</button>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="thanksView">
+          <section class="panel thanks-card">
+            <div class="panel-title">
+              <h3>Thanks</h3>
+              <p>Dukungan kecil sangat berarti untuk pengembangan aplikasi ini.</p>
+            </div>
+            <div class="bank-account">
+              <div>
+                <span class="stat-sub">BCA</span>
+                <strong id="bcaAccountNumber">899-094-7296</strong>
+              </div>
+              <button class="button primary" id="copyBcaButton" type="button">Copy</button>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="modalTitle">Tambah</h3>
+          <button class="icon-button" id="closeModalButton" type="button" title="Tutup">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+
+    <script src="./config.js"></script>
+    <script src="./quotes.js"></script>
+    <script src="./js/constants.js"></script>
+    <script src="./js/utils.js"></script>
+    <script src="./js/state.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/cloud.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

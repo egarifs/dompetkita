@@ -1,0 +1,22 @@
+{
+  "name": "Pencatatan Keuangan",
+  "short_name": "Keuangan",
+  "description": "Aplikasi pencatatan keuangan pribadi untuk transaksi, anggaran, laporan, hutang, dan piutang.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#f4f6f8",
+  "theme_color": "#176b5b",
+  "orientation": "portrait",
+  "categories": ["finance", "productivity"],
+  "lang": "id-ID",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
