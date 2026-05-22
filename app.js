@@ -120,6 +120,7 @@
         : [...defaultDashboardMenuOrder];
       let users = window.AppAuth.loadUsers(authStorageKey);
       let currentUser = loadSessionUser();
+      let guestTransactionAdds = 0;
 
 
       function loadUsers() {
@@ -239,9 +240,13 @@
             return normalizeState(stored);
           }
         } catch {
-          return normalizeState(demoState());
+          return emptyState();
         }
-        return normalizeState(demoState());
+        return emptyState();
+      }
+
+      function emptyState() {
+        return normalizeState({});
       }
 
       function saveState() {
@@ -348,6 +353,7 @@
           cloudUserKey,
           replaceState,
           mergeStateData,
+          emptyState,
           state,
           saveCloudState,
         });
@@ -984,6 +990,7 @@
           element.disabled = !isAdmin();
           element.title = isAdmin() ? "" : "Hanya admin";
         });
+        document.querySelector("#loadDemoButton").classList.toggle("hidden", !isGuest());
         document.querySelector("#deleteAccountButton").disabled = isGuest();
       }
 
@@ -1025,7 +1032,15 @@
       }
 
       function openTransactionForm() {
-        if (!requireSignedIn()) return;
+        if (!currentUser) {
+          requireSignedIn();
+          return;
+        }
+        if (isGuest() && guestTransactionAdds >= 3) {
+          alert("Mode tamu hanya bisa menambahkan 3 transaksi. Silakan login atau daftar akun untuk melanjutkan.");
+          openAuthRequiredModal();
+          return;
+        }
         document.querySelector("#modalTitle").textContent = "Tambah Transaksi";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="transactionForm">
@@ -1080,6 +1095,7 @@
             amount: parseFormattedNumber(document.querySelector("#transactionAmount").value),
             description: document.querySelector("#transactionDescription").value.trim(),
           });
+          if (isGuest()) guestTransactionAdds += 1;
           saveState();
           const saved = await flushCloudSave();
           closeModal();
@@ -1980,6 +1996,7 @@
       }
 
       async function enterGuestMode() {
+        guestTransactionAdds = 0;
         currentUser = {
           id: "guest",
           username: "guest",
@@ -2078,6 +2095,7 @@
         saveUsers(users);
         currentUser = user;
         localStorage.setItem(sessionStorageKey, JSON.stringify({ username: user.username, signedInAt: new Date().toISOString() }));
+        replaceState(emptyState());
         return { ok: true, signedIn: true, message: "Registrasi berhasil." };
       }
 
@@ -2583,7 +2601,12 @@
       document.querySelector("#logoutButton").addEventListener("click", logout);
       document.querySelector("#deleteAccountButton").addEventListener("click", deleteCurrentAccount);
       document.querySelector("#loadDemoButton").addEventListener("click", () => {
+        if (!isGuest()) {
+          alert("Data contoh hanya tersedia saat masuk sebagai tamu.");
+          return;
+        }
         if (confirm("Muat ulang data contoh? Data saat ini akan diganti.")) {
+          guestTransactionAdds = 0;
           const fresh = demoState();
           const normalized = normalizeState(fresh);
           state.transactions = normalized.transactions;

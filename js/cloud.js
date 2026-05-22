@@ -35,6 +35,7 @@ window.AppCloud = {
       cloudUserKey,
       replaceState,
       mergeStateData,
+      emptyState,
       state,
       saveCloudState,
     } = ctx;
@@ -59,6 +60,7 @@ window.AppCloud = {
         cloudSync.lastSyncedAt = data.updated_at || new Date().toISOString();
         await saveCloudState();
       } else {
+        if (typeof emptyState === "function") replaceState(emptyState());
         await saveCloudState();
       }
       cloudSync.lastError = "";
