@@ -1081,7 +1081,12 @@
               <label for="transactionDescription">Deskripsi (opsional)</label>
               <textarea id="transactionDescription" placeholder="Contoh: belanja mingguan"></textarea>
             </div>
+            <p class="form-status hidden" id="transactionStatus"></p>
             <div class="row-actions">
+              <label class="remember-row" for="addAnotherTransaction">
+                <input id="addAnotherTransaction" type="checkbox" />
+                Tambah Lagi
+              </label>
               <button class="button" type="button" data-close-modal>Batal</button>
               <button class="button primary" type="submit">Simpan Transaksi</button>
             </div>
@@ -1091,9 +1096,20 @@
         attachRupiahInput("#transactionAmount");
         document.querySelector("#transactionForm").addEventListener("submit", async (event) => {
           event.preventDefault();
+          if (isGuest() && guestTransactionAdds >= 3) {
+            alert("Mode tamu hanya bisa menambahkan 3 transaksi. Silakan login atau daftar akun untuk melanjutkan.");
+            closeModal();
+            openAuthRequiredModal();
+            return;
+          }
+          const form = event.currentTarget;
+          const addAnother = document.querySelector("#addAnotherTransaction").checked;
+          const status = document.querySelector("#transactionStatus");
           const submitButton = event.submitter || document.querySelector("#transactionForm .button.primary");
           submitButton.disabled = true;
           submitButton.textContent = "Menyimpan...";
+          status.className = "form-status hidden";
+          status.textContent = "";
           state.transactions.push({
             id: id(),
             type: document.querySelector("#transactionType").value,
@@ -1105,10 +1121,31 @@
           if (isGuest()) guestTransactionAdds += 1;
           saveState();
           const saved = await flushCloudSave();
-          closeModal();
           renderAll();
-          if (!saved && cloudSync.enabled) {
+          submitButton.disabled = false;
+          submitButton.textContent = "Simpan Transaksi";
+
+          if (addAnother && !(isGuest() && guestTransactionAdds >= 3)) {
+            form.reset();
+            document.querySelector("#transactionDate").value = todayDate();
+            document.querySelector("#transactionAmount").value = "";
+            document.querySelector("#transactionDescription").value = "";
+            status.className = saved || !cloudSync.enabled ? "form-status success" : "form-status error";
+            status.textContent = saved || !cloudSync.enabled
+              ? "Transaksi berhasil disimpan. Silakan tambah transaksi berikutnya."
+              : "Transaksi tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.";
+            document.querySelector("#transactionAmount").focus();
+            return;
+          }
+
+          closeModal();
+          if (isGuest() && guestTransactionAdds >= 3) {
+            alert("Transaksi berhasil disimpan. Mode tamu sudah mencapai batas 3 transaksi. Silakan login atau daftar akun untuk melanjutkan.");
+            openAuthRequiredModal();
+          } else if (!saved && cloudSync.enabled) {
             alert("Transaksi tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+          } else {
+            alert("Transaksi berhasil disimpan.");
           }
         });
       }
