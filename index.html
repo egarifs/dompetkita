@@ -210,8 +210,8 @@
             </article>
           </div>
 
-          <div class="content-grid" data-home-section="chartBudget">
-            <section class="panel">
+          <div class="dashboard-sections" id="dashboardSections">
+            <section class="panel" data-home-section="chartBudget">
               <div class="panel-header">
                 <div class="panel-title">
                   <h3>Grafik Saldo dan Anggaran</h3>
@@ -236,9 +236,8 @@
               </div>
               <div class="budget-list" id="homeBudgetList"></div>
             </section>
-          </div>
 
-          <section class="panel" style="margin-top: 14px" data-home-section="insight">
+            <section class="panel" data-home-section="insight">
             <div class="panel-header">
               <div class="panel-title">
                 <h3>Insight</h3>
@@ -248,7 +247,7 @@
             <div class="debt-list" id="insightList"></div>
           </section>
 
-          <section class="panel" style="margin-top: 14px" data-home-section="latestTransactions">
+            <section class="panel" data-home-section="latestTransactions">
             <div class="panel-header">
               <div class="panel-title">
                 <h3>Transaksi Terbaru</h3>
@@ -259,7 +258,7 @@
             <div class="table-wrap" id="latestTransactions"></div>
           </section>
 
-          <section class="panel" style="margin-top: 14px" data-home-section="savings">
+            <section class="panel" data-home-section="savings">
             <div class="panel-header">
               <div class="panel-title">
                 <h3>Tabungan</h3>
@@ -273,7 +272,7 @@
             <div class="budget-list" id="homeSavingsList"></div>
           </section>
 
-          <section class="panel" style="margin-top: 14px" data-home-section="billReminder">
+            <section class="panel" data-home-section="billReminder">
             <div class="panel-header">
               <div class="panel-title">
                 <h3>Reminder Tagihan</h3>
@@ -283,6 +282,7 @@
             </div>
             <div class="debt-list" id="billReminderList"></div>
           </section>
+          </div>
         </section>
 
         <section class="view" id="savingsView">
@@ -512,7 +512,7 @@
                   <div class="settings-item">
                     <div>
                       <strong>Urutan Menu Dashboard</strong>
-                      <span id="dashboardMenuSummary">Beranda, Laporan, Anggaran, Akun</span>
+                      <span id="dashboardMenuSummary">Grafik Saldo dan Anggaran, Anggaran Bulan Ini, Insight, Transaksi Terbaru, Tabungan, Reminder Tagihan</span>
                     </div>
                     <button class="button" type="button" data-open-form="dashboardMenu">Kelola</button>
                   </div>

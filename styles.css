@@ -520,6 +520,12 @@
         align-items: start;
       }
 
+      .dashboard-sections {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
       .panel-header {
         display: flex;
         align-items: flex-start;

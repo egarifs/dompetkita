@@ -114,10 +114,8 @@
       const state = loadState();
       let categories = state.categories?.length ? state.categories : [...defaultCategories];
       state.categories = categories;
-      const defaultDashboardMenuOrder = ["home", "reports", "budgets", "account"];
-      state.settings.dashboardMenuOrder = Array.isArray(state.settings?.dashboardMenuOrder) && state.settings.dashboardMenuOrder.length
-        ? state.settings.dashboardMenuOrder
-        : [...defaultDashboardMenuOrder];
+      const defaultHomeSectionOrder = ["chartBudget", "budgetMonth", "insight", "latestTransactions", "savings", "billReminder"];
+      state.settings.homeSectionOrder = normalizeHomeSectionOrder(state.settings?.homeSectionOrder);
       let users = window.AppAuth.loadUsers(authStorageKey);
       let currentUser = loadSessionUser();
       let guestTransactionAdds = 0;
@@ -949,24 +947,33 @@
         `).join("");
       }
 
+      function normalizeHomeSectionOrder(order) {
+        const configured = Array.isArray(order) ? order : [];
+        return [...new Set([...configured, ...defaultHomeSectionOrder])].filter((section) => defaultHomeSectionOrder.includes(section));
+      }
+
       function renderDashboardMenuOrder() {
-        const nav = document.querySelector(".nav");
-        const addBlock = document.querySelector("#addBlock");
-        if (!nav || !addBlock) return;
-        const navButtons = [...nav.querySelectorAll(".nav-button[data-view]")];
-        const map = new Map(navButtons.map((button) => [button.dataset.view, button]));
-        const configured = Array.isArray(state.settings.dashboardMenuOrder) ? state.settings.dashboardMenuOrder : [];
-        const orderedViews = [...new Set([...configured, ...defaultDashboardMenuOrder])].filter((view) => map.has(view));
-        const orderedButtons = orderedViews.map((view) => map.get(view)).filter(Boolean);
-        state.settings.dashboardMenuOrder = orderedViews;
-        for (const button of orderedButtons) {
-          nav.insertBefore(button, addBlock);
+        const dashboard = document.querySelector("#dashboardSections");
+        if (!dashboard) return;
+        const sectionMap = new Map([...dashboard.querySelectorAll("[data-home-section]")].map((section) => [section.dataset.homeSection, section]));
+        const orderedSections = normalizeHomeSectionOrder(state.settings.homeSectionOrder);
+        state.settings.homeSectionOrder = orderedSections;
+        for (const section of orderedSections) {
+          const element = sectionMap.get(section);
+          if (element) dashboard.appendChild(element);
         }
       }
 
-      function dashboardMenuViewLabel(view) {
-        const labels = { home: "Beranda", reports: "Laporan", budgets: "Anggaran", account: "Akun" };
-        return labels[view] || view;
+      function dashboardSectionLabel(section) {
+        const labels = {
+          chartBudget: "Grafik Saldo dan Anggaran",
+          budgetMonth: "Anggaran Bulan Ini",
+          insight: "Insight",
+          latestTransactions: "Transaksi Terbaru",
+          savings: "Tabungan",
+          billReminder: "Reminder Tagihan",
+        };
+        return labels[section] || section;
       }
 
       function renderAccount() {
@@ -984,7 +991,7 @@
         document.querySelector("#reminderStatus").textContent = state.settings.reminderEnabled ? `Aktif pukul ${state.settings.reminderTime}` : "Belum aktif";
         document.querySelector("#walletSummary").textContent = state.wallets.join(", ") || "Belum ada dompet";
         document.querySelector("#categorySummary").textContent = `${categories.length} kategori aktif`;
-        document.querySelector("#dashboardMenuSummary").textContent = state.settings.dashboardMenuOrder.map(dashboardMenuViewLabel).join(", ");
+        document.querySelector("#dashboardMenuSummary").textContent = state.settings.homeSectionOrder.map(dashboardSectionLabel).join(", ");
         document.querySelector("#pinSummary").textContent = state.settings.pin ? "PIN sudah disimpan di perangkat ini." : "PIN belum aktif.";
         document.querySelectorAll("[data-admin-only]").forEach((element) => {
           element.disabled = !isAdmin();
@@ -1400,21 +1407,21 @@
 
       function openDashboardMenuForm() {
         if (!requireSignedIn()) return;
-        const order = [...state.settings.dashboardMenuOrder];
+        const order = normalizeHomeSectionOrder(state.settings.homeSectionOrder);
         document.querySelector("#modalTitle").textContent = "Urutan Menu Dashboard";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="dashboardMenuForm">
             <div class="field">
-              <label>Urutan saat ini</label>
+              <label>Urutan tampilan dashboard</label>
               <div class="debt-list">
-                ${order.map((view, index) => `
+                ${order.map((section, index) => `
                   <article class="debt-item">
                     <div>
-                      <strong>${escapeHtml(dashboardMenuViewLabel(view))}</strong>
+                      <strong>${escapeHtml(dashboardSectionLabel(section))}</strong>
                     </div>
                     <div class="row-actions">
-                      <button class="button" type="button" data-menu-up="${view}" ${index === 0 ? "disabled" : ""}>↑</button>
-                      <button class="button" type="button" data-menu-down="${view}" ${index === order.length - 1 ? "disabled" : ""}>↓</button>
+                      <button class="button" type="button" data-menu-up="${section}" ${index === 0 ? "disabled" : ""}>↑</button>
+                      <button class="button" type="button" data-menu-down="${section}" ${index === order.length - 1 ? "disabled" : ""}>↓</button>
                     </div>
                   </article>
                 `).join("")}
@@ -1428,13 +1435,13 @@
         `;
         showModal();
 
-        const move = (view, direction) => {
-          const idx = order.indexOf(view);
+        const move = (section, direction) => {
+          const idx = order.indexOf(section);
           if (idx < 0) return;
           const target = direction === "up" ? idx - 1 : idx + 1;
           if (target < 0 || target >= order.length) return;
           [order[idx], order[target]] = [order[target], order[idx]];
-          state.settings.dashboardMenuOrder = [...order];
+          state.settings.homeSectionOrder = [...order];
           openDashboardMenuForm();
         };
 
@@ -1447,7 +1454,7 @@
 
         document.querySelector("#dashboardMenuForm").addEventListener("submit", (event) => {
           event.preventDefault();
-          state.settings.dashboardMenuOrder = [...order];
+          state.settings.homeSectionOrder = [...order];
           closeModal();
           renderAll();
         });
