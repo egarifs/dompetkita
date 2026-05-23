@@ -64,6 +64,7 @@
           "nav.addTransaction": "Tambah Transaksi",
           "nav.addDebt": "Tambah Hutang Piutang",
           "nav.budgets": "Anggaran",
+          "nav.vehicles": "Kendaraan",
           "nav.account": "Akun",
           "common.add": "Tambah",
           "account.title": "Akun",
@@ -84,6 +85,7 @@
           "nav.addTransaction": "Add Transaction",
           "nav.addDebt": "Add Debt",
           "nav.budgets": "Budget",
+          "nav.vehicles": "Vehicles",
           "nav.account": "Account",
           "common.add": "Add",
           "account.title": "Account",
@@ -104,6 +106,7 @@
           home: ["Beranda Keuangan", "Pantau pengeluaran bulan berjalan, saldo, dan sisa anggaran."],
           reports: ["Laporan", "Lihat semua transaksi dan pola pengeluaran per kategori."],
           budgets: ["Anggaran", "Atur batas pengeluaran dan pantau hutang piutang."],
+          vehicles: ["Kendaraan", "Pantau service, oli, part, pajak, dan biaya kendaraan."],
           account: ["Akun", "Kelola profil, akses, ekspor data, dan pengaturan aplikasi."],
           thanks: ["Thanks", "Dukung pengembangan aplikasi melalui rekening yang tersedia."],
           savings: ["Tabungan", "Kelola tujuan tabungan dan progres pencapaiannya."],
@@ -112,6 +115,7 @@
           home: ["Finance Dashboard", "Track this month's spending, balance, and remaining budget."],
           reports: ["Reports", "View all transactions and category spending patterns."],
           budgets: ["Budget", "Set spending limits and monitor debts."],
+          vehicles: ["Vehicles", "Track service, oil, parts, taxes, and vehicle costs."],
           account: ["Account", "Manage profile, access, exports, and app settings."],
           thanks: ["Thanks", "Support app development through the available bank account."],
           savings: ["Savings", "Manage savings goals and progress."],
@@ -284,6 +288,11 @@
         state.savings = normalized.savings;
         state.billReminders = normalized.billReminders;
         state.recurring = normalized.recurring;
+        state.vehicles = normalized.vehicles;
+        state.vehicleServices = normalized.vehicleServices;
+        state.vehicleOilChanges = normalized.vehicleOilChanges;
+        state.vehicleParts = normalized.vehicleParts;
+        state.vehicleTaxes = normalized.vehicleTaxes;
         state.categories = normalized.categories;
         state.wallets = normalized.wallets;
         state.deleted = normalized.deleted;
@@ -308,6 +317,11 @@
           savings: mergeDeletedIds(cloud, local, "savings"),
           billReminders: mergeDeletedIds(cloud, local, "billReminders"),
           recurring: mergeDeletedIds(cloud, local, "recurring"),
+          vehicles: mergeDeletedIds(cloud, local, "vehicles"),
+          vehicleServices: mergeDeletedIds(cloud, local, "vehicleServices"),
+          vehicleOilChanges: mergeDeletedIds(cloud, local, "vehicleOilChanges"),
+          vehicleParts: mergeDeletedIds(cloud, local, "vehicleParts"),
+          vehicleTaxes: mergeDeletedIds(cloud, local, "vehicleTaxes"),
         };
         const budgetMap = new Map();
         cloud.budgets.forEach((item) => budgetMap.set(item.category, item));
@@ -319,6 +333,11 @@
           savings: withoutDeleted(mergeById(cloud.savings, local.savings), deleted.savings),
           billReminders: withoutDeleted(mergeById(cloud.billReminders, local.billReminders), deleted.billReminders),
           recurring: withoutDeleted(mergeById(cloud.recurring, local.recurring), deleted.recurring),
+          vehicles: withoutDeleted(mergeById(cloud.vehicles, local.vehicles), deleted.vehicles),
+          vehicleServices: withoutDeleted(mergeById(cloud.vehicleServices, local.vehicleServices), deleted.vehicleServices),
+          vehicleOilChanges: withoutDeleted(mergeById(cloud.vehicleOilChanges, local.vehicleOilChanges), deleted.vehicleOilChanges),
+          vehicleParts: withoutDeleted(mergeById(cloud.vehicleParts, local.vehicleParts), deleted.vehicleParts),
+          vehicleTaxes: withoutDeleted(mergeById(cloud.vehicleTaxes, local.vehicleTaxes), deleted.vehicleTaxes),
           categories: [...new Set([...cloud.categories, ...local.categories])],
           wallets: [...new Set([...cloud.wallets, ...local.wallets])],
           settings: { ...cloud.settings, ...local.settings },
@@ -469,6 +488,80 @@
 
       function billReminder(title, category, amount, dueDate, note = "", status = "unpaid") {
         return window.AppState.billReminder(id(), title, category, amount, dueDate, note, status);
+      }
+
+      function vehicleName(vehicleId) {
+        const vehicle = state.vehicles.find((item) => item.id === vehicleId);
+        return vehicle ? vehicle.name : "Kendaraan";
+      }
+
+      function ensureVehicleCategory() {
+        if (!state.categories.includes("Kendaraan")) {
+          state.categories.push("Kendaraan");
+          categories = state.categories;
+        }
+      }
+
+      function addMonths(dateValue, months) {
+        if (!dateValue) return "";
+        const date = new Date(`${dateValue}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return "";
+        date.setMonth(date.getMonth() + Number(months || 0));
+        return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+      }
+
+      function daysUntil(dateValue) {
+        if (!dateValue) return Infinity;
+        const today = new Date(`${todayDate()}T00:00:00`);
+        const target = new Date(`${dateValue}T00:00:00`);
+        return Math.ceil((target - today) / 86400000);
+      }
+
+      function vehicleStatusBySchedule(dateValue, kmLeft = Infinity) {
+        const days = daysUntil(dateValue);
+        if (days < 0 || kmLeft < 0) return { label: "Sudah lewat", className: "danger" };
+        if (days <= 30 || kmLeft <= 500) return { label: "Mendekati jadwal", className: "warn" };
+        return { label: "Aman", className: "income" };
+      }
+
+      function vehicleOptions(selectedId = "") {
+        if (!state.vehicles.length) return `<option value="">Belum ada kendaraan</option>`;
+        return state.vehicles.map((vehicle) => `<option value="${vehicle.id}" ${vehicle.id === selectedId ? "selected" : ""}>${escapeHtml(vehicle.name)} - ${escapeHtml(vehicle.plate)}</option>`).join("");
+      }
+
+      function vehicleTransactions() {
+        return state.transactions.filter((item) => item.category === "Kendaraan" || item.vehicleId);
+      }
+
+      function upsertVehicleTransaction(record, subcategory, amount, date, description) {
+        const value = Number(amount || 0);
+        if (value <= 0) return "";
+        ensureVehicleCategory();
+        const existing = record.transactionId ? state.transactions.find((item) => item.id === record.transactionId) : null;
+        const payload = {
+          type: "expense",
+          date,
+          category: "Kendaraan",
+          subcategory,
+          amount: value,
+          description,
+          vehicleId: record.vehicleId,
+          vehicleRecordId: record.id,
+          vehicleRecordType: subcategory,
+        };
+        if (existing) {
+          Object.assign(existing, payload);
+          return existing.id;
+        }
+        const transactionId = id();
+        state.transactions.push({ id: transactionId, ...payload });
+        return transactionId;
+      }
+
+      function removeVehicleTransaction(record) {
+        if (!record?.transactionId) return;
+        markDeleted("transactions", record.transactionId);
+        state.transactions = state.transactions.filter((item) => item.id !== record.transactionId);
       }
 
       function monthOf(item) {
@@ -791,6 +884,217 @@
         document.querySelector("#homeSavingsList").innerHTML = savingsRows(3);
         document.querySelector("#allSavingsList").innerHTML = savingsRows();
         document.querySelector("#viewAllSavingsButton").classList.toggle("hidden", activeCount <= 3);
+      }
+
+      function latestVehicleOil(vehicleId) {
+        return [...state.vehicleOilChanges].filter((item) => item.vehicleId === vehicleId).sort((a, b) => (b.lastOilDate || "").localeCompare(a.lastOilDate || ""))[0];
+      }
+
+      function nearestVehiclePart(vehicleId) {
+        return [...state.vehicleParts].filter((item) => item.vehicleId === vehicleId).sort((a, b) => (partNextDate(a) || "9999").localeCompare(partNextDate(b) || "9999"))[0];
+      }
+
+      function nearestVehicleService(vehicleId) {
+        return [...state.vehicleServices].filter((item) => item.vehicleId === vehicleId).sort((a, b) => (b.serviceDate || "").localeCompare(a.serviceDate || ""))[0];
+      }
+
+      function vehicleTax(vehicleId) {
+        return [...state.vehicleTaxes].filter((item) => item.vehicleId === vehicleId).sort((a, b) => (a.annualDueDate || "").localeCompare(b.annualDueDate || ""))[0];
+      }
+
+      function oilNextDate(item) {
+        return addMonths(item.lastOilDate, item.intervalMonths);
+      }
+
+      function oilNextKm(item) {
+        return Number(item.lastOilKm || 0) + Number(item.intervalKm || 0);
+      }
+
+      function partNextDate(item) {
+        return addMonths(item.replacementDate, item.lifeMonths);
+      }
+
+      function partNextKm(item) {
+        return Number(item.replacementKm || 0) + Number(item.lifeKm || 0);
+      }
+
+      function vehicleMonthlyTotal(vehicleId = "", month = currentMonthKey()) {
+        return vehicleTransactions()
+          .filter((item) => (!vehicleId || item.vehicleId === vehicleId) && monthOf(item) === month)
+          .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      }
+
+      function vehicleYearTotal(vehicleId = "", year = todayDate().slice(0, 4)) {
+        return vehicleTransactions()
+          .filter((item) => (!vehicleId || item.vehicleId === vehicleId) && item.date?.startsWith(year))
+          .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      }
+
+      function vehicleBadge(status) {
+        return `<span class="pill ${status.className}">${status.label}</span>`;
+      }
+
+      function renderVehicles() {
+        const view = document.querySelector("#vehiclesView");
+        if (!view) return;
+        renderVehicleDashboard();
+        renderVehicleList();
+        renderVehicleServices();
+        renderVehicleOilChanges();
+        renderVehicleParts();
+        renderVehicleTaxes();
+        renderVehicleExpenseFilters();
+        renderVehicleExpenses();
+      }
+
+      function renderVehicleDashboard() {
+        const target = document.querySelector("#vehicleDashboard");
+        if (!target) return;
+        if (!state.vehicles.length) {
+          target.innerHTML = `<div class="empty"><p>Belum ada kendaraan.</p><button class="button primary" type="button" data-open-form="vehicle">Tambah Kendaraan</button></div>`;
+          return;
+        }
+        target.innerHTML = state.vehicles.map((vehicle) => {
+          const oil = latestVehicleOil(vehicle.id);
+          const part = nearestVehiclePart(vehicle.id);
+          const service = nearestVehicleService(vehicle.id);
+          const tax = vehicleTax(vehicle.id);
+          const oilStatus = oil ? vehicleStatusBySchedule(oilNextDate(oil), oilNextKm(oil) - Number(vehicle.currentKm || 0)) : { label: "Belum ada oli", className: "debt" };
+          const partStatus = part ? vehicleStatusBySchedule(partNextDate(part), partNextKm(part) - Number(vehicle.currentKm || 0)) : { label: "Belum ada part", className: "debt" };
+          const taxStatus = tax ? vehicleStatusBySchedule(tax.annualDueDate) : { label: "Belum ada pajak", className: "debt" };
+          return `
+            <article class="stat-card vehicle-card">
+              <div class="stat-label">${escapeHtml(vehicle.type || "Kendaraan")} ${vehicleBadge(taxStatus)}</div>
+              <strong class="stat-value">${escapeHtml(vehicle.name)}</strong>
+              <span class="stat-sub">${formatNumber(vehicle.currentKm || 0)} km - ${escapeHtml(vehicle.plate)}</span>
+              <div class="compact-list">
+                <span class="pill">Service: ${service ? escapeHtml(service.serviceDate) : "-"}</span>
+                ${vehicleBadge(oilStatus)}
+                ${vehicleBadge(partStatus)}
+                <span class="pill">Pajak: ${tax?.annualDueDate || "-"}</span>
+              </div>
+              <div class="vehicle-costs">
+                <span>Bulan ini <strong>${money(vehicleMonthlyTotal(vehicle.id))}</strong></span>
+                <span>Tahun ini <strong>${money(vehicleYearTotal(vehicle.id))}</strong></span>
+              </div>
+            </article>
+          `;
+        }).join("");
+      }
+
+      function renderVehicleList() {
+        const target = document.querySelector("#vehicleList");
+        if (!target) return;
+        target.innerHTML = state.vehicles.length ? state.vehicles.map((vehicle) => `
+          <article class="debt-row">
+            <div class="debt-row-top">
+              <div>
+                <strong>${escapeHtml(vehicle.name)}</strong>
+                <span>${escapeHtml(vehicle.brand || "-")} ${escapeHtml(vehicle.model || "")} - ${escapeHtml(vehicle.plate)}</span>
+              </div>
+              <button class="icon-button danger" type="button" data-delete-vehicle="${vehicle.id}" title="Hapus kendaraan">${trashIcon()}</button>
+            </div>
+            <div class="compact-list">
+              <span class="pill">${escapeHtml(vehicle.type || "-")}</span>
+              <span class="pill">${escapeHtml(vehicle.transmission || "-")}</span>
+              <span class="pill">${formatNumber(vehicle.currentKm || 0)} km</span>
+              <span class="pill">Tahun ${escapeHtml(vehicle.year || "-")}</span>
+            </div>
+          </article>
+        `).join("") : `<div class="empty"><p>Belum ada data kendaraan.</p></div>`;
+      }
+
+      function renderVehicleServices() {
+        const target = document.querySelector("#vehicleServiceList");
+        if (!target) return;
+        target.innerHTML = state.vehicleServices.length ? [...state.vehicleServices].sort((a, b) => b.serviceDate.localeCompare(a.serviceDate)).map((item) => `
+          <article class="debt-row">
+            <div class="debt-row-top"><div><strong>${escapeHtml(item.serviceType)}</strong><span>${escapeHtml(vehicleName(item.vehicleId))} - ${escapeHtml(item.workshop || "-")}</span></div><span>${money(item.cost || 0)}</span></div>
+            <div class="compact-list"><span class="pill">${escapeHtml(item.serviceDate)}</span><span class="pill">${formatNumber(item.serviceKm || 0)} km</span><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleServices" data-record-id="${item.id}" title="Hapus service">${trashIcon()}</button></div>
+          </article>
+        `).join("") : `<div class="empty"><p>Belum ada riwayat service.</p></div>`;
+      }
+
+      function renderVehicleOilChanges() {
+        const target = document.querySelector("#vehicleOilList");
+        if (!target) return;
+        target.innerHTML = state.vehicleOilChanges.length ? [...state.vehicleOilChanges].sort((a, b) => oilNextDate(a).localeCompare(oilNextDate(b))).map((item) => {
+          const vehicle = state.vehicles.find((entry) => entry.id === item.vehicleId);
+          const status = vehicleStatusBySchedule(oilNextDate(item), oilNextKm(item) - Number(vehicle?.currentKm || 0));
+          return `
+            <article class="debt-row">
+              <div class="debt-row-top"><div><strong>Ganti Oli ${escapeHtml(item.oilBrand || "")}</strong><span>${escapeHtml(vehicleName(item.vehicleId))}</span></div>${vehicleBadge(status)}</div>
+              <div class="compact-list"><span class="pill">Berikutnya ${oilNextDate(item) || "-"}</span><span class="pill">${formatNumber(oilNextKm(item))} km</span><span class="pill">${money(item.cost || 0)}</span><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleOilChanges" data-record-id="${item.id}" title="Hapus oli">${trashIcon()}</button></div>
+            </article>
+          `;
+        }).join("") : `<div class="empty"><p>Belum ada jadwal ganti oli.</p></div>`;
+      }
+
+      function renderVehicleParts() {
+        const target = document.querySelector("#vehiclePartList");
+        if (!target) return;
+        target.innerHTML = state.vehicleParts.length ? [...state.vehicleParts].sort((a, b) => partNextDate(a).localeCompare(partNextDate(b))).map((item) => {
+          const vehicle = state.vehicles.find((entry) => entry.id === item.vehicleId);
+          const status = vehicleStatusBySchedule(partNextDate(item), partNextKm(item) - Number(vehicle?.currentKm || 0));
+          return `
+            <article class="debt-row">
+              <div class="debt-row-top"><div><strong>${escapeHtml(item.partName)}</strong><span>${escapeHtml(vehicleName(item.vehicleId))}</span></div>${vehicleBadge(status)}</div>
+              <div class="compact-list"><span class="pill">Berikutnya ${partNextDate(item) || "-"}</span><span class="pill">${formatNumber(partNextKm(item))} km</span><span class="pill">${money(item.cost || 0)}</span><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleParts" data-record-id="${item.id}" title="Hapus part">${trashIcon()}</button></div>
+            </article>
+          `;
+        }).join("") : `<div class="empty"><p>Belum ada penggantian part.</p></div>`;
+      }
+
+      function renderVehicleTaxes() {
+        const target = document.querySelector("#vehicleTaxList");
+        if (!target) return;
+        target.innerHTML = state.vehicleTaxes.length ? [...state.vehicleTaxes].sort((a, b) => a.annualDueDate.localeCompare(b.annualDueDate)).map((item) => {
+          const status = vehicleStatusBySchedule(item.annualDueDate);
+          return `
+            <article class="debt-row">
+              <div class="debt-row-top"><div><strong>Pajak ${escapeHtml(vehicleName(item.vehicleId))}</strong><span>Tahunan ${escapeHtml(item.annualDueDate)} - 5 tahunan ${escapeHtml(item.fiveYearDueDate || "-")}</span></div>${vehicleBadge(status)}</div>
+              <div class="compact-list"><span class="pill">${item.status === "paid" ? "Sudah dibayar" : "Belum dibayar"}</span><span class="pill">${money(item.estimatedCost || 0)}</span><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleTaxes" data-record-id="${item.id}" title="Hapus pajak">${trashIcon()}</button></div>
+            </article>
+          `;
+        }).join("") : `<div class="empty"><p>Belum ada data pajak kendaraan.</p></div>`;
+      }
+
+      function renderVehicleExpenseFilters() {
+        const vehicleFilter = document.querySelector("#vehicleExpenseVehicleFilter");
+        const monthFilter = document.querySelector("#vehicleExpenseMonthFilter");
+        if (!vehicleFilter || !monthFilter) return;
+        const currentVehicle = vehicleFilter.value;
+        vehicleFilter.innerHTML = `<option value="">Semua Kendaraan</option>${vehicleOptions(currentVehicle)}`;
+        vehicleFilter.value = currentVehicle;
+        if (!monthFilter.value) monthFilter.value = currentMonthKey();
+      }
+
+      function renderVehicleExpenses() {
+        const vehicleId = document.querySelector("#vehicleExpenseVehicleFilter")?.value || "";
+        const month = document.querySelector("#vehicleExpenseMonthFilter")?.value || currentMonthKey();
+        const type = document.querySelector("#vehicleExpenseTypeFilter")?.value || "";
+        const year = month.slice(0, 4);
+        const rows = vehicleTransactions().filter((item) => {
+          return (!vehicleId || item.vehicleId === vehicleId)
+            && (!type || item.subcategory === type)
+            && (!month || monthOf(item) === month);
+        });
+        const yearRows = vehicleTransactions().filter((item) => (!vehicleId || item.vehicleId === vehicleId) && item.date?.startsWith(year));
+        const yearTotal = yearRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        const monthTotal = rows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        const maxCost = yearRows.reduce((max, item) => Math.max(max, Number(item.amount || 0)), 0);
+        document.querySelector("#vehicleMonthTotal").textContent = money(monthTotal);
+        document.querySelector("#vehicleYearTotal").textContent = money(yearTotal);
+        document.querySelector("#vehicleAverageTotal").textContent = money(Math.round(yearTotal / 12));
+        document.querySelector("#vehicleMaxTotal").textContent = money(maxCost);
+        document.querySelector("#vehicleExpenseList").innerHTML = rows.length ? `
+          <table>
+            <thead><tr><th>Tanggal</th><th>Kendaraan</th><th>Jenis</th><th>Catatan</th><th>Nominal</th></tr></thead>
+            <tbody>${rows.sort((a, b) => b.date.localeCompare(a.date)).map((item) => `
+              <tr><td>${escapeHtml(item.date)}</td><td>${escapeHtml(vehicleName(item.vehicleId))}</td><td>${escapeHtml(item.subcategory || "Lainnya")}</td><td>${escapeHtml(item.description || "-")}</td><td>${money(item.amount)}</td></tr>
+            `).join("")}</tbody>
+          </table>
+        ` : `<div class="empty"><p>Belum ada pengeluaran kendaraan pada filter ini.</p></div>`;
       }
 
       function renderInsights() {
@@ -1127,6 +1431,7 @@
       function renderAll() {
         categories = state.categories?.length ? state.categories : [...defaultCategories];
         state.categories = categories;
+        ensureVehicleCategory();
         renderDashboardMenuOrder();
         applyDarkMode();
         saveState();
@@ -1138,6 +1443,7 @@
         renderTransactions();
         renderBudgets();
         renderSavings();
+        renderVehicles();
         renderInsights();
         renderBillReminders();
         renderDebts();
@@ -1813,6 +2119,197 @@
         });
       }
 
+      function openVehicleForm() {
+        if (!requireSignedIn()) return;
+        document.querySelector("#modalTitle").textContent = "Tambah Kendaraan";
+        document.querySelector("#modalBody").innerHTML = `
+          <form class="form" id="vehicleForm">
+            <div class="form-grid">
+              <div class="field"><label for="vehicleName">Nama kendaraan</label><input id="vehicleName" required placeholder="Contoh: Avanza Putih" /></div>
+              <div class="field"><label for="vehiclePlate">Nomor plat</label><input id="vehiclePlate" required placeholder="B 1234 ABC" /></div>
+            </div>
+            <div class="form-grid">
+              <div class="field"><label for="vehicleBrand">Merk</label><input id="vehicleBrand" placeholder="Toyota" /></div>
+              <div class="field"><label for="vehicleModel">Model</label><input id="vehicleModel" placeholder="Avanza" /></div>
+            </div>
+            <div class="form-grid">
+              <div class="field"><label for="vehicleYear">Tahun</label><input id="vehicleYear" type="number" min="1900" max="2100" placeholder="2020" /></div>
+              <div class="field"><label for="vehicleType">Jenis kendaraan</label><select id="vehicleType"><option>Mobil</option><option>Motor</option></select></div>
+            </div>
+            <div class="form-grid">
+              <div class="field"><label for="vehicleTransmission">Transmisi</label><input id="vehicleTransmission" placeholder="Manual / Matic" /></div>
+              <div class="field"><label for="vehicleCurrentKm">Kilometer saat ini</label><input id="vehicleCurrentKm" type="number" min="0" value="0" required /></div>
+            </div>
+            <div class="field"><label for="vehiclePurchaseDate">Tanggal pembelian</label><input id="vehiclePurchaseDate" type="date" /></div>
+            <div class="field"><label for="vehicleNote">Catatan tambahan</label><textarea id="vehicleNote" placeholder="Catatan tambahan"></textarea></div>
+            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">Simpan Kendaraan</button></div>
+          </form>
+        `;
+        showModal();
+        document.querySelector("#vehicleForm").addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const currentKm = Number(document.querySelector("#vehicleCurrentKm").value || 0);
+          if (currentKm < 0) return alert("Kilometer tidak boleh negatif.");
+          state.vehicles.push({
+            id: id(),
+            name: document.querySelector("#vehicleName").value.trim(),
+            brand: document.querySelector("#vehicleBrand").value.trim(),
+            model: document.querySelector("#vehicleModel").value.trim(),
+            year: document.querySelector("#vehicleYear").value,
+            plate: document.querySelector("#vehiclePlate").value.trim(),
+            type: document.querySelector("#vehicleType").value,
+            transmission: document.querySelector("#vehicleTransmission").value.trim(),
+            currentKm,
+            purchaseDate: document.querySelector("#vehiclePurchaseDate").value,
+            note: document.querySelector("#vehicleNote").value.trim(),
+          });
+          closeModal();
+          await persistChanges("Data kendaraan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+          openView("vehicles");
+        });
+      }
+
+      function requireVehicleData() {
+        if (state.vehicles.length) return true;
+        alert("Tambahkan data kendaraan terlebih dahulu.");
+        openVehicleForm();
+        return false;
+      }
+
+      function openVehicleServiceForm() {
+        if (!requireSignedIn() || !requireVehicleData()) return;
+        document.querySelector("#modalTitle").textContent = "Tambah Riwayat Service";
+        document.querySelector("#modalBody").innerHTML = `
+          <form class="form" id="vehicleServiceForm">
+            <div class="field"><label for="serviceVehicle">Kendaraan</label><select id="serviceVehicle" required>${vehicleOptions()}</select></div>
+            <div class="form-grid"><div class="field"><label for="serviceDate">Tanggal service</label><input id="serviceDate" type="date" value="${todayDate()}" required /></div><div class="field"><label for="serviceKm">Kilometer</label><input id="serviceKm" type="number" min="0" required /></div></div>
+            <div class="form-grid"><div class="field"><label for="serviceType">Jenis service</label><input id="serviceType" required placeholder="Service berkala" /></div><div class="field"><label for="serviceWorkshop">Nama bengkel</label><input id="serviceWorkshop" placeholder="Nama bengkel" /></div></div>
+            <div class="field"><label for="serviceCost">Biaya service</label><div class="currency-input"><span>Rp</span><input id="serviceCost" type="text" inputmode="numeric" placeholder="0" /></div></div>
+            <div class="field"><label for="serviceNote">Catatan service</label><textarea id="serviceNote"></textarea></div>
+            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">Simpan Service</button></div>
+          </form>
+        `;
+        showModal();
+        attachRupiahInput("#serviceCost");
+        document.querySelector("#vehicleServiceForm").addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const cost = parseFormattedNumber(document.querySelector("#serviceCost").value);
+          const serviceKm = Number(document.querySelector("#serviceKm").value || 0);
+          if (cost < 0 || serviceKm < 0) return alert("Biaya dan kilometer tidak boleh negatif.");
+          const record = { id: id(), vehicleId: document.querySelector("#serviceVehicle").value, serviceDate: document.querySelector("#serviceDate").value, serviceKm, serviceType: document.querySelector("#serviceType").value.trim(), workshop: document.querySelector("#serviceWorkshop").value.trim(), cost, note: document.querySelector("#serviceNote").value.trim() };
+          record.transactionId = upsertVehicleTransaction(record, "Service", cost, record.serviceDate, record.note || record.serviceType);
+          state.vehicleServices.push(record);
+          closeModal();
+          await persistChanges("Riwayat service tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+        });
+      }
+
+      function openVehicleOilForm() {
+        if (!requireSignedIn() || !requireVehicleData()) return;
+        document.querySelector("#modalTitle").textContent = "Tambah Jadwal Ganti Oli";
+        document.querySelector("#modalBody").innerHTML = `
+          <form class="form" id="vehicleOilForm">
+            <div class="field"><label for="oilVehicle">Kendaraan</label><select id="oilVehicle" required>${vehicleOptions()}</select></div>
+            <div class="form-grid"><div class="field"><label for="oilDate">Tanggal terakhir ganti oli</label><input id="oilDate" type="date" value="${todayDate()}" required /></div><div class="field"><label for="oilKm">Kilometer terakhir</label><input id="oilKm" type="number" min="0" required /></div></div>
+            <div class="form-grid"><div class="field"><label for="oilIntervalKm">Interval kilometer</label><input id="oilIntervalKm" type="number" min="0" value="5000" required /></div><div class="field"><label for="oilIntervalMonths">Interval bulan</label><input id="oilIntervalMonths" type="number" min="0" value="6" required /></div></div>
+            <div class="form-grid"><div class="field"><label for="oilBrand">Merk oli</label><input id="oilBrand" placeholder="Shell, Yamalube, dll" /></div><div class="field"><label for="oilCost">Biaya oli</label><div class="currency-input"><span>Rp</span><input id="oilCost" type="text" inputmode="numeric" placeholder="0" /></div></div></div>
+            <div class="field"><label for="oilNote">Catatan</label><textarea id="oilNote"></textarea></div>
+            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">Simpan Oli</button></div>
+          </form>
+        `;
+        showModal();
+        attachRupiahInput("#oilCost");
+        document.querySelector("#vehicleOilForm").addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const cost = parseFormattedNumber(document.querySelector("#oilCost").value);
+          const record = { id: id(), vehicleId: document.querySelector("#oilVehicle").value, lastOilDate: document.querySelector("#oilDate").value, lastOilKm: Number(document.querySelector("#oilKm").value || 0), intervalKm: Number(document.querySelector("#oilIntervalKm").value || 0), intervalMonths: Number(document.querySelector("#oilIntervalMonths").value || 0), oilBrand: document.querySelector("#oilBrand").value.trim(), cost, note: document.querySelector("#oilNote").value.trim() };
+          if ([cost, record.lastOilKm, record.intervalKm, record.intervalMonths].some((value) => value < 0)) return alert("Biaya, kilometer, dan interval tidak boleh negatif.");
+          record.transactionId = upsertVehicleTransaction(record, "Oli", cost, record.lastOilDate, record.note || `Ganti oli ${record.oilBrand}`);
+          state.vehicleOilChanges.push(record);
+          closeModal();
+          await persistChanges("Jadwal oli tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+        });
+      }
+
+      function openVehiclePartForm() {
+        if (!requireSignedIn() || !requireVehicleData()) return;
+        document.querySelector("#modalTitle").textContent = "Tambah Penggantian Part";
+        document.querySelector("#modalBody").innerHTML = `
+          <form class="form" id="vehiclePartForm">
+            <div class="field"><label for="partVehicle">Kendaraan</label><select id="partVehicle" required>${vehicleOptions()}</select></div>
+            <div class="form-grid"><div class="field"><label for="partName">Nama part</label><input id="partName" required placeholder="Ban, aki, kampas rem" /></div><div class="field"><label for="partDate">Tanggal penggantian</label><input id="partDate" type="date" value="${todayDate()}" required /></div></div>
+            <div class="form-grid"><div class="field"><label for="partKm">Kilometer saat diganti</label><input id="partKm" type="number" min="0" required /></div><div class="field"><label for="partLifeKm">Estimasi umur kilometer</label><input id="partLifeKm" type="number" min="0" value="10000" /></div></div>
+            <div class="form-grid"><div class="field"><label for="partLifeMonths">Estimasi umur bulan</label><input id="partLifeMonths" type="number" min="0" value="12" /></div><div class="field"><label for="partCost">Biaya part</label><div class="currency-input"><span>Rp</span><input id="partCost" type="text" inputmode="numeric" placeholder="0" /></div></div></div>
+            <div class="field"><label for="partNote">Catatan</label><textarea id="partNote"></textarea></div>
+            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">Simpan Part</button></div>
+          </form>
+        `;
+        showModal();
+        attachRupiahInput("#partCost");
+        document.querySelector("#vehiclePartForm").addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const cost = parseFormattedNumber(document.querySelector("#partCost").value);
+          const record = { id: id(), vehicleId: document.querySelector("#partVehicle").value, partName: document.querySelector("#partName").value.trim(), replacementDate: document.querySelector("#partDate").value, replacementKm: Number(document.querySelector("#partKm").value || 0), lifeKm: Number(document.querySelector("#partLifeKm").value || 0), lifeMonths: Number(document.querySelector("#partLifeMonths").value || 0), cost, note: document.querySelector("#partNote").value.trim() };
+          if ([cost, record.replacementKm, record.lifeKm, record.lifeMonths].some((value) => value < 0)) return alert("Biaya, kilometer, dan estimasi umur tidak boleh negatif.");
+          record.transactionId = upsertVehicleTransaction(record, "Spare Part", cost, record.replacementDate, record.note || `Ganti ${record.partName}`);
+          state.vehicleParts.push(record);
+          closeModal();
+          await persistChanges("Data part tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+        });
+      }
+
+      function openVehicleTaxForm() {
+        if (!requireSignedIn() || !requireVehicleData()) return;
+        document.querySelector("#modalTitle").textContent = "Tambah Pajak Kendaraan";
+        document.querySelector("#modalBody").innerHTML = `
+          <form class="form" id="vehicleTaxForm">
+            <div class="field"><label for="taxVehicle">Kendaraan</label><select id="taxVehicle" required>${vehicleOptions()}</select></div>
+            <div class="form-grid"><div class="field"><label for="taxAnnualDue">Jatuh tempo tahunan</label><input id="taxAnnualDue" type="date" required /></div><div class="field"><label for="taxFiveYearDue">Jatuh tempo 5 tahunan</label><input id="taxFiveYearDue" type="date" /></div></div>
+            <div class="form-grid"><div class="field"><label for="taxCost">Estimasi biaya pajak</label><div class="currency-input"><span>Rp</span><input id="taxCost" type="text" inputmode="numeric" placeholder="0" /></div></div><div class="field"><label for="taxStatus">Status pembayaran</label><select id="taxStatus"><option value="unpaid">Belum dibayar</option><option value="paid">Sudah dibayar</option></select></div></div>
+            <div class="field"><label for="taxPaidDate">Tanggal pembayaran</label><input id="taxPaidDate" type="date" /></div>
+            <div class="field"><label for="taxNote">Catatan</label><textarea id="taxNote"></textarea></div>
+            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">Simpan Pajak</button></div>
+          </form>
+        `;
+        showModal();
+        attachRupiahInput("#taxCost");
+        document.querySelector("#vehicleTaxForm").addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const estimatedCost = parseFormattedNumber(document.querySelector("#taxCost").value);
+          if (estimatedCost < 0) return alert("Biaya pajak tidak boleh negatif.");
+          const record = { id: id(), vehicleId: document.querySelector("#taxVehicle").value, annualDueDate: document.querySelector("#taxAnnualDue").value, fiveYearDueDate: document.querySelector("#taxFiveYearDue").value, estimatedCost, status: document.querySelector("#taxStatus").value, paidDate: document.querySelector("#taxPaidDate").value, note: document.querySelector("#taxNote").value.trim() };
+          if (record.status === "paid" && !record.paidDate) return alert("Tanggal pembayaran wajib diisi jika pajak sudah dibayar.");
+          if (record.status === "paid") record.transactionId = upsertVehicleTransaction(record, "Pajak", estimatedCost, record.paidDate, record.note || "Pajak kendaraan");
+          state.vehicleTaxes.push(record);
+          closeModal();
+          await persistChanges("Data pajak tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+        });
+      }
+
+      function openVehicleExpenseForm() {
+        if (!requireSignedIn() || !requireVehicleData()) return;
+        document.querySelector("#modalTitle").textContent = "Tambah Biaya Kendaraan";
+        document.querySelector("#modalBody").innerHTML = `
+          <form class="form" id="vehicleExpenseForm">
+            <div class="form-grid"><div class="field"><label for="expenseVehicle">Kendaraan</label><select id="expenseVehicle" required>${vehicleOptions()}</select></div><div class="field"><label for="expenseType">Jenis biaya</label><select id="expenseType"><option>Bensin</option><option>Lainnya</option></select></div></div>
+            <div class="form-grid"><div class="field"><label for="expenseDate">Tanggal</label><input id="expenseDate" type="date" value="${todayDate()}" required /></div><div class="field"><label for="expenseAmount">Nominal</label><div class="currency-input"><span>Rp</span><input id="expenseAmount" type="text" inputmode="numeric" required placeholder="0" /></div></div></div>
+            <div class="field"><label for="expenseNote">Catatan</label><textarea id="expenseNote" placeholder="Contoh: Bensin full tank"></textarea></div>
+            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">Simpan Biaya</button></div>
+          </form>
+        `;
+        showModal();
+        attachRupiahInput("#expenseAmount");
+        document.querySelector("#vehicleExpenseForm").addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const amount = parseFormattedNumber(document.querySelector("#expenseAmount").value);
+          if (amount < 0) return alert("Nominal biaya tidak boleh negatif.");
+          const record = { id: id(), vehicleId: document.querySelector("#expenseVehicle").value };
+          upsertVehicleTransaction(record, document.querySelector("#expenseType").value, amount, document.querySelector("#expenseDate").value, document.querySelector("#expenseNote").value.trim() || document.querySelector("#expenseType").value);
+          closeModal();
+          await persistChanges("Biaya kendaraan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+        });
+      }
+
       function openPinForm() {
         if (!requireSignedIn()) return;
         document.querySelector("#modalTitle").textContent = "Atur PIN";
@@ -2111,6 +2608,11 @@
               ${table("Tabungan", ["Judul", "Kategori", "Target", "Terkumpul", "Target Tanggal"], state.savings.map((item) => [item.title, item.category, item.target, savingsBalance(item), item.targetDate]))}
               ${table("Reminder Tagihan", ["Nama", "Kategori", "Nominal", "Jatuh Tempo", "Catatan", "Status"], state.billReminders.map((item) => [item.title, item.category, item.amount, item.dueDate, item.note, item.status]))}
               ${table("Transaksi Berulang", ["Jenis", "Kategori", "Deskripsi", "Nominal", "Tanggal Bulanan", "Status"], state.recurring.map((item) => [item.type, item.category, item.description, item.amount, item.day, item.active ? "Aktif" : "Nonaktif"]))}
+              ${table("Kendaraan", ["Nama", "Merk", "Model", "Tahun", "Plat", "Jenis", "Kilometer"], state.vehicles.map((item) => [item.name, item.brand, item.model, item.year, item.plate, item.type, item.currentKm]))}
+              ${table("Service Kendaraan", ["Kendaraan", "Tanggal", "Kilometer", "Jenis", "Bengkel", "Biaya"], state.vehicleServices.map((item) => [vehicleName(item.vehicleId), item.serviceDate, item.serviceKm, item.serviceType, item.workshop, item.cost]))}
+              ${table("Ganti Oli", ["Kendaraan", "Terakhir", "KM Terakhir", "KM Berikutnya", "Tanggal Berikutnya", "Biaya"], state.vehicleOilChanges.map((item) => [vehicleName(item.vehicleId), item.lastOilDate, item.lastOilKm, oilNextKm(item), oilNextDate(item), item.cost]))}
+              ${table("Part Kendaraan", ["Kendaraan", "Part", "Tanggal", "KM", "Jadwal Berikutnya", "Biaya"], state.vehicleParts.map((item) => [vehicleName(item.vehicleId), item.partName, item.replacementDate, item.replacementKm, partNextDate(item), item.cost]))}
+              ${table("Pajak Kendaraan", ["Kendaraan", "Tahunan", "5 Tahunan", "Biaya", "Status", "Tanggal Bayar"], state.vehicleTaxes.map((item) => [vehicleName(item.vehicleId), item.annualDueDate, item.fiveYearDueDate, item.estimatedCost, item.status, item.paidDate]))}
             </body>
           </html>
         `;
@@ -2163,6 +2665,11 @@
             state.savings = normalized.savings;
             state.billReminders = normalized.billReminders;
             state.recurring = normalized.recurring;
+            state.vehicles = normalized.vehicles;
+            state.vehicleServices = normalized.vehicleServices;
+            state.vehicleOilChanges = normalized.vehicleOilChanges;
+            state.vehicleParts = normalized.vehicleParts;
+            state.vehicleTaxes = normalized.vehicleTaxes;
             state.categories = normalized.categories;
             state.wallets = normalized.wallets;
             state.deleted = normalized.deleted;
@@ -2675,6 +3182,12 @@
         if (opener?.dataset.openForm === "changelog") openChangelogPopup();
         if (opener?.dataset.openForm === "licenses") openLicensesPopup();
         if (opener?.dataset.openForm === "monthlyReset") openMonthlyResetForm();
+        if (opener?.dataset.openForm === "vehicle") openVehicleForm();
+        if (opener?.dataset.openForm === "vehicleService") openVehicleServiceForm();
+        if (opener?.dataset.openForm === "vehicleOil") openVehicleOilForm();
+        if (opener?.dataset.openForm === "vehiclePart") openVehiclePartForm();
+        if (opener?.dataset.openForm === "vehicleTax") openVehicleTaxForm();
+        if (opener?.dataset.openForm === "vehicleExpense") openVehicleExpenseForm();
 
         const passwordToggle = event.target.closest("[data-toggle-password]");
         if (passwordToggle) {
@@ -2718,6 +3231,46 @@
         const savingsEntryButton = event.target.closest("[data-savings-entry]");
         if (savingsEntryButton) {
           openSavingsEntryForm(savingsEntryButton.dataset.goalId, savingsEntryButton.dataset.savingsEntry);
+        }
+
+        const vehicleDeleteButton = event.target.closest("[data-delete-vehicle]");
+        if (vehicleDeleteButton) {
+          if (!requireSignedIn()) return;
+          const target = state.vehicles.find((item) => item.id === vehicleDeleteButton.dataset.deleteVehicle);
+          if (!target) return;
+          const relatedCount = state.vehicleServices.filter((item) => item.vehicleId === target.id).length
+            + state.vehicleOilChanges.filter((item) => item.vehicleId === target.id).length
+            + state.vehicleParts.filter((item) => item.vehicleId === target.id).length
+            + state.vehicleTaxes.filter((item) => item.vehicleId === target.id).length
+            + vehicleTransactions().filter((item) => item.vehicleId === target.id).length;
+          if (!confirm(`Hapus kendaraan "${target.name}"${relatedCount ? " beserta data terkaitnya" : ""}?`)) return;
+          markDeleted("vehicles", target.id);
+          state.vehicles = state.vehicles.filter((item) => item.id !== target.id);
+          for (const collection of ["vehicleServices", "vehicleOilChanges", "vehicleParts", "vehicleTaxes"]) {
+            state[collection].filter((item) => item.vehicleId === target.id).forEach((item) => {
+              markDeleted(collection, item.id);
+              removeVehicleTransaction(item);
+            });
+            state[collection] = state[collection].filter((item) => item.vehicleId !== target.id);
+          }
+          vehicleTransactions().filter((item) => item.vehicleId === target.id).forEach((item) => markDeleted("transactions", item.id));
+          state.transactions = state.transactions.filter((item) => item.vehicleId !== target.id);
+          await persistChanges("Data kendaraan sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+          return;
+        }
+
+        const vehicleRecordDeleteButton = event.target.closest("[data-delete-vehicle-record]");
+        if (vehicleRecordDeleteButton) {
+          if (!requireSignedIn()) return;
+          const collection = vehicleRecordDeleteButton.dataset.deleteVehicleRecord;
+          const target = state[collection]?.find((item) => item.id === vehicleRecordDeleteButton.dataset.recordId);
+          if (target && confirm("Hapus data kendaraan ini dan transaksi terkaitnya?")) {
+            markDeleted(collection, target.id);
+            removeVehicleTransaction(target);
+            state[collection] = state[collection].filter((item) => item.id !== target.id);
+            await persistChanges("Data kendaraan sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+          }
+          return;
         }
 
         const categoryDeleteButton = event.target.closest("[data-delete-category]");
@@ -2858,6 +3411,9 @@
         renderDailyExpenses();
       });
       document.querySelector("#typeFilter").addEventListener("change", renderTransactions);
+      document.querySelector("#vehicleExpenseVehicleFilter").addEventListener("change", renderVehicleExpenses);
+      document.querySelector("#vehicleExpenseMonthFilter").addEventListener("change", renderVehicleExpenses);
+      document.querySelector("#vehicleExpenseTypeFilter").addEventListener("change", renderVehicleExpenses);
       document.querySelector("#exportCsvButton").addEventListener("click", exportCsv);
       document.querySelector("#exportJsonButton").addEventListener("click", exportJson);
       document.querySelector("#importJsonFile").addEventListener("change", importJson);
@@ -2923,9 +3479,14 @@
           state.savings = normalized.savings;
           state.billReminders = normalized.billReminders;
           state.recurring = normalized.recurring;
+          state.vehicles = normalized.vehicles;
+          state.vehicleServices = normalized.vehicleServices;
+          state.vehicleOilChanges = normalized.vehicleOilChanges;
+          state.vehicleParts = normalized.vehicleParts;
+          state.vehicleTaxes = normalized.vehicleTaxes;
           state.categories = normalized.categories;
           state.wallets = normalized.wallets;
-          state.deleted = { transactions: [], debts: [], savings: [], billReminders: [], recurring: [] };
+          state.deleted = { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [] };
           state.settings = normalized.settings;
           renderAll();
         }
@@ -2939,7 +3500,12 @@
           state.savings = [];
           state.billReminders = [];
           state.recurring = [];
-          state.deleted = { transactions: [], debts: [], savings: [], billReminders: [], recurring: [] };
+          state.vehicles = [];
+          state.vehicleServices = [];
+          state.vehicleOilChanges = [];
+          state.vehicleParts = [];
+          state.vehicleTaxes = [];
+          state.deleted = { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [] };
           renderAll();
         }
       });

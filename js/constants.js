@@ -12,7 +12,7 @@ window.AppConstants = {
     { quote: "Anggaran bukan batasan, tapi peta agar tujuan keuangan lebih dekat.", author: "Catatan Keuangan" },
   ],
   savingCategories: ["Dana Darurat", "Pendidikan", "Pernikahan", "Rumah", "Liburan", "Kendaraan", "Dana Pensiun", "Kesehatan", "Ibadah", "Lainnya"],
-  defaultCategories: ["Makanan", "Transportasi", "Tagihan", "Belanja", "Kesehatan", "Hiburan", "Pendidikan", "Lainnya"],
+  defaultCategories: ["Makanan", "Transportasi", "Tagihan", "Belanja", "Kesehatan", "Hiburan", "Pendidikan", "Kendaraan", "Lainnya"],
   rupiah: new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",

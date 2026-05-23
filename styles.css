@@ -954,6 +954,44 @@
         align-items: start;
       }
 
+      .vehicle-layout {
+        display: grid;
+        gap: 14px;
+      }
+
+      .vehicle-dashboard {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
+        padding: 16px;
+      }
+
+      .vehicle-card {
+        min-height: 0;
+      }
+
+      .vehicle-costs {
+        display: grid;
+        gap: 7px;
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 750;
+      }
+
+      .vehicle-costs strong {
+        color: var(--on-surface);
+      }
+
+      .compact-stats {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        padding: 0 16px 14px;
+      }
+
+      .compact-stats .stat-card {
+        min-height: 100px;
+      }
+
       .account-stack {
         display: grid;
         gap: 14px;
@@ -1366,6 +1404,7 @@
         .content-grid,
         .report-grid,
         .budget-page-grid,
+        .compact-stats,
         .account-grid {
           grid-template-columns: 1fr;
         }
@@ -1393,7 +1432,7 @@
         }
 
         .nav {
-          grid-template-columns: repeat(5, minmax(0, 1fr));
+          grid-template-columns: repeat(6, minmax(0, 1fr));
           gap: 4px;
         }
 

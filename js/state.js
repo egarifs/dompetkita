@@ -54,6 +54,11 @@ window.AppState = {
       savings: window.AppState.deletionList(data, "savings"),
       billReminders: window.AppState.deletionList(data, "billReminders"),
       recurring: window.AppState.deletionList(data, "recurring"),
+      vehicles: window.AppState.deletionList(data, "vehicles"),
+      vehicleServices: window.AppState.deletionList(data, "vehicleServices"),
+      vehicleOilChanges: window.AppState.deletionList(data, "vehicleOilChanges"),
+      vehicleParts: window.AppState.deletionList(data, "vehicleParts"),
+      vehicleTaxes: window.AppState.deletionList(data, "vehicleTaxes"),
     };
     return {
       transactions: window.AppState.withoutDeleted(Array.isArray(data.transactions) ? data.transactions : [], deleted.transactions),
@@ -62,6 +67,11 @@ window.AppState = {
       savings: window.AppState.withoutDeleted(Array.isArray(data.savings) ? data.savings : [], deleted.savings),
       billReminders: window.AppState.withoutDeleted(Array.isArray(data.billReminders) ? data.billReminders : [], deleted.billReminders),
       recurring: window.AppState.withoutDeleted(Array.isArray(data.recurring) ? data.recurring : [], deleted.recurring),
+      vehicles: window.AppState.withoutDeleted(Array.isArray(data.vehicles) ? data.vehicles : [], deleted.vehicles),
+      vehicleServices: window.AppState.withoutDeleted(Array.isArray(data.vehicleServices) ? data.vehicleServices : [], deleted.vehicleServices),
+      vehicleOilChanges: window.AppState.withoutDeleted(Array.isArray(data.vehicleOilChanges) ? data.vehicleOilChanges : [], deleted.vehicleOilChanges),
+      vehicleParts: window.AppState.withoutDeleted(Array.isArray(data.vehicleParts) ? data.vehicleParts : [], deleted.vehicleParts),
+      vehicleTaxes: window.AppState.withoutDeleted(Array.isArray(data.vehicleTaxes) ? data.vehicleTaxes : [], deleted.vehicleTaxes),
       categories: Array.isArray(data.categories) && data.categories.length ? data.categories : [...defaultCategories],
       wallets: Array.isArray(data.wallets) && data.wallets.length ? data.wallets : ["Tunai", "Bank"],
       deleted,

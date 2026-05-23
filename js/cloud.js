@@ -17,7 +17,12 @@ window.AppCloud = {
         state?.debts?.length ||
         state?.savings?.length ||
         state?.billReminders?.length ||
-        state?.recurring?.length,
+        state?.recurring?.length ||
+        state?.vehicles?.length ||
+        state?.vehicleServices?.length ||
+        state?.vehicleOilChanges?.length ||
+        state?.vehicleParts?.length ||
+        state?.vehicleTaxes?.length,
     );
   },
 
