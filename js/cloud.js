@@ -121,14 +121,13 @@ window.AppCloud = {
     cloudSync.savePromise = (async () => {
       try {
         await window.AppCloud.ensureCloudSession(client);
-        const { error } = await client.from(cloudConfig.table).upsert({
+        const { data, error } = await client.from(cloudConfig.table).upsert({
           user_id: userKey,
           payload: normalizeState(state),
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "user_id" });
+        }, { onConflict: "user_id" }).select("updated_at").single();
         if (error) throw error;
         cloudSync.loadedUsers.add(userKey);
-        cloudSync.lastSyncedAt = new Date().toISOString();
+        cloudSync.lastSyncedAt = data?.updated_at || new Date().toISOString();
         cloudSync.lastError = "";
         return true;
       } catch (error) {
@@ -187,7 +186,6 @@ window.AppCloud = {
           const row = event.new || {};
           if (!row.payload) return;
           const remoteAt = row.updated_at || new Date().toISOString();
-          if (cloudSync.lastSyncedAt && new Date(remoteAt) <= new Date(cloudSync.lastSyncedAt)) return;
           applyCloudPayload(row.payload, remoteAt);
         },
       )

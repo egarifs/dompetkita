@@ -4,6 +4,22 @@ create table if not exists public.finance_snapshots (
   updated_at timestamptz not null default now()
 );
 
+create or replace function public.set_finance_snapshot_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists set_finance_snapshot_updated_at on public.finance_snapshots;
+create trigger set_finance_snapshot_updated_at
+before update on public.finance_snapshots
+for each row
+execute function public.set_finance_snapshot_updated_at();
+
 alter table public.finance_snapshots enable row level security;
 
 drop policy if exists "Users can read their own finance snapshot" on public.finance_snapshots;
