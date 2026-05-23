@@ -476,6 +476,18 @@
         return window.AppState.tx(id(), type, date, category, description, amount);
       }
 
+      function transactionRecord(type, date, category, description, amount, meta = {}) {
+        return window.AppState.tx(id(), type, date, category, description, amount, meta);
+      }
+
+      function updateTransactionRecord(target, values) {
+        Object.assign(target, {
+          ...values,
+          amount: Number(values.amount || 0),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
       function savingsEntry(type, date, amount, note) {
         return window.AppState.savingsEntry(id(), type, date, amount, note);
       }
@@ -543,17 +555,20 @@
           subcategory,
           amount: value,
           description,
+          sourceModule: "vehicles",
+          sourceId: record.id,
           vehicleId: record.vehicleId,
           vehicleRecordId: record.id,
           vehicleRecordType: subcategory,
+          updatedAt: new Date().toISOString(),
         };
         if (existing) {
-          Object.assign(existing, payload);
+          updateTransactionRecord(existing, payload);
           return existing.id;
         }
-        const transactionId = id();
-        state.transactions.push({ id: transactionId, ...payload });
-        return transactionId;
+        const transaction = transactionRecord("expense", date, "Kendaraan", description, value, payload);
+        state.transactions.push(transaction);
+        return transaction.id;
       }
 
       function removeVehicleTransaction(record) {
@@ -742,6 +757,15 @@
         `;
       }
 
+      function editIcon() {
+        return `
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+            <path d="M14 7l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        `;
+      }
+
       function transactionRows(items, limit = null) {
         const visible = [...items].sort((a, b) => b.date.localeCompare(a.date)).slice(0, limit ?? items.length);
         if (!visible.length) {
@@ -769,6 +793,9 @@
                   <td><span class="pill ${item.type}">${item.type === "income" ? "Pemasukan" : "Pengeluaran"}</span></td>
                   <td class="amount ${item.type}">${item.type === "income" ? "+" : "-"} ${money(item.amount)}</td>
                   <td>
+                    <button class="icon-button" type="button" title="Edit transaksi" data-edit-transaction="${item.id}">
+                      ${editIcon()}
+                    </button>
                     <button class="icon-button" type="button" title="Hapus transaksi" data-delete-transaction="${item.id}">
                       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                         <path d="M5 7h14M10 11v6M14 11v6M8 7l1-3h6l1 3M7 7l1 13h8l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -1468,57 +1495,60 @@
         document.querySelector("#addBlock").classList.remove("open");
       }
 
-      function openTransactionForm() {
+      function openTransactionForm(transactionId = "") {
         if (!currentUser) {
           requireSignedIn();
           return;
         }
-        if (isGuest() && guestTransactionAdds >= 3) {
+        const editingTransaction = transactionId ? state.transactions.find((item) => item.id === transactionId) : null;
+        if (!editingTransaction && isGuest() && guestTransactionAdds >= 3) {
           alert("Mode tamu hanya bisa menambahkan 3 transaksi. Silakan login atau daftar akun untuk melanjutkan.");
           openAuthRequiredModal();
           return;
         }
-        document.querySelector("#modalTitle").textContent = "Tambah Transaksi";
+        document.querySelector("#modalTitle").textContent = editingTransaction ? "Edit Transaksi" : "Tambah Transaksi";
+        const selectedType = editingTransaction?.type || "expense";
+        const selectedCategory = editingTransaction?.category || categories[0] || "Lainnya";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="transactionForm">
             <div class="form-grid">
               <div class="field">
                 <label for="transactionType">Tipe</label>
                 <select id="transactionType" required>
-                  <option value="expense">Pengeluaran</option>
-                  <option value="income">Pemasukan</option>
+                  <option value="expense" ${selectedType === "expense" ? "selected" : ""}>Pengeluaran</option>
+                  <option value="income" ${selectedType === "income" ? "selected" : ""}>Pemasukan</option>
                 </select>
               </div>
               <div class="field">
                 <label for="transactionDate">Tanggal</label>
-                <input id="transactionDate" type="date" value="${todayDate()}" required />
+                <input id="transactionDate" type="date" value="${editingTransaction?.date || todayDate()}" required />
               </div>
             </div>
             <div class="form-grid">
               <div class="field">
                 <label for="transactionCategory">Kategori</label>
-                <select id="transactionCategory">${categories.map((category) => `<option value="${category}">${category}</option>`).join("")}</select>
+                <select id="transactionCategory">${categories.map((category) => `<option value="${category}" ${category === selectedCategory ? "selected" : ""}>${category}</option>`).join("")}</select>
               </div>
               <div class="field">
                 <label for="transactionAmount">Nominal</label>
                 <div class="currency-input">
                   <span>Rp</span>
-                  <input id="transactionAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="0" required />
+                  <input id="transactionAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${editingTransaction ? formatNumber(editingTransaction.amount) : ""}" required />
                 </div>
               </div>
             </div>
             <div class="field">
               <label for="transactionDescription">Deskripsi (opsional)</label>
-              <textarea id="transactionDescription" placeholder="Contoh: belanja mingguan"></textarea>
+              <textarea id="transactionDescription" placeholder="Contoh: belanja mingguan">${escapeHtml(editingTransaction?.description || "")}</textarea>
             </div>
             <p class="form-status hidden" id="transactionStatus"></p>
             <div class="row-actions">
-              <label class="remember-row" for="addAnotherTransaction">
+              <label class="remember-row ${editingTransaction ? "hidden" : ""}" for="addAnotherTransaction">
                 <input id="addAnotherTransaction" type="checkbox" />
                 Tambah Lagi
               </label>
               <button class="button" type="button" data-close-modal>Batal</button>
-              <button class="button primary" type="submit">Simpan Transaksi</button>
+              <button class="button primary" type="submit">${editingTransaction ? "Simpan Perubahan" : "Simpan Transaksi"}</button>
             </div>
           </form>
         `;
@@ -1526,34 +1556,41 @@
         attachRupiahInput("#transactionAmount");
         document.querySelector("#transactionForm").addEventListener("submit", async (event) => {
           event.preventDefault();
-          if (isGuest() && guestTransactionAdds >= 3) {
+          if (!editingTransaction && isGuest() && guestTransactionAdds >= 3) {
             alert("Mode tamu hanya bisa menambahkan 3 transaksi. Silakan login atau daftar akun untuk melanjutkan.");
             closeModal();
             openAuthRequiredModal();
             return;
           }
           const form = event.currentTarget;
-          const addAnother = document.querySelector("#addAnotherTransaction").checked;
+          const addAnother = !editingTransaction && document.querySelector("#addAnotherTransaction").checked;
           const status = document.querySelector("#transactionStatus");
           const submitButton = event.submitter || document.querySelector("#transactionForm .button.primary");
           submitButton.disabled = true;
           submitButton.textContent = "Menyimpan...";
           status.className = "form-status hidden";
           status.textContent = "";
-          state.transactions.push({
-            id: id(),
+          const values = {
             type: document.querySelector("#transactionType").value,
             date: document.querySelector("#transactionDate").value,
             category: document.querySelector("#transactionCategory").value,
             amount: parseFormattedNumber(document.querySelector("#transactionAmount").value),
             description: document.querySelector("#transactionDescription").value.trim(),
-          });
-          if (isGuest()) guestTransactionAdds += 1;
+            sourceModule: editingTransaction?.sourceModule || "manual",
+            sourceId: editingTransaction?.sourceId || "",
+            subcategory: editingTransaction?.subcategory || "",
+          };
+          if (editingTransaction) {
+            updateTransactionRecord(editingTransaction, values);
+          } else {
+            state.transactions.push(transactionRecord(values.type, values.date, values.category, values.description, values.amount, values));
+          }
+          if (!editingTransaction && isGuest()) guestTransactionAdds += 1;
           saveState();
           const saved = await flushCloudSave();
           renderAll();
           submitButton.disabled = false;
-          submitButton.textContent = "Simpan Transaksi";
+          submitButton.textContent = editingTransaction ? "Simpan Perubahan" : "Simpan Transaksi";
 
           if (addAnother && !(isGuest() && guestTransactionAdds >= 3)) {
             form.reset();
@@ -1569,7 +1606,9 @@
           }
 
           closeModal();
-          if (isGuest() && guestTransactionAdds >= 3) {
+          if (editingTransaction) {
+            showSnackbar(saved || !isCloudSyncAllowed() ? "Transaksi berhasil diperbarui." : "Transaksi diperbarui di perangkat, sinkronisasi belum berhasil.", saved || !isCloudSyncAllowed() ? "success" : "error");
+          } else if (isGuest() && guestTransactionAdds >= 3) {
             showSnackbar("Transaksi berhasil disimpan.");
             alert("Mode tamu sudah mencapai batas 3 transaksi. Silakan login atau daftar akun untuk melanjutkan.");
             openAuthRequiredModal();
@@ -2607,7 +2646,7 @@
           <html>
             <head><meta charset="UTF-8" /></head>
             <body>
-              ${table("Transaksi", ["Tanggal", "Kategori", "Deskripsi", "Tipe", "Nominal"], state.transactions.map((item) => [item.date, item.category, item.description, item.type, item.amount]))}
+              ${table("Transaksi", ["Tanggal", "Kategori", "Subkategori", "Deskripsi", "Tipe", "Nominal", "Sumber", "Dibuat", "Diperbarui"], state.transactions.map((item) => [item.date, item.category, item.subcategory || "", item.description, item.type, item.amount, item.sourceModule || "manual", item.createdAt || "", item.updatedAt || ""]))}
               ${table("Anggaran", ["Kategori", "Batas"], state.budgets.map((item) => [item.category, item.limit]))}
               ${table("Hutang Piutang", ["Tanggal", "Jatuh Tempo", "Jenis", "Nama", "Deskripsi", "Nominal", "Status"], state.debts.map((item) => [item.date, item.dueDate, item.kind, item.person, item.description, item.amount, item.status]))}
               ${table("Tabungan", ["Judul", "Kategori", "Target", "Terkumpul", "Target Tanggal"], state.savings.map((item) => [item.title, item.category, item.target, savingsBalance(item), item.targetDate]))}
@@ -2636,15 +2675,11 @@
           const date = `${month}-${String(day).padStart(2, "0")}`;
           const exists = state.transactions.some((transaction) => transaction.recurringId === item.id && monthOf(transaction) === month);
           if (exists) return;
-          state.transactions.push({
-            id: id(),
+          state.transactions.push(transactionRecord(item.type, date, item.category, `${item.description} (berulang)`, Number(item.amount), {
             recurringId: item.id,
-            type: item.type,
-            date,
-            category: item.category,
-            amount: Number(item.amount),
-            description: `${item.description} (berulang)`,
-          });
+            sourceModule: "recurring",
+            sourceId: item.id,
+          }));
           created += 1;
         });
 
@@ -3203,6 +3238,13 @@
         }
 
         if (event.target.closest("[data-close-modal]")) closeModal();
+
+        const editButton = event.target.closest("[data-edit-transaction]");
+        if (editButton) {
+          if (!requireSignedIn()) return;
+          openTransactionForm(editButton.dataset.editTransaction);
+          return;
+        }
 
         const deleteButton = event.target.closest("[data-delete-transaction]");
         if (deleteButton) {

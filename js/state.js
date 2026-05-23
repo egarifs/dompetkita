@@ -22,8 +22,42 @@ window.AppState = {
     return items.filter((item) => !deleted.has(item.id));
   },
 
-  tx(id, type, date, category, description, amount) {
-    return { id, type, date, category, description, amount: Number(amount) };
+  tx(id, type, date, category, description, amount, meta = {}) {
+    const timestamp = meta.createdAt || new Date().toISOString();
+    return {
+      id,
+      type,
+      date,
+      category,
+      description,
+      amount: Number(amount),
+      subcategory: meta.subcategory || "",
+      sourceModule: meta.sourceModule || "manual",
+      sourceId: meta.sourceId || "",
+      createdAt: timestamp,
+      updatedAt: meta.updatedAt || timestamp,
+      ...meta,
+    };
+  },
+
+  normalizeTransaction(item) {
+    const sourceModule = item.sourceModule || (item.vehicleId ? "vehicles" : item.recurringId ? "recurring" : "manual");
+    const sourceId = item.sourceId || item.vehicleRecordId || item.recurringId || "";
+    const timestamp = item.createdAt || (item.date ? `${item.date}T00:00:00.000Z` : new Date().toISOString());
+    return {
+      ...item,
+      id: item.id,
+      type: item.type || "expense",
+      date: item.date || "",
+      category: item.category || "Lainnya",
+      description: item.description || "",
+      amount: Number(item.amount || 0),
+      subcategory: item.subcategory || "",
+      sourceModule,
+      sourceId,
+      createdAt: timestamp,
+      updatedAt: item.updatedAt || timestamp,
+    };
   },
 
   savingsEntry(id, type, date, amount, note) {
@@ -61,7 +95,7 @@ window.AppState = {
       vehicleTaxes: window.AppState.deletionList(data, "vehicleTaxes"),
     };
     return {
-      transactions: window.AppState.withoutDeleted(Array.isArray(data.transactions) ? data.transactions : [], deleted.transactions),
+      transactions: window.AppState.withoutDeleted(Array.isArray(data.transactions) ? data.transactions : [], deleted.transactions).map(window.AppState.normalizeTransaction),
       budgets: Array.isArray(data.budgets) ? data.budgets : [],
       debts: window.AppState.withoutDeleted(Array.isArray(data.debts) ? data.debts : [], deleted.debts),
       savings: window.AppState.withoutDeleted(Array.isArray(data.savings) ? data.savings : [], deleted.savings),
