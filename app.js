@@ -119,6 +119,7 @@
       let users = window.AppAuth.loadUsers(authStorageKey);
       let currentUser = loadSessionUser();
       let guestTransactionAdds = 0;
+      let snackbarTimer = null;
 
 
       function loadUsers() {
@@ -128,6 +129,17 @@
       function saveUsers(nextUsers) {
         users = nextUsers;
         window.AppAuth.saveUsers(authStorageKey, users);
+      }
+
+      function showSnackbar(message, tone = "success") {
+        const snackbar = document.querySelector("#snackbar");
+        if (!snackbar) return;
+        snackbar.textContent = message;
+        snackbar.className = `snackbar show ${tone === "error" ? "error" : ""}`;
+        clearTimeout(snackbarTimer);
+        snackbarTimer = setTimeout(() => {
+          snackbar.className = "snackbar";
+        }, 3200);
       }
 
       function loadRememberedLogin() {
@@ -1140,12 +1152,14 @@
 
           closeModal();
           if (isGuest() && guestTransactionAdds >= 3) {
-            alert("Transaksi berhasil disimpan. Mode tamu sudah mencapai batas 3 transaksi. Silakan login atau daftar akun untuk melanjutkan.");
+            showSnackbar("Transaksi berhasil disimpan.");
+            alert("Mode tamu sudah mencapai batas 3 transaksi. Silakan login atau daftar akun untuk melanjutkan.");
             openAuthRequiredModal();
           } else if (!saved && cloudSync.enabled) {
+            showSnackbar("Transaksi tersimpan di perangkat, sinkronisasi belum berhasil.", "error");
             alert("Transaksi tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
           } else {
-            alert("Transaksi berhasil disimpan.");
+            showSnackbar("Transaksi berhasil disimpan.");
           }
         });
       }
