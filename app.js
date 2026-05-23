@@ -64,7 +64,6 @@
           "nav.addTransaction": "Tambah Transaksi",
           "nav.addDebt": "Tambah Hutang Piutang",
           "nav.budgets": "Anggaran",
-          "nav.vehicles": "Kendaraan",
           "nav.account": "Akun",
           "common.add": "Tambah",
           "account.title": "Akun",
@@ -85,7 +84,6 @@
           "nav.addTransaction": "Add Transaction",
           "nav.addDebt": "Add Debt",
           "nav.budgets": "Budget",
-          "nav.vehicles": "Vehicles",
           "nav.account": "Account",
           "common.add": "Add",
           "account.title": "Account",
@@ -125,7 +123,7 @@
       const state = loadState();
       let categories = state.categories?.length ? state.categories : [...defaultCategories];
       state.categories = categories;
-      const defaultHomeSectionOrder = ["chartBudget", "budgetMonth", "insight", "latestTransactions", "savings", "billReminder"];
+      const defaultHomeSectionOrder = ["chartBudget", "budgetMonth", "insight", "latestTransactions", "savings", "billReminder", "vehicles"];
       state.settings.homeSectionOrder = normalizeHomeSectionOrder(state.settings?.homeSectionOrder);
       let users = window.AppAuth.loadUsers(authStorageKey);
       let currentUser = loadSessionUser();
@@ -948,13 +946,16 @@
       }
 
       function renderVehicleDashboard() {
-        const target = document.querySelector("#vehicleDashboard");
-        if (!target) return;
+        const targets = [document.querySelector("#vehicleDashboard"), document.querySelector("#homeVehicleDashboard")].filter(Boolean);
+        if (!targets.length) return;
         if (!state.vehicles.length) {
-          target.innerHTML = `<div class="empty"><p>Belum ada kendaraan.</p><button class="button primary" type="button" data-open-form="vehicle">Tambah Kendaraan</button></div>`;
+          const empty = `<div class="empty"><p>Belum ada kendaraan.</p><button class="button primary" type="button" data-open-form="vehicle">Tambah Kendaraan</button></div>`;
+          targets.forEach((target) => {
+            target.innerHTML = empty;
+          });
           return;
         }
-        target.innerHTML = state.vehicles.map((vehicle) => {
+        const rows = state.vehicles.map((vehicle) => {
           const oil = latestVehicleOil(vehicle.id);
           const part = nearestVehiclePart(vehicle.id);
           const service = nearestVehicleService(vehicle.id);
@@ -980,6 +981,9 @@
             </article>
           `;
         }).join("");
+        targets.forEach((target) => {
+          target.innerHTML = rows;
+        });
       }
 
       function renderVehicleList() {
@@ -1393,6 +1397,7 @@
           latestTransactions: "Transaksi Terbaru",
           savings: "Tabungan",
           billReminder: "Reminder Tagihan",
+          vehicles: "Kendaraan",
         };
         return labels[section] || section;
       }
