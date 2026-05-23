@@ -943,6 +943,47 @@
         gap: 14px;
       }
 
+      .account-accordion {
+        overflow: hidden;
+      }
+
+      .accordion-summary {
+        cursor: pointer;
+        list-style: none;
+        user-select: none;
+      }
+
+      .accordion-summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .accordion-summary::after {
+        content: "";
+        width: 10px;
+        height: 10px;
+        flex: 0 0 auto;
+        border-right: 2px solid var(--muted);
+        border-bottom: 2px solid var(--muted);
+        transform: rotate(45deg);
+        transition: transform 0.2s ease, border-color 0.2s ease;
+        margin-top: 4px;
+      }
+
+      .accordion-summary:hover::after,
+      .accordion-summary:focus-visible::after {
+        border-color: var(--primary);
+      }
+
+      .accordion-summary:focus-visible {
+        outline: 3px solid var(--primary-container);
+        outline-offset: -6px;
+      }
+
+      .account-accordion[open] > .accordion-summary::after {
+        transform: rotate(225deg);
+        margin-top: 9px;
+      }
+
       .profile-card {
         display: grid;
         gap: 14px;
