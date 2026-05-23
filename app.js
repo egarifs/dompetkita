@@ -1056,6 +1056,23 @@
 
       function applyDarkMode() {
         document.body.classList.toggle("dark", Boolean(state.settings.darkMode));
+        document.documentElement.dataset.theme = state.settings.darkMode ? "business" : "emerald";
+      }
+
+      function applyDaisyClasses(root = document) {
+        root.querySelectorAll(".button").forEach((element) => {
+          element.classList.add("btn");
+          if (element.classList.contains("primary")) element.classList.add("btn-primary");
+          if (element.classList.contains("danger")) element.classList.add("btn-error");
+        });
+        root.querySelectorAll(".panel, .stat-card, .auth-card, .splash-card, .thanks-card").forEach((element) => element.classList.add("card"));
+        root.querySelectorAll(".pill").forEach((element) => element.classList.add("badge"));
+        root.querySelectorAll("input:not([type='checkbox']):not([type='file'])").forEach((element) => element.classList.add("input"));
+        root.querySelectorAll("select").forEach((element) => element.classList.add("select"));
+        root.querySelectorAll("textarea").forEach((element) => element.classList.add("textarea"));
+        root.querySelectorAll("input[type='checkbox']").forEach((element) => element.classList.add("checkbox"));
+        root.querySelectorAll(".modal-card").forEach((element) => element.classList.add("modal-box"));
+        root.querySelectorAll(".snackbar").forEach((element) => element.classList.add("toast", "alert"));
       }
 
       function renderAll() {
@@ -1079,6 +1096,7 @@
         renderDailyExpenses();
         renderRecurring();
         renderAccount();
+        applyDaisyClasses();
       }
 
       function openView(view) {
@@ -1921,7 +1939,7 @@
               <span class="pill">JavaScript</span>
               <span class="pill">Supabase</span>
               <span class="pill">Netlify</span>
-              <span class="pill">Material Design 3</span>
+              <span class="pill">DaisyUI</span>
               <span class="pill">Plus Jakarta Sans</span>
             </div>
           </div>
@@ -1988,6 +2006,7 @@
       }
 
       function showModal() {
+        applyDaisyClasses(document.querySelector("#modal"));
         document.querySelector("#modal").classList.add("open");
       }
 
@@ -2119,6 +2138,7 @@
         document.querySelector("#appShell").classList.add("hidden");
         applyRememberedLogin();
         updateForgotPasswordVisibility();
+        applyDaisyClasses();
       }
 
       function setSplashQuote(quote, author, source = "Internet") {
@@ -2144,6 +2164,7 @@
         document.querySelector("#authScreen").classList.add("hidden");
         document.querySelector("#appShell").classList.add("hidden");
         loadSplashQuote();
+        applyDaisyClasses();
         const button = document.querySelector("#continueToLoginButton");
         const status = document.querySelector("#splashReadStatus");
         button.disabled = true;
