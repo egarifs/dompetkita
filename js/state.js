@@ -69,6 +69,7 @@ window.AppState = {
         reminderEnabled: Boolean(data.settings?.reminderEnabled),
         reminderTime: data.settings?.reminderTime || "20:00",
         darkMode: Boolean(data.settings?.darkMode),
+        cloudSyncEnabled: data.settings?.cloudSyncEnabled !== false,
         language: translations[data.settings?.language] ? data.settings.language : "id",
         pin: data.settings?.pin || "",
         homeSectionOrder: Array.isArray(data.settings?.homeSectionOrder) && data.settings.homeSectionOrder.length

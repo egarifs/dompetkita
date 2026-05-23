@@ -428,7 +428,13 @@
                       <strong data-i18n="account.cloudSync">Sinkronisasi Cloud</strong>
                       <span id="syncStatus">Mode lokal aktif.</span>
                     </div>
-                    <button class="button" id="syncNowButton" type="button">Sync</button>
+                    <div class="row-actions">
+                      <label class="switch" aria-label="Aktifkan Sinkronisasi Cloud">
+                        <input id="cloudSyncToggle" type="checkbox" checked />
+                        <span></span>
+                      </label>
+                      <button class="button" id="syncNowButton" type="button">Sync</button>
+                    </div>
                   </div>
                   <div class="settings-item">
                     <div>

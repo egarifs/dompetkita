@@ -272,6 +272,10 @@
         queueCloudSave();
       }
 
+      function isCloudSyncAllowed() {
+        return Boolean(cloudSync.enabled && state.settings.cloudSyncEnabled !== false);
+      }
+
       function replaceState(nextState) {
         const normalized = normalizeState(nextState);
         state.transactions = normalized.transactions;
@@ -331,6 +335,7 @@
       }
 
       function queueCloudSave() {
+        if (!isCloudSyncAllowed()) return;
         return window.AppCloud.queueCloudSave({
           cloudSync,
           currentUser,
@@ -340,6 +345,7 @@
       }
 
       async function flushCloudSave() {
+        if (!isCloudSyncAllowed()) return true;
         return window.AppCloud.flushCloudSave({
           cloudSync,
           isGuest,
@@ -351,7 +357,7 @@
       async function persistChanges(failedMessage = "Perubahan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.") {
         renderAll();
         const saved = await flushCloudSave();
-        if (!saved && cloudSync.enabled) alert(failedMessage);
+        if (!saved && isCloudSyncAllowed()) alert(failedMessage);
         return saved;
       }
 
@@ -359,6 +365,10 @@
         if (isGuest()) return false;
         if (!cloudSync.enabled) {
           cloudSync.lastError = "Konfigurasi Supabase belum aktif.";
+          return false;
+        }
+        if (!isCloudSyncAllowed()) {
+          cloudSync.lastError = "";
           return false;
         }
         if (!cloudUserKey()) {
@@ -371,6 +381,7 @@
       }
 
       async function loadCloudState(options = {}) {
+        if (!isCloudSyncAllowed()) return;
         return window.AppCloud.loadCloudState({
           cloudSync,
           setupCloudClient: () => setupCloudClient(),
@@ -386,6 +397,7 @@
       }
 
       async function saveCloudState() {
+        if (!isCloudSyncAllowed()) return true;
         return window.AppCloud.saveCloudState({
           cloudSync,
           setupCloudClient: () => setupCloudClient(),
@@ -398,19 +410,20 @@
       }
 
       function syncStatusText() {
+        if (state.settings.cloudSyncEnabled === false) return "Sinkronisasi cloud nonaktif. Data hanya disimpan di perangkat ini.";
         return window.AppCloud.syncStatusText(cloudSync);
       }
 
       function applyCloudPayload(payload, updatedAt) {
-        if (isGuest() || !payload) return;
+        if (isGuest() || !payload || !isCloudSyncAllowed()) return;
         replaceState(mergeStateData(payload, state));
         cloudSync.lastSyncedAt = updatedAt || new Date().toISOString();
         cloudSync.lastError = "";
         renderAll();
-        showSnackbar("Data terbaru sudah disinkronkan.");
       }
 
       function startCloudRealtimeSync() {
+        if (!isCloudSyncAllowed()) return;
         window.AppCloud.startRealtimeSync({
           cloudSync,
           setupCloudClient: () => setupCloudClient(),
@@ -1038,9 +1051,10 @@
         document.querySelector("#profileSyncStatus").textContent = isGuest() ? "Demo" : cloudSync.enabled ? "Cloud" : "Lokal";
         document.querySelector("#appVersionLabel").textContent = `v${appVersion}`;
         document.querySelector("#darkModeToggle").checked = Boolean(state.settings.darkMode);
+        document.querySelector("#cloudSyncToggle").checked = state.settings.cloudSyncEnabled !== false;
         document.querySelector("#languageSelect").value = currentLanguage();
         document.querySelector("#syncStatus").textContent = isGuest() ? "Mode tamu aktif. Login atau registrasi untuk menyimpan data." : syncStatusText();
-        document.querySelector("#syncNowButton").disabled = isGuest() || !cloudSync.enabled || cloudSync.isSaving;
+        document.querySelector("#syncNowButton").disabled = isGuest() || !isCloudSyncAllowed() || cloudSync.isSaving;
         document.querySelector("#reminderStatus").textContent = state.settings.reminderEnabled ? `Aktif pukul ${state.settings.reminderTime}` : "Belum aktif";
         document.querySelector("#walletSummary").textContent = state.wallets.join(", ") || "Belum ada dompet";
         document.querySelector("#categorySummary").textContent = `${categories.length} kategori aktif`;
@@ -1201,8 +1215,8 @@
             document.querySelector("#transactionDate").value = todayDate();
             document.querySelector("#transactionAmount").value = "";
             document.querySelector("#transactionDescription").value = "";
-            status.className = saved || !cloudSync.enabled ? "form-status success" : "form-status error";
-            status.textContent = saved || !cloudSync.enabled
+            status.className = saved || !isCloudSyncAllowed() ? "form-status success" : "form-status error";
+            status.textContent = saved || !isCloudSyncAllowed()
               ? "Transaksi berhasil disimpan. Silakan tambah transaksi berikutnya."
               : "Transaksi tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.";
             document.querySelector("#transactionAmount").focus();
@@ -1214,7 +1228,7 @@
             showSnackbar("Transaksi berhasil disimpan.");
             alert("Mode tamu sudah mencapai batas 3 transaksi. Silakan login atau daftar akun untuk melanjutkan.");
             openAuthRequiredModal();
-          } else if (!saved && cloudSync.enabled) {
+          } else if (!saved && isCloudSyncAllowed()) {
             showSnackbar("Transaksi tersimpan di perangkat, sinkronisasi belum berhasil.", "error");
             alert("Transaksi tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
           } else {
@@ -2127,8 +2141,8 @@
         document.querySelector("#splashScreen").classList.add("hidden");
         document.querySelector("#authScreen").classList.add("hidden");
         document.querySelector("#appShell").classList.remove("hidden");
-        if (!isGuest()) await loadCloudState();
-        if (!isGuest()) startCloudRealtimeSync();
+        if (!isGuest() && isCloudSyncAllowed()) await loadCloudState();
+        if (!isGuest() && isCloudSyncAllowed()) startCloudRealtimeSync();
         renderAll();
       }
 
@@ -2788,14 +2802,18 @@
       document.querySelector("#debtHistoryButton").addEventListener("click", openDebtHistory);
       document.querySelector("#syncNowButton").addEventListener("click", async () => {
         if (!requireSignedIn()) return;
+        if (!isCloudSyncAllowed()) {
+          alert("Sinkronisasi cloud sedang nonaktif. Aktifkan toggle Sinkronisasi Cloud untuk mengirim data ke cloud.");
+          return;
+        }
         const synced = await syncCloudState();
         alert(synced ? "Data berhasil disinkronkan dari cloud." : `Cloud belum bisa disinkronkan.${cloudSync.lastError ? `\n\nDetail: ${cloudSync.lastError}` : ""}`);
       });
       window.addEventListener("focus", () => {
-        if (currentUser && !isGuest() && cloudSync.enabled) syncCloudState({ saveAfterLoad: false });
+        if (currentUser && !isGuest() && isCloudSyncAllowed()) syncCloudState({ saveAfterLoad: false });
       });
       document.addEventListener("visibilitychange", () => {
-        if (!document.hidden && currentUser && !isGuest() && cloudSync.enabled) syncCloudState({ saveAfterLoad: false });
+        if (!document.hidden && currentUser && !isGuest() && isCloudSyncAllowed()) syncCloudState({ saveAfterLoad: false });
       });
       document.querySelector("#applyRecurringButton").addEventListener("click", async () => {
         if (!requireSignedIn()) return;
@@ -2804,6 +2822,22 @@
       document.querySelector("#darkModeToggle").addEventListener("change", (event) => {
         state.settings.darkMode = event.target.checked;
         renderAll();
+      });
+      document.querySelector("#cloudSyncToggle").addEventListener("change", async (event) => {
+        state.settings.cloudSyncEnabled = event.target.checked;
+        cloudSync.lastError = "";
+        if (state.settings.cloudSyncEnabled) {
+          renderAll();
+          if (!isGuest() && isCloudSyncAllowed()) {
+            await loadCloudState();
+            startCloudRealtimeSync();
+          }
+        } else {
+          stopCloudRealtimeSync();
+          clearTimeout(cloudSync.saveTimer);
+          renderAll();
+          showSnackbar("Sinkronisasi cloud nonaktif. Data hanya disimpan lokal.");
+        }
       });
       document.querySelector("#languageSelect").addEventListener("change", (event) => {
         state.settings.language = event.target.value;
