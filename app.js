@@ -24,6 +24,10 @@
         isSaving: false,
         pendingSave: false,
         savePromise: null,
+        channel: null,
+        realtimeUserKey: "",
+        realtimeStatus: "",
+        pollTimer: null,
         lastSyncedAt: null,
         lastError: "",
       };
@@ -348,7 +352,7 @@
         return saved;
       }
 
-      async function syncCloudState() {
+      async function syncCloudState(options = {}) {
         if (isGuest()) return false;
         if (!cloudSync.enabled) {
           cloudSync.lastError = "Konfigurasi Supabase belum aktif.";
@@ -358,12 +362,12 @@
           cloudSync.lastError = "Akun belum terhubung ke Supabase. Silakan logout lalu login kembali.";
           return false;
         }
-        await loadCloudState();
+        await loadCloudState(options);
         renderAll();
         return !cloudSync.lastError;
       }
 
-      async function loadCloudState() {
+      async function loadCloudState(options = {}) {
         return window.AppCloud.loadCloudState({
           cloudSync,
           setupCloudClient: () => setupCloudClient(),
@@ -374,6 +378,7 @@
           emptyState,
           state,
           saveCloudState,
+          saveAfterLoad: options.saveAfterLoad,
         });
       }
 
@@ -391,6 +396,30 @@
 
       function syncStatusText() {
         return window.AppCloud.syncStatusText(cloudSync);
+      }
+
+      function applyCloudPayload(payload, updatedAt) {
+        if (isGuest() || !payload) return;
+        replaceState(mergeStateData(payload, state));
+        cloudSync.lastSyncedAt = updatedAt || new Date().toISOString();
+        cloudSync.lastError = "";
+        renderAll();
+        showSnackbar("Data terbaru sudah disinkronkan.");
+      }
+
+      function startCloudRealtimeSync() {
+        window.AppCloud.startRealtimeSync({
+          cloudSync,
+          setupCloudClient: () => setupCloudClient(),
+          cloudConfig,
+          cloudUserKey,
+          applyCloudPayload,
+          loadCloudState: (options) => loadCloudState(options),
+        });
+      }
+
+      function stopCloudRealtimeSync() {
+        window.AppCloud.stopRealtimeSync(cloudSync);
       }
 
       function normalizeState(data) {
@@ -2015,6 +2044,7 @@
         document.querySelector("#authScreen").classList.add("hidden");
         document.querySelector("#appShell").classList.remove("hidden");
         if (!isGuest()) await loadCloudState();
+        if (!isGuest()) startCloudRealtimeSync();
         renderAll();
       }
 
@@ -2422,6 +2452,7 @@
 
       function logout() {
         localStorage.removeItem(sessionStorageKey);
+        stopCloudRealtimeSync();
         if (cloudSync.enabled) setupCloudClient()?.auth.signOut();
         currentUser = null;
         const stored = loadState();
@@ -2669,6 +2700,12 @@
         if (!requireSignedIn()) return;
         const synced = await syncCloudState();
         alert(synced ? "Data berhasil disinkronkan dari cloud." : `Cloud belum bisa disinkronkan.${cloudSync.lastError ? `\n\nDetail: ${cloudSync.lastError}` : ""}`);
+      });
+      window.addEventListener("focus", () => {
+        if (currentUser && !isGuest() && cloudSync.enabled) syncCloudState({ saveAfterLoad: false });
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && currentUser && !isGuest() && cloudSync.enabled) syncCloudState({ saveAfterLoad: false });
       });
       document.querySelector("#applyRecurringButton").addEventListener("click", async () => {
         if (!requireSignedIn()) return;

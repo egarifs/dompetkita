@@ -60,6 +60,7 @@ window.AppCloud = {
       emptyState,
       state,
       saveCloudState,
+      saveAfterLoad = true,
     } = ctx;
 
     const userKey = cloudUserKey();
@@ -81,10 +82,10 @@ window.AppCloud = {
       if (data?.payload) {
         replaceState(mergeStateData(data.payload, state));
         cloudSync.lastSyncedAt = data.updated_at || new Date().toISOString();
-        await saveCloudState();
+        if (saveAfterLoad) await saveCloudState();
       } else {
         if (!window.AppCloud.hasStateData(state) && typeof emptyState === "function") replaceState(emptyState());
-        await saveCloudState();
+        if (saveAfterLoad) await saveCloudState();
       }
       cloudSync.lastError = "";
     } catch (error) {
@@ -146,12 +147,67 @@ window.AppCloud = {
     return saved;
   },
 
+  stopRealtimeSync(cloudSync) {
+    clearInterval(cloudSync.pollTimer);
+    cloudSync.pollTimer = null;
+    if (cloudSync.channel && cloudSync.client) {
+      cloudSync.client.removeChannel(cloudSync.channel);
+    }
+    cloudSync.channel = null;
+    cloudSync.realtimeUserKey = "";
+  },
+
+  startRealtimeSync(ctx) {
+    const {
+      cloudSync,
+      setupCloudClient,
+      cloudConfig,
+      cloudUserKey,
+      applyCloudPayload,
+      loadCloudState,
+    } = ctx;
+    const userKey = cloudUserKey();
+    const client = setupCloudClient(cloudSync, cloudConfig);
+    if (!cloudSync.enabled || !client || !userKey) return;
+    if (cloudSync.channel && cloudSync.realtimeUserKey === userKey) return;
+
+    window.AppCloud.stopRealtimeSync(cloudSync);
+    cloudSync.realtimeUserKey = userKey;
+    cloudSync.channel = client
+      .channel(`finance-sync-${userKey}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: cloudConfig.table,
+          filter: `user_id=eq.${userKey}`,
+        },
+        (event) => {
+          const row = event.new || {};
+          if (!row.payload) return;
+          const remoteAt = row.updated_at || new Date().toISOString();
+          if (cloudSync.lastSyncedAt && new Date(remoteAt) <= new Date(cloudSync.lastSyncedAt)) return;
+          applyCloudPayload(row.payload, remoteAt);
+        },
+      )
+      .subscribe((status) => {
+        cloudSync.realtimeStatus = status;
+      });
+
+    cloudSync.pollTimer = setInterval(() => {
+      if (document.hidden) return;
+      loadCloudState({ saveAfterLoad: false });
+    }, 30000);
+  },
+
   syncStatusText(cloudSync) {
     if (!cloudSync.enabled) return "Mode lokal aktif. Isi config.js untuk menghubungkan Supabase.";
     if (cloudSync.lastError) return `Cloud bermasalah: ${cloudSync.lastError}`;
     if (cloudSync.isSaving) return "Sedang menyimpan ke cloud...";
     if (!cloudSync.lastSyncedAt) return "Cloud siap, menunggu sinkronisasi pertama.";
     const label = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(new Date(cloudSync.lastSyncedAt));
-    return `Terakhir tersinkron ${label}.`;
+    const realtime = cloudSync.realtimeStatus === "SUBSCRIBED" ? " Realtime aktif." : " Auto-sync aktif.";
+    return `Terakhir tersinkron ${label}.${realtime}`;
   },
 };
