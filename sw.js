@@ -26,6 +26,7 @@ self.addEventListener("fetch", (event) => {
   const shouldRefreshFirst =
     url.origin === self.location.origin &&
     (url.pathname.endsWith("/config.js") ||
+      url.pathname.endsWith("/app-meta.js") ||
       url.pathname.endsWith("/quotes.js") ||
       url.pathname.endsWith("/app.js") ||
       url.pathname.endsWith("/styles.css") ||

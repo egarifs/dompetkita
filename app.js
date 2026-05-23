@@ -11,6 +11,9 @@
         rupiah,
       } = window.AppConstants;
       const appConfig = globalThis.APP_CONFIG || {};
+      const appMeta = globalThis.APP_META || {};
+      const appVersion = appMeta.version || "1.0.0";
+      const appShareUrl = appMeta.shareUrl || "https://dompify.netlify.app/";
       const cloudConfig = {
         url: appConfig.supabaseUrl || "",
         anonKey: appConfig.supabaseAnonKey || "",
@@ -1033,6 +1036,7 @@
         document.querySelector("#profileRole").textContent = isGuest() ? "Tamu" : currentUser.role === "admin" ? "Admin" : "User";
         document.querySelector("#profilePinStatus").textContent = state.settings.pin ? "PIN aktif" : "PIN belum aktif";
         document.querySelector("#profileSyncStatus").textContent = isGuest() ? "Demo" : cloudSync.enabled ? "Cloud" : "Lokal";
+        document.querySelector("#appVersionLabel").textContent = `v${appVersion}`;
         document.querySelector("#darkModeToggle").checked = Boolean(state.settings.darkMode);
         document.querySelector("#languageSelect").value = currentLanguage();
         document.querySelector("#syncStatus").textContent = isGuest() ? "Mode tamu aktif. Login atau registrasi untuk menyimpan data." : syncStatusText();
@@ -1885,6 +1889,67 @@
         });
       }
 
+      function openChangelogPopup() {
+        const entries = Array.isArray(appMeta.changelog) && appMeta.changelog.length ? appMeta.changelog : [];
+        document.querySelector("#modalTitle").textContent = "Riwayat Perubahan";
+        document.querySelector("#modalBody").innerHTML = `
+          <div class="form">
+            <div class="changelog-list">
+              ${entries.length ? entries.map((entry) => `
+                <article class="changelog-entry">
+                  <h4>v${escapeHtml(entry.version)} - ${escapeHtml(entry.date)}</h4>
+                  ${Object.entries(entry.changes || {}).map(([type, items]) => `
+                    <h5>${escapeHtml(type)}</h5>
+                    <ul>
+                      ${(Array.isArray(items) ? items : []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+                    </ul>
+                  `).join("")}
+                </article>
+              `).join("") : `<div class="empty"><p>Belum ada riwayat perubahan.</p></div>`}
+            </div>
+          </div>
+        `;
+        showModal();
+      }
+
+      function openLicensesPopup() {
+        document.querySelector("#modalTitle").textContent = "Open Source Licenses";
+        document.querySelector("#modalBody").innerHTML = `
+          <div class="form">
+            <p class="form-status">Dompify dibangun dengan teknologi web open source dan layanan Supabase.</p>
+            <div class="compact-list">
+              <span class="pill">JavaScript</span>
+              <span class="pill">Supabase</span>
+              <span class="pill">Netlify</span>
+              <span class="pill">Material Design 3</span>
+              <span class="pill">Plus Jakarta Sans</span>
+            </div>
+          </div>
+        `;
+        showModal();
+      }
+
+      async function shareApp() {
+        const text = `Coba aplikasi Dompify untuk mencatat pemasukan, pengeluaran, dan mengatur keuangan keluarga: ${appShareUrl}`;
+        try {
+          if (navigator.share) {
+            await navigator.share({
+              title: "Dompify",
+              text,
+              url: appShareUrl,
+            });
+            showSnackbar("Aplikasi siap dibagikan.");
+            return;
+          }
+          await copyText(appShareUrl);
+          showSnackbar("Link aplikasi berhasil disalin");
+        } catch (error) {
+          if (error?.name === "AbortError") return;
+          await copyText(appShareUrl);
+          showSnackbar("Link aplikasi berhasil disalin");
+        }
+      }
+
       async function copyText(value) {
         try {
           await navigator.clipboard.writeText(value);
@@ -2520,9 +2585,12 @@
         if (opener?.dataset.openForm === "wallet") openWalletForm();
         if (opener?.dataset.openForm === "category") openCategoryForm();
         if (opener?.dataset.openForm === "dashboardMenu") openDashboardMenuForm();
-        if (opener?.dataset.openForm === "savingsGoal") openSavingsGoalForm();        if (opener?.dataset.openForm === "pin") openPinForm();
+        if (opener?.dataset.openForm === "savingsGoal") openSavingsGoalForm();
+        if (opener?.dataset.openForm === "pin") openPinForm();
         if (opener?.dataset.openForm === "feedback") openFeedbackForm();
         if (opener?.dataset.openForm === "thanks") openThanksPopup();
+        if (opener?.dataset.openForm === "changelog") openChangelogPopup();
+        if (opener?.dataset.openForm === "licenses") openLicensesPopup();
         if (opener?.dataset.openForm === "monthlyReset") openMonthlyResetForm();
 
         const passwordToggle = event.target.closest("[data-toggle-password]");
@@ -2668,6 +2736,7 @@
         await copyText(document.querySelector("#bcaAccountNumber").textContent.trim());
         alert("Nomor rekening BCA berhasil disalin.");
       });
+      document.querySelector("#shareAppButton").addEventListener("click", shareApp);
       document.querySelector("#viewAllSavingsButton").addEventListener("click", () => openView("savings"));
 
       document.querySelector("#budgetForm").addEventListener("submit", (event) => {

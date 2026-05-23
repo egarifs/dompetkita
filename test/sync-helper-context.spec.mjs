@@ -61,9 +61,12 @@ const client = {
       async maybeSingle() {
         return { data: null, error: null };
       },
-      async upsert() {
+      upsert() {
         saved = true;
-        return { error: null };
+        return this;
+      },
+      async single() {
+        return { data: { updated_at: "2026-05-23T00:00:00.000Z" }, error: null };
       },
     };
   },

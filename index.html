@@ -409,6 +409,10 @@
                     </div>
                   </div>
                 </div>
+                <div class="app-info">
+                  <span>Versi Aplikasi</span>
+                  <strong id="appVersionLabel">v1.0.0</strong>
+                </div>
               </section>
 
               <section class="panel">
@@ -553,6 +557,20 @@
                   </div>
                   <div class="settings-item">
                     <div>
+                      <strong>Riwayat Perubahan</strong>
+                      <span>Lihat update fitur, perbaikan bug, dan perubahan UI/UX.</span>
+                    </div>
+                    <button class="button" type="button" data-open-form="changelog">Buka</button>
+                  </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong>Bagikan Aplikasi</strong>
+                      <span>Bagikan link Dompify ke keluarga atau teman.</span>
+                    </div>
+                    <button class="button" id="shareAppButton" type="button">Bagikan</button>
+                  </div>
+                  <div class="settings-item">
+                    <div>
                       <strong>Reset Data Bulanan</strong>
                       <span>Hapus data berdasarkan bulan yang dipilih.</span>
                     </div>
@@ -571,6 +589,10 @@
                       <span>Keluar dari sesi aplikasi di perangkat ini.</span>
                     </div>
                     <button class="button" id="logoutButton" type="button">Logout</button>
+                  </div>
+                  <div class="app-copyright">
+                    <span>© 2026 Dompify. Built with open-source technologies.</span>
+                    <button class="auth-link" type="button" data-open-form="licenses">Open Source Licenses</button>
                   </div>
                 </div>
               </section>
@@ -613,6 +635,7 @@
     <div class="snackbar" id="snackbar" role="status" aria-live="polite"></div>
 
     <script src="./config.js"></script>
+    <script src="./app-meta.js"></script>
     <script src="./quotes.js"></script>
     <script src="./js/constants.js"></script>
     <script src="./js/utils.js"></script>
