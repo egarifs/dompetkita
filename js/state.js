@@ -12,8 +12,8 @@ window.AppState = {
 
   mergeDeletedIds(cloudData, localData, collection) {
     return [...new Set([
-      ...this.deletionList(cloudData, collection),
-      ...this.deletionList(localData, collection),
+      ...window.AppState.deletionList(cloudData, collection),
+      ...window.AppState.deletionList(localData, collection),
     ])];
   },
 
@@ -49,19 +49,19 @@ window.AppState = {
   normalizeState(data, deps) {
     const { defaultCategories, translations } = deps;
     const deleted = {
-      transactions: this.deletionList(data, "transactions"),
-      debts: this.deletionList(data, "debts"),
-      savings: this.deletionList(data, "savings"),
-      billReminders: this.deletionList(data, "billReminders"),
-      recurring: this.deletionList(data, "recurring"),
+      transactions: window.AppState.deletionList(data, "transactions"),
+      debts: window.AppState.deletionList(data, "debts"),
+      savings: window.AppState.deletionList(data, "savings"),
+      billReminders: window.AppState.deletionList(data, "billReminders"),
+      recurring: window.AppState.deletionList(data, "recurring"),
     };
     return {
-      transactions: this.withoutDeleted(Array.isArray(data.transactions) ? data.transactions : [], deleted.transactions),
+      transactions: window.AppState.withoutDeleted(Array.isArray(data.transactions) ? data.transactions : [], deleted.transactions),
       budgets: Array.isArray(data.budgets) ? data.budgets : [],
-      debts: this.withoutDeleted(Array.isArray(data.debts) ? data.debts : [], deleted.debts),
-      savings: this.withoutDeleted(Array.isArray(data.savings) ? data.savings : [], deleted.savings),
-      billReminders: this.withoutDeleted(Array.isArray(data.billReminders) ? data.billReminders : [], deleted.billReminders),
-      recurring: this.withoutDeleted(Array.isArray(data.recurring) ? data.recurring : [], deleted.recurring),
+      debts: window.AppState.withoutDeleted(Array.isArray(data.debts) ? data.debts : [], deleted.debts),
+      savings: window.AppState.withoutDeleted(Array.isArray(data.savings) ? data.savings : [], deleted.savings),
+      billReminders: window.AppState.withoutDeleted(Array.isArray(data.billReminders) ? data.billReminders : [], deleted.billReminders),
+      recurring: window.AppState.withoutDeleted(Array.isArray(data.recurring) ? data.recurring : [], deleted.recurring),
       categories: Array.isArray(data.categories) && data.categories.length ? data.categories : [...defaultCategories],
       wallets: Array.isArray(data.wallets) && data.wallets.length ? data.wallets : ["Tunai", "Bank"],
       deleted,
