@@ -653,7 +653,13 @@
         display: flex;
         justify-content: space-between;
         gap: 12px;
-        align-items: baseline;
+        align-items: center;
+      }
+
+      .budget-row-top > div,
+      .debt-row-top > div,
+      .category-row-top > div {
+        min-width: 0;
       }
 
       .budget-row strong,
@@ -692,6 +698,10 @@
 
       .progress.warn > i {
         background: var(--amber);
+      }
+
+      .progress.success > i {
+        background: var(--income);
       }
 
       .progress.danger > i {
@@ -905,6 +915,12 @@
       .icon-button:hover {
         color: var(--primary);
         background: var(--state-hover);
+        border-color: transparent;
+      }
+
+      .icon-button.danger {
+        color: var(--expense);
+        background: var(--error-container);
         border-color: transparent;
       }
 

@@ -508,6 +508,22 @@
         return Math.min(100, Math.max(0, Math.round((savingsBalance(goal) / Number(goal.target)) * 100)));
       }
 
+      function isSavingsAchieved(goal) {
+        return Number(goal?.target || 0) > 0 && savingsBalance(goal) >= Number(goal.target || 0);
+      }
+
+      function trashIcon() {
+        return `
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"></path>
+            <path d="M8 6V4h8v2"></path>
+            <path d="M19 6l-1 14H6L5 6"></path>
+            <path d="M10 11v6"></path>
+            <path d="M14 11v6"></path>
+          </svg>
+        `;
+      }
+
       function renderStats() {
         const month = currentMonthKey();
         const currentItems = transactionsByMonth(month);
@@ -709,7 +725,8 @@
       }
 
       function savingsRows(limit = null) {
-        const goals = [...state.savings].sort((a, b) => (a.targetDate || "").localeCompare(b.targetDate || "")).slice(0, limit ?? state.savings.length);
+        const activeGoals = state.savings.filter((goal) => !isSavingsAchieved(goal));
+        const goals = [...activeGoals].sort((a, b) => (a.targetDate || "").localeCompare(b.targetDate || "")).slice(0, limit ?? activeGoals.length);
         if (!goals.length) {
           return `
             <div class="empty">
@@ -725,8 +742,13 @@
           return `
             <article class="budget-row" data-open-savings="${goal.id}">
               <div class="budget-row-top">
-                <strong>${escapeHtml(goal.title)}</strong>
-                <span>${percent}%</span>
+                <div>
+                  <strong>${escapeHtml(goal.title)}</strong>
+                  <span>${percent}%</span>
+                </div>
+                <button class="icon-button danger" type="button" data-delete-savings="${goal.id}" aria-label="Hapus tabungan ${escapeHtml(goal.title)}" title="Hapus tabungan">
+                  ${trashIcon()}
+                </button>
               </div>
               <div class="progress"><i style="width: ${percent}%"></i></div>
               <div class="stat-sub">${money(balance)} dari ${money(goal.target)} - Target ${escapeHtml(goal.targetDate || "-")}</div>
@@ -735,10 +757,40 @@
         }).join("");
       }
 
+      function savingsHistoryRows() {
+        const achievedGoals = state.savings
+          .filter((goal) => isSavingsAchieved(goal))
+          .sort((a, b) => (b.targetDate || "").localeCompare(a.targetDate || ""));
+
+        if (!achievedGoals.length) {
+          return `<div class="empty"><p>Belum ada riwayat tabungan yang tercapai.</p></div>`;
+        }
+
+        return achievedGoals.map((goal) => {
+          const balance = savingsBalance(goal);
+          return `
+            <article class="budget-row" data-open-savings="${goal.id}">
+              <div class="budget-row-top">
+                <div>
+                  <strong>${escapeHtml(goal.title)}</strong>
+                  <span>Tercapai</span>
+                </div>
+                <button class="icon-button danger" type="button" data-delete-savings="${goal.id}" aria-label="Hapus riwayat tabungan ${escapeHtml(goal.title)}" title="Hapus tabungan">
+                  ${trashIcon()}
+                </button>
+              </div>
+              <div class="progress success"><i style="width: 100%"></i></div>
+              <div class="stat-sub">${money(balance)} dari ${money(goal.target)} - Target ${escapeHtml(goal.targetDate || "-")}</div>
+            </article>
+          `;
+        }).join("");
+      }
+
       function renderSavings() {
+        const activeCount = state.savings.filter((goal) => !isSavingsAchieved(goal)).length;
         document.querySelector("#homeSavingsList").innerHTML = savingsRows(3);
         document.querySelector("#allSavingsList").innerHTML = savingsRows();
-        document.querySelector("#viewAllSavingsButton").classList.toggle("hidden", state.savings.length <= 3);
+        document.querySelector("#viewAllSavingsButton").classList.toggle("hidden", activeCount <= 3);
       }
 
       function renderInsights() {
@@ -1658,14 +1710,29 @@
             document.querySelector("#savingsTargetDate").value = targetDateFromShortcut(Number(button.dataset.targetMonths));
           });
         });
-        document.querySelector("#savingsGoalForm").addEventListener("submit", (event) => {
+        document.querySelector("#savingsGoalForm").addEventListener("submit", async (event) => {
           event.preventDefault();
           const category = document.querySelector("#savingsCategory").value;
           state.savings.push(savingsGoal(category, parseFormattedNumber(document.querySelector("#savingsTarget").value), document.querySelector("#savingsTargetDate").value));
           closeModal();
-          renderAll();
+          await persistChanges("Tujuan tabungan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
           openView("savings");
         });
+      }
+
+      function openSavingsHistory() {
+        document.querySelector("#modalTitle").textContent = "Riwayat Tabungan";
+        document.querySelector("#modalBody").innerHTML = `
+          <div class="form">
+            <div class="budget-list modal-list">
+              ${savingsHistoryRows()}
+            </div>
+            <div class="row-actions">
+              <button class="button" type="button" data-close-modal>Tutup</button>
+            </div>
+          </div>
+        `;
+        showModal();
       }
 
       function openSavingsDetail(goalId) {
@@ -1673,18 +1740,20 @@
         if (!goal) return;
         const balance = savingsBalance(goal);
         const percent = savingsPercent(goal);
+        const achieved = isSavingsAchieved(goal);
         document.querySelector("#modalTitle").textContent = goal.title;
         document.querySelector("#modalBody").innerHTML = `
           <div class="form">
             <div class="budget-row">
               <div class="budget-row-top">
                 <strong>${money(balance)}</strong>
-                <span>Target ${money(goal.target)}</span>
+                <span>${achieved ? "Tercapai" : `Target ${money(goal.target)}`}</span>
               </div>
               <div class="progress"><i style="width: ${percent}%"></i></div>
               <div class="stat-sub">${percent}% tercapai - Target tanggal ${escapeHtml(goal.targetDate || "-")}</div>
             </div>
             <div class="row-actions">
+              <button class="button danger" type="button" data-delete-savings="${goal.id}">Hapus</button>
               <button class="button danger" type="button" data-savings-entry="withdraw" data-goal-id="${goal.id}">Tarik</button>
               <button class="button primary" type="button" data-savings-entry="deposit" data-goal-id="${goal.id}">Tambah</button>
             </div>
@@ -1734,12 +1803,12 @@
         `;
         showModal();
         attachRupiahInput("#savingsEntryAmount");
-        document.querySelector("#savingsEntryForm").addEventListener("submit", (event) => {
+        document.querySelector("#savingsEntryForm").addEventListener("submit", async (event) => {
           event.preventDefault();
           goal.entries = goal.entries || [];
           goal.entries.push(savingsEntry(type, document.querySelector("#savingsEntryDate").value, parseFormattedNumber(document.querySelector("#savingsEntryAmount").value), document.querySelector("#savingsEntryNote").value.trim()));
           closeModal();
-          renderAll();
+          await persistChanges("Perubahan tabungan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
           openSavingsDetail(goal.id);
         });
       }
@@ -2617,16 +2686,6 @@
 
         if (event.target.closest("[data-close-modal]")) closeModal();
 
-        const savingsCard = event.target.closest("[data-open-savings]");
-        if (savingsCard) {
-          openSavingsDetail(savingsCard.dataset.openSavings);
-        }
-
-        const savingsEntryButton = event.target.closest("[data-savings-entry]");
-        if (savingsEntryButton) {
-          openSavingsEntryForm(savingsEntryButton.dataset.goalId, savingsEntryButton.dataset.savingsEntry);
-        }
-
         const deleteButton = event.target.closest("[data-delete-transaction]");
         if (deleteButton) {
           if (!requireSignedIn()) return;
@@ -2636,6 +2695,29 @@
             state.transactions = state.transactions.filter((item) => item.id !== target.id);
             await persistChanges("Transaksi sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
           }
+        }
+
+        const savingsDeleteButton = event.target.closest("[data-delete-savings]");
+        if (savingsDeleteButton) {
+          if (!requireSignedIn()) return;
+          const target = state.savings.find((item) => item.id === savingsDeleteButton.dataset.deleteSavings);
+          if (target && confirm(`Hapus tabungan "${target.title}"?`)) {
+            markDeleted("savings", target.id);
+            state.savings = state.savings.filter((item) => item.id !== target.id);
+            closeModal();
+            await persistChanges("Tabungan sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+          }
+          return;
+        }
+
+        const savingsCard = event.target.closest("[data-open-savings]");
+        if (savingsCard) {
+          openSavingsDetail(savingsCard.dataset.openSavings);
+        }
+
+        const savingsEntryButton = event.target.closest("[data-savings-entry]");
+        if (savingsEntryButton) {
+          openSavingsEntryForm(savingsEntryButton.dataset.goalId, savingsEntryButton.dataset.savingsEntry);
         }
 
         const categoryDeleteButton = event.target.closest("[data-delete-category]");
@@ -2752,6 +2834,8 @@
       });
       document.querySelector("#shareAppButton").addEventListener("click", shareApp);
       document.querySelector("#viewAllSavingsButton").addEventListener("click", () => openView("savings"));
+      document.querySelector("#homeSavingsHistoryButton").addEventListener("click", openSavingsHistory);
+      document.querySelector("#savingsHistoryButton").addEventListener("click", openSavingsHistory);
 
       document.querySelector("#budgetForm").addEventListener("submit", (event) => {
         event.preventDefault();
