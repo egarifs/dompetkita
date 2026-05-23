@@ -349,7 +349,15 @@
       }
 
       async function syncCloudState() {
-        if (isGuest() || !cloudSync.enabled || !cloudUserKey()) return false;
+        if (isGuest()) return false;
+        if (!cloudSync.enabled) {
+          cloudSync.lastError = "Konfigurasi Supabase belum aktif.";
+          return false;
+        }
+        if (!cloudUserKey()) {
+          cloudSync.lastError = "Akun belum terhubung ke Supabase. Silakan logout lalu login kembali.";
+          return false;
+        }
         await loadCloudState();
         renderAll();
         return !cloudSync.lastError;
@@ -2660,7 +2668,7 @@
       document.querySelector("#syncNowButton").addEventListener("click", async () => {
         if (!requireSignedIn()) return;
         const synced = await syncCloudState();
-        alert(synced ? "Data berhasil disinkronkan dari cloud." : "Cloud belum bisa disinkronkan.");
+        alert(synced ? "Data berhasil disinkronkan dari cloud." : `Cloud belum bisa disinkronkan.${cloudSync.lastError ? `\n\nDetail: ${cloudSync.lastError}` : ""}`);
       });
       document.querySelector("#applyRecurringButton").addEventListener("click", async () => {
         if (!requireSignedIn()) return;

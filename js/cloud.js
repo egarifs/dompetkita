@@ -10,6 +10,28 @@ window.AppCloud = {
     return "";
   },
 
+  hasStateData(state) {
+    return Boolean(
+      state?.transactions?.length ||
+        state?.budgets?.length ||
+        state?.debts?.length ||
+        state?.savings?.length ||
+        state?.billReminders?.length ||
+        state?.recurring?.length,
+    );
+  },
+
+  async ensureCloudSession(client) {
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    if (data?.session) return data.session;
+
+    const refreshed = await client.auth.refreshSession();
+    if (refreshed.error) throw refreshed.error;
+    if (!refreshed.data?.session) throw new Error("Sesi login cloud tidak aktif. Silakan logout lalu login kembali.");
+    return refreshed.data.session;
+  },
+
   queueCloudSave(ctx) {
     const { cloudSync, currentUser, cloudUserKey, saveCloudState } = ctx;
     if (!currentUser || !cloudSync.enabled || !cloudSync.loadedUsers.has(cloudUserKey())) return;
@@ -45,6 +67,7 @@ window.AppCloud = {
     if (!client || !userKey) return;
 
     try {
+      await this.ensureCloudSession(client);
       const { data, error } = await client
         .from(cloudConfig.table)
         .select("payload, updated_at")
@@ -60,7 +83,7 @@ window.AppCloud = {
         cloudSync.lastSyncedAt = data.updated_at || new Date().toISOString();
         await saveCloudState();
       } else {
-        if (typeof emptyState === "function") replaceState(emptyState());
+        if (!this.hasStateData(state) && typeof emptyState === "function") replaceState(emptyState());
         await saveCloudState();
       }
       cloudSync.lastError = "";
@@ -96,6 +119,7 @@ window.AppCloud = {
     cloudSync.isSaving = true;
     cloudSync.savePromise = (async () => {
       try {
+        await this.ensureCloudSession(client);
         const { error } = await client.from(cloudConfig.table).upsert({
           user_id: userKey,
           payload: normalizeState(state),

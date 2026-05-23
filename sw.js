@@ -1,4 +1,4 @@
-const CACHE_NAME = "finance-tracker-pwa-v6";
+const CACHE_NAME = "finance-tracker-pwa-v7";
 const APP_SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon.svg"];
 
 self.addEventListener("install", (event) => {
