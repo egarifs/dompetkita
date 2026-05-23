@@ -67,7 +67,7 @@ window.AppCloud = {
     if (!client || !userKey) return;
 
     try {
-      await this.ensureCloudSession(client);
+      await window.AppCloud.ensureCloudSession(client);
       const { data, error } = await client
         .from(cloudConfig.table)
         .select("payload, updated_at")
@@ -83,7 +83,7 @@ window.AppCloud = {
         cloudSync.lastSyncedAt = data.updated_at || new Date().toISOString();
         await saveCloudState();
       } else {
-        if (!this.hasStateData(state) && typeof emptyState === "function") replaceState(emptyState());
+        if (!window.AppCloud.hasStateData(state) && typeof emptyState === "function") replaceState(emptyState());
         await saveCloudState();
       }
       cloudSync.lastError = "";
@@ -111,7 +111,7 @@ window.AppCloud = {
       await cloudSync.savePromise;
       if (cloudSync.pendingSave) {
         cloudSync.pendingSave = false;
-        return this.saveCloudState(ctx);
+        return window.AppCloud.saveCloudState(ctx);
       }
       return !cloudSync.lastError;
     }
@@ -119,7 +119,7 @@ window.AppCloud = {
     cloudSync.isSaving = true;
     cloudSync.savePromise = (async () => {
       try {
-        await this.ensureCloudSession(client);
+        await window.AppCloud.ensureCloudSession(client);
         const { error } = await client.from(cloudConfig.table).upsert({
           user_id: userKey,
           payload: normalizeState(state),
@@ -141,7 +141,7 @@ window.AppCloud = {
     const saved = await cloudSync.savePromise;
     if (cloudSync.pendingSave) {
       cloudSync.pendingSave = false;
-      return this.saveCloudState(ctx);
+      return window.AppCloud.saveCloudState(ctx);
     }
     return saved;
   },

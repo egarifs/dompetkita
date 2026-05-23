@@ -9,6 +9,7 @@
     "test:splash": "node test/splash-skip.spec.mjs",
     "test:guest": "node test/guest-login.spec.mjs",
     "test:guest-sync": "node test/guest-sync-disabled.spec.mjs",
+    "test:sync-context": "node test/sync-helper-context.spec.mjs",
     "test:ui": "npm run test:splash && npm run test:guest"
   },
   "keywords": [],

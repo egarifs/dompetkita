@@ -11,9 +11,9 @@ window.AppAuth = {
       const users = JSON.parse(localStorage.getItem(authStorageKey));
       if (Array.isArray(users) && users.length) return users;
     } catch {
-      return this.defaultUsers();
+      return window.AppAuth.defaultUsers();
     }
-    const users = this.defaultUsers();
+    const users = window.AppAuth.defaultUsers();
     localStorage.setItem(authStorageKey, JSON.stringify(users));
     return users;
   },
@@ -45,7 +45,7 @@ window.AppAuth = {
   },
 
   recordFailedLogin(failedLoginKey) {
-    sessionStorage.setItem(failedLoginKey, String(this.failedLoginCount(failedLoginKey) + 1));
+    sessionStorage.setItem(failedLoginKey, String(window.AppAuth.failedLoginCount(failedLoginKey) + 1));
   },
 
   resetFailedLogin(failedLoginKey) {
