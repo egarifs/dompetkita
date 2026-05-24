@@ -328,7 +328,7 @@
           transactions: withoutDeleted(mergeById(cloud.transactions, local.transactions), deleted.transactions),
           budgets: [...budgetMap.values()],
           debts: withoutDeleted(mergeById(cloud.debts, local.debts), deleted.debts),
-          savings: withoutDeleted(mergeById(cloud.savings, local.savings), deleted.savings),
+          savings: withoutDeleted(mergeSavingsGoals(cloud.savings, local.savings), deleted.savings),
           billReminders: withoutDeleted(mergeById(cloud.billReminders, local.billReminders), deleted.billReminders),
           recurring: withoutDeleted(mergeById(cloud.recurring, local.recurring), deleted.recurring),
           vehicles: withoutDeleted(mergeById(cloud.vehicles, local.vehicles), deleted.vehicles),
@@ -494,6 +494,42 @@
 
       function savingsGoal(category, target, targetDate, entries = []) {
         return window.AppState.savingsGoal(id(), todayDate(), category, target, targetDate, entries);
+      }
+
+      function touchSavingsGoal(goal) {
+        if (!goal) return;
+        goal.updatedAt = new Date().toISOString();
+      }
+
+      function mergeSavingsEntries(primaryEntries = [], secondaryEntries = []) {
+        const map = new Map();
+        [...primaryEntries, ...secondaryEntries].forEach((entry) => {
+          if (!entry?.id) return;
+          const existing = map.get(entry.id);
+          if (!existing || String(entry.updatedAt || "") >= String(existing.updatedAt || "")) {
+            map.set(entry.id, entry);
+          }
+        });
+        return [...map.values()].sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+      }
+
+      function mergeSavingsGoals(primary = [], secondary = []) {
+        const map = new Map();
+        primary.forEach((goal) => map.set(goal.id, { ...goal, entries: [...(goal.entries || [])] }));
+        secondary.forEach((goal) => {
+          const existing = map.get(goal.id);
+          if (!existing) {
+            map.set(goal.id, { ...goal, entries: [...(goal.entries || [])] });
+            return;
+          }
+          const newerGoal = String(goal.updatedAt || "") >= String(existing.updatedAt || "") ? goal : existing;
+          map.set(goal.id, {
+            ...existing,
+            ...newerGoal,
+            entries: mergeSavingsEntries(existing.entries || [], goal.entries || []),
+          });
+        });
+        return [...map.values()];
       }
 
       function billReminder(title, category, amount, dueDate, note = "", status = "unpaid") {
@@ -2062,11 +2098,16 @@
         });
         document.querySelector("#savingsGoalForm").addEventListener("submit", async (event) => {
           event.preventDefault();
+          const submitButton = event.submitter || document.querySelector("#savingsGoalForm .button.primary");
+          submitButton.disabled = true;
+          submitButton.textContent = "Menyimpan...";
           const category = document.querySelector("#savingsCategory").value;
           state.savings.push(savingsGoal(category, parseFormattedNumber(document.querySelector("#savingsTarget").value), document.querySelector("#savingsTargetDate").value));
+          saveState();
           closeModal();
           await persistChanges("Tujuan tabungan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
           openView("savings");
+          showSnackbar("Tujuan tabungan berhasil disimpan.");
         });
       }
 
@@ -2155,11 +2196,17 @@
         attachRupiahInput("#savingsEntryAmount");
         document.querySelector("#savingsEntryForm").addEventListener("submit", async (event) => {
           event.preventDefault();
+          const submitButton = event.submitter || document.querySelector("#savingsEntryForm .button.primary");
+          submitButton.disabled = true;
+          submitButton.textContent = "Menyimpan...";
           goal.entries = goal.entries || [];
           goal.entries.push(savingsEntry(type, document.querySelector("#savingsEntryDate").value, parseFormattedNumber(document.querySelector("#savingsEntryAmount").value), document.querySelector("#savingsEntryNote").value.trim()));
+          touchSavingsGoal(goal);
+          saveState();
           closeModal();
           await persistChanges("Perubahan tabungan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
           openSavingsDetail(goal.id);
+          showSnackbar("Perubahan tabungan berhasil disimpan.");
         });
       }
 

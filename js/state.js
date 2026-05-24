@@ -60,8 +60,18 @@ window.AppState = {
     };
   },
 
-  savingsEntry(id, type, date, amount, note) {
-    return { id, type, date, amount: Number(amount), note };
+  savingsEntry(id, type, date, amount, note, meta = {}) {
+    const timestamp = meta.createdAt || new Date().toISOString();
+    return {
+      id,
+      type,
+      date,
+      amount: Number(amount),
+      note,
+      createdAt: timestamp,
+      updatedAt: meta.updatedAt || timestamp,
+      ...meta,
+    };
   },
 
   savingsGoal(id, todayDate, category, target, targetDate, entries = []) {
@@ -72,7 +82,32 @@ window.AppState = {
       target: Number(target),
       targetDate,
       createdAt: todayDate,
+      updatedAt: new Date().toISOString(),
       entries,
+    };
+  },
+
+  normalizeSavingsEntry(entry) {
+    const timestamp = entry.createdAt || (entry.date ? `${entry.date}T00:00:00.000Z` : new Date().toISOString());
+    return {
+      ...entry,
+      id: entry.id,
+      type: entry.type || "deposit",
+      date: entry.date || "",
+      amount: Number(entry.amount || 0),
+      note: entry.note || "",
+      createdAt: timestamp,
+      updatedAt: entry.updatedAt || timestamp,
+    };
+  },
+
+  normalizeSavingsGoal(goal) {
+    const timestamp = goal.updatedAt || goal.createdAt || new Date().toISOString();
+    return {
+      ...goal,
+      target: Number(goal.target || 0),
+      entries: Array.isArray(goal.entries) ? goal.entries.map(window.AppState.normalizeSavingsEntry) : [],
+      updatedAt: timestamp,
     };
   },
 
@@ -98,7 +133,7 @@ window.AppState = {
       transactions: window.AppState.withoutDeleted(Array.isArray(data.transactions) ? data.transactions : [], deleted.transactions).map(window.AppState.normalizeTransaction),
       budgets: Array.isArray(data.budgets) ? data.budgets : [],
       debts: window.AppState.withoutDeleted(Array.isArray(data.debts) ? data.debts : [], deleted.debts),
-      savings: window.AppState.withoutDeleted(Array.isArray(data.savings) ? data.savings : [], deleted.savings),
+      savings: window.AppState.withoutDeleted(Array.isArray(data.savings) ? data.savings : [], deleted.savings).map(window.AppState.normalizeSavingsGoal),
       billReminders: window.AppState.withoutDeleted(Array.isArray(data.billReminders) ? data.billReminders : [], deleted.billReminders),
       recurring: window.AppState.withoutDeleted(Array.isArray(data.recurring) ? data.recurring : [], deleted.recurring),
       vehicles: window.AppState.withoutDeleted(Array.isArray(data.vehicles) ? data.vehicles : [], deleted.vehicles),
