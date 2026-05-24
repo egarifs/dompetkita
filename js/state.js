@@ -130,6 +130,7 @@ window.AppState = {
       vehicleTaxes: window.AppState.deletionList(data, "vehicleTaxes"),
     };
     return {
+      syncStatus: ["synced", "pending", "failed"].includes(data.syncStatus) ? data.syncStatus : "synced",
       transactions: window.AppState.withoutDeleted(Array.isArray(data.transactions) ? data.transactions : [], deleted.transactions).map(window.AppState.normalizeTransaction),
       budgets: Array.isArray(data.budgets) ? data.budgets : [],
       debts: window.AppState.withoutDeleted(Array.isArray(data.debts) ? data.debts : [], deleted.debts),

@@ -129,7 +129,7 @@
       let currentUser = loadSessionUser();
       let guestTransactionAdds = 0;
       let snackbarTimer = null;
-      let hasUnsyncedChanges = false;
+      let hasUnsyncedChanges = state.syncStatus === "pending" || state.syncStatus === "failed";
 
 
       function loadUsers() {
@@ -277,6 +277,12 @@
 
       function markDataChanged() {
         hasUnsyncedChanges = true;
+        state.syncStatus = "pending";
+      }
+
+      function setLocalSyncStatus(status) {
+        state.syncStatus = status;
+        if (!isGuest()) localStorage.setItem(storageKey, JSON.stringify(state));
       }
 
       function isCloudSyncAllowed() {
@@ -300,6 +306,7 @@
         state.wallets = normalized.wallets;
         state.deleted = normalized.deleted;
         state.settings = normalized.settings;
+        state.syncStatus = normalized.syncStatus;
         if (isGuest()) return;
         localStorage.setItem(storageKey, JSON.stringify(state));
       }
@@ -375,7 +382,12 @@
           cloudUserKey,
           saveCloudState,
         });
-        if (saved) hasUnsyncedChanges = false;
+        if (saved) {
+          hasUnsyncedChanges = false;
+          setLocalSyncStatus("synced");
+        } else {
+          setLocalSyncStatus("failed");
+        }
         return saved;
       }
 
@@ -402,6 +414,10 @@
           return false;
         }
         await loadCloudState(options);
+        if (!cloudSync.lastError && options.markSynced !== false) {
+          hasUnsyncedChanges = false;
+          setLocalSyncStatus("synced");
+        }
         renderAll();
         return !cloudSync.lastError;
       }
@@ -436,7 +452,13 @@
       }
 
       function syncStatusText() {
-        if (state.settings.cloudSyncEnabled === false) return "Sinkronisasi cloud nonaktif. Data hanya disimpan di perangkat ini.";
+        if (state.settings.cloudSyncEnabled === false) {
+          return hasUnsyncedChanges
+            ? "Sinkronisasi cloud nonaktif. Perubahan tersimpan lokal dan menunggu sync."
+            : "Sinkronisasi cloud nonaktif. Data hanya disimpan di perangkat ini.";
+        }
+        if (state.syncStatus === "failed") return "Perubahan lokal belum berhasil tersinkron. Coba tekan Sync.";
+        if (state.syncStatus === "pending") return "Ada perubahan lokal yang menunggu sinkronisasi.";
         return window.AppCloud.syncStatusText(cloudSync);
       }
 
@@ -2771,6 +2793,7 @@
             state.wallets = normalized.wallets;
             state.deleted = normalized.deleted;
             state.settings = normalized.settings;
+            state.syncStatus = normalized.syncStatus;
             renderAll();
             alert("Backup berhasil diimpor.");
           } catch {
@@ -2795,7 +2818,16 @@
         document.querySelector("#splashScreen").classList.add("hidden");
         document.querySelector("#authScreen").classList.add("hidden");
         document.querySelector("#appShell").classList.remove("hidden");
-        if (!isGuest() && isCloudSyncAllowed()) await loadCloudState();
+        if (!isGuest() && isCloudSyncAllowed()) {
+          const shouldUploadLocal = hasUnsyncedChanges;
+          await loadCloudState({ saveAfterLoad: shouldUploadLocal });
+          if (shouldUploadLocal && !cloudSync.lastError) {
+            hasUnsyncedChanges = false;
+            setLocalSyncStatus("synced");
+          } else if (shouldUploadLocal) {
+            setLocalSyncStatus("failed");
+          }
+        }
         if (!isGuest() && isCloudSyncAllowed()) startCloudRealtimeSync();
         renderAll();
       }
@@ -3546,7 +3578,14 @@
         if (state.settings.cloudSyncEnabled) {
           renderAll();
           if (!isGuest() && isCloudSyncAllowed()) {
-            await loadCloudState();
+            await loadCloudState({ saveAfterLoad: hasUnsyncedChanges });
+            if (!cloudSync.lastError) {
+              hasUnsyncedChanges = false;
+              setLocalSyncStatus("synced");
+            } else if (hasUnsyncedChanges) {
+              setLocalSyncStatus("failed");
+              showSnackbar("Data lokal belum berhasil tersinkron ke cloud.", "error");
+            }
             startCloudRealtimeSync();
           }
         } else {
@@ -3586,6 +3625,7 @@
           state.wallets = normalized.wallets;
           state.deleted = { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [] };
           state.settings = normalized.settings;
+          state.syncStatus = normalized.syncStatus;
           renderAll();
         }
       });

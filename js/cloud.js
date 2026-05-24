@@ -126,9 +126,11 @@ window.AppCloud = {
     cloudSync.savePromise = (async () => {
       try {
         await window.AppCloud.ensureCloudSession(client);
+        const payload = normalizeState(state);
+        payload.syncStatus = "synced";
         const { data, error } = await client.from(cloudConfig.table).upsert({
           user_id: userKey,
-          payload: normalizeState(state),
+          payload,
         }, { onConflict: "user_id" }).select("updated_at").single();
         if (error) throw error;
         cloudSync.loadedUsers.add(userKey);
