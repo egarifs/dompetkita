@@ -198,10 +198,8 @@ window.AppCloud = {
         cloudSync.realtimeStatus = status;
       });
 
-    cloudSync.pollTimer = setInterval(() => {
-      if (document.hidden) return;
-      loadCloudState({ saveAfterLoad: false });
-    }, 30000);
+    clearInterval(cloudSync.pollTimer);
+    cloudSync.pollTimer = null;
   },
 
   syncStatusText(cloudSync) {
@@ -210,7 +208,7 @@ window.AppCloud = {
     if (cloudSync.isSaving) return "Sedang menyimpan ke cloud...";
     if (!cloudSync.lastSyncedAt) return "Cloud siap, menunggu sinkronisasi pertama.";
     const label = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(new Date(cloudSync.lastSyncedAt));
-    const realtime = cloudSync.realtimeStatus === "SUBSCRIBED" ? " Realtime aktif." : " Auto-sync aktif.";
+    const realtime = cloudSync.realtimeStatus === "SUBSCRIBED" ? " Realtime aktif." : " Event-based sync aktif.";
     return `Terakhir tersinkron ${label}.${realtime}`;
   },
 };

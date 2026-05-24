@@ -129,6 +129,7 @@
       let currentUser = loadSessionUser();
       let guestTransactionAdds = 0;
       let snackbarTimer = null;
+      let hasUnsyncedChanges = false;
 
 
       function loadUsers() {
@@ -271,7 +272,11 @@
       function saveState() {
         if (isGuest()) return;
         localStorage.setItem(storageKey, JSON.stringify(state));
-        queueCloudSave();
+        if (hasUnsyncedChanges) queueCloudSave();
+      }
+
+      function markDataChanged() {
+        hasUnsyncedChanges = true;
       }
 
       function isCloudSyncAllowed() {
@@ -362,16 +367,20 @@
       }
 
       async function flushCloudSave() {
+        if (!hasUnsyncedChanges) return true;
         if (!isCloudSyncAllowed()) return true;
-        return window.AppCloud.flushCloudSave({
+        const saved = await window.AppCloud.flushCloudSave({
           cloudSync,
           isGuest,
           cloudUserKey,
           saveCloudState,
         });
+        if (saved) hasUnsyncedChanges = false;
+        return saved;
       }
 
       async function persistChanges(failedMessage = "Perubahan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.") {
+        markDataChanged();
         renderAll();
         const saved = await flushCloudSave();
         if (!saved && isCloudSyncAllowed()) alert(failedMessage);
@@ -1622,6 +1631,7 @@
             state.transactions.push(transactionRecord(values.type, values.date, values.category, values.description, values.amount, values));
           }
           if (!editingTransaction && isGuest()) guestTransactionAdds += 1;
+          markDataChanged();
           saveState();
           const saved = await flushCloudSave();
           renderAll();
@@ -3493,7 +3503,7 @@
         if (existing) existing.limit = limit;
         else state.budgets.push({ category, limit });
         document.querySelector("#budgetLimit").value = "";
-        renderAll();
+        persistChanges("Anggaran tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
       });
 
       document.querySelector("#searchInput").addEventListener("input", () => {
@@ -3522,19 +3532,13 @@
         const synced = await syncCloudState();
         alert(synced ? "Data berhasil disinkronkan dari cloud." : `Cloud belum bisa disinkronkan.${cloudSync.lastError ? `\n\nDetail: ${cloudSync.lastError}` : ""}`);
       });
-      window.addEventListener("focus", () => {
-        if (currentUser && !isGuest() && isCloudSyncAllowed()) syncCloudState({ saveAfterLoad: false });
-      });
-      document.addEventListener("visibilitychange", () => {
-        if (!document.hidden && currentUser && !isGuest() && isCloudSyncAllowed()) syncCloudState({ saveAfterLoad: false });
-      });
       document.querySelector("#applyRecurringButton").addEventListener("click", async () => {
         if (!requireSignedIn()) return;
         await applyRecurringThisMonth();
       });
       document.querySelector("#darkModeToggle").addEventListener("change", (event) => {
         state.settings.darkMode = event.target.checked;
-        renderAll();
+        persistChanges("Pengaturan tampilan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
       });
       document.querySelector("#cloudSyncToggle").addEventListener("change", async (event) => {
         state.settings.cloudSyncEnabled = event.target.checked;
@@ -3554,7 +3558,7 @@
       });
       document.querySelector("#languageSelect").addEventListener("change", (event) => {
         state.settings.language = event.target.value;
-        renderAll();
+        persistChanges("Pengaturan bahasa tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
       });
       document.querySelector("#logoutButton").addEventListener("click", logout);
       document.querySelector("#deleteAccountButton").addEventListener("click", deleteCurrentAccount);
@@ -3600,7 +3604,7 @@
           state.vehicleParts = [];
           state.vehicleTaxes = [];
           state.deleted = { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [] };
-          renderAll();
+          persistChanges("Data sudah dikosongkan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
         }
       });
 
