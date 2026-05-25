@@ -1190,7 +1190,7 @@
             </thead>
             <tbody>
               ${visible.map((item) => `
-                <tr class="transaction-row ${item.type}">
+                <tr class="transaction-row ${item.type}" data-open-transaction-detail="${item.id}">
                   <td>${escapeHtml(transactionDateLabel(item.date))}</td>
                   <td><span class="pill">${escapeHtml(item.category)}</span></td>
                   <td>${escapeHtml(walletName(item.walletId))}</td>
@@ -1212,6 +1212,49 @@
             </tbody>
           </table>
         `;
+      }
+
+      function openTransactionDetail(transactionId) {
+        if (!requireSignedIn()) return;
+        const item = state.transactions.find((transaction) => transaction.id === transactionId);
+        if (!item) return;
+        const receiptUrl = item.receiptUrl || item.receiptImage || item.strukUrl || "";
+        document.querySelector("#modalTitle").textContent = "Detail Transaksi";
+        document.querySelector("#modalBody").innerHTML = `
+          <div class="transaction-detail" id="transactionDetailView">
+            <section class="receipt-preview">
+              ${receiptUrl
+                ? `<img src="${escapeHtml(receiptUrl)}" alt="Foto struk transaksi" />`
+                : `<div class="receipt-empty"><strong>Belum ada foto struk</strong><span>Foto struk bisa ditambahkan ketika fitur upload struk tersedia.</span></div>`}
+            </section>
+            <section class="transaction-detail-summary">
+              <div>
+                <span class="stat-label">Nominal</span>
+                <strong class="amount ${item.type}">${item.type === "income" ? "+" : "-"} ${money(item.amount)}</strong>
+              </div>
+              <span class="pill ${item.type}">${item.type === "income" ? "Pemasukan" : "Pengeluaran"}</span>
+            </section>
+            <div class="compact-list transaction-detail-meta">
+              <span class="pill">${escapeHtml(transactionDateLabel(item.date))}</span>
+              <span class="pill">${escapeHtml(walletName(item.walletId))}</span>
+              <span class="pill">${escapeHtml(item.category || "Lainnya")}</span>
+            </div>
+            <div class="debt-row">
+              <div class="debt-row-top">
+                <div>
+                  <strong>Deskripsi</strong>
+                  <span>${escapeHtml(item.description || "-")}</span>
+                </div>
+              </div>
+            </div>
+            <div class="row-actions">
+              <button class="button" type="button" data-close-modal>Tutup</button>
+              <button class="button" type="button" data-edit-transaction="${item.id}">Edit</button>
+              <button class="button danger" type="button" data-delete-transaction="${item.id}">Hapus</button>
+            </div>
+          </div>
+        `;
+        showModal();
       }
 
       function renderTransactions() {
@@ -4053,7 +4096,17 @@
               state.transactions = state.transactions.filter((item) => item.id !== target.id);
             },
             undoFn: () => restoreItems("transactions", snapshot),
+            afterDelete: () => {
+              if (document.querySelector("#transactionDetailView")) closeModal();
+            },
           });
+          return;
+        }
+
+        const transactionDetailRow = event.target.closest("[data-open-transaction-detail]");
+        if (transactionDetailRow) {
+          openTransactionDetail(transactionDetailRow.dataset.openTransactionDetail);
+          return;
         }
 
         const savingsDeleteButton = event.target.closest("[data-delete-savings]");
