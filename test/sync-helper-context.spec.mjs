@@ -26,6 +26,39 @@ if (normalized.transactions.length !== 1 || normalized.transactions[0].id !== "k
   throw new Error("Deleted transactions were not filtered during normalizeState.");
 }
 
+const transactionMetadata = normalizeState(
+  {
+    transactions: [
+      { id: "manual", type: "expense", date: "2026-05-20", category: "Makanan", amount: 12000 },
+      { id: "vehicle", type: "expense", date: "2026-05-21", category: "Kendaraan", amount: 50000, vehicleId: "car-1", vehicleRecordId: "service-1" },
+      { id: "recurring", type: "expense", date: "2026-05-22", category: "Tagihan", amount: 300000, recurringId: "internet-1" },
+    ],
+  },
+  { defaultCategories: ["Lainnya"], translations: { id: {} } },
+).transactions;
+
+const manualTransaction = transactionMetadata.find((item) => item.id === "manual");
+const vehicleTransaction = transactionMetadata.find((item) => item.id === "vehicle");
+const recurringTransaction = transactionMetadata.find((item) => item.id === "recurring");
+
+if (
+  manualTransaction.sourceModule !== "manual" ||
+  manualTransaction.sourceId !== "" ||
+  manualTransaction.subcategory !== "" ||
+  !manualTransaction.createdAt ||
+  !manualTransaction.updatedAt
+) {
+  throw new Error("Manual transaction metadata was not normalized.");
+}
+
+if (vehicleTransaction.sourceModule !== "vehicles" || vehicleTransaction.sourceId !== "service-1") {
+  throw new Error("Vehicle transaction relation metadata was not normalized.");
+}
+
+if (recurringTransaction.sourceModule !== "recurring" || recurringTransaction.sourceId !== "internet-1") {
+  throw new Error("Recurring transaction relation metadata was not normalized.");
+}
+
 let selected = false;
 let saved = false;
 const { loadCloudState, saveCloudState } = window.AppCloud;

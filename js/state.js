@@ -22,9 +22,24 @@ window.AppState = {
     return items.filter((item) => !deleted.has(item.id));
   },
 
+  transactionSourceModule(item = {}) {
+    if (item.sourceModule) return item.sourceModule;
+    if (item.vehicleId || item.vehicleRecordId) return "vehicles";
+    if (item.recurringId) return "recurring";
+    return "manual";
+  },
+
+  transactionSourceId(item = {}) {
+    if (item.sourceId) return item.sourceId;
+    if (item.vehicleRecordId) return item.vehicleRecordId;
+    if (item.recurringId) return item.recurringId;
+    return "";
+  },
+
   tx(id, type, date, category, description, amount, meta = {}) {
     const timestamp = meta.createdAt || new Date().toISOString();
     return {
+      ...meta,
       id,
       type,
       date,
@@ -32,17 +47,16 @@ window.AppState = {
       description,
       amount: Number(amount),
       subcategory: meta.subcategory || "",
-      sourceModule: meta.sourceModule || "manual",
-      sourceId: meta.sourceId || "",
+      sourceModule: window.AppState.transactionSourceModule(meta),
+      sourceId: window.AppState.transactionSourceId(meta),
       createdAt: timestamp,
       updatedAt: meta.updatedAt || timestamp,
-      ...meta,
     };
   },
 
   normalizeTransaction(item) {
-    const sourceModule = item.sourceModule || (item.vehicleId ? "vehicles" : item.recurringId ? "recurring" : "manual");
-    const sourceId = item.sourceId || item.vehicleRecordId || item.recurringId || "";
+    const sourceModule = window.AppState.transactionSourceModule(item);
+    const sourceId = window.AppState.transactionSourceId(item);
     const timestamp = item.createdAt || (item.date ? `${item.date}T00:00:00.000Z` : new Date().toISOString());
     return {
       ...item,

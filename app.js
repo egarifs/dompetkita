@@ -569,11 +569,14 @@
       }
 
       function updateTransactionRecord(target, values) {
-        Object.assign(target, {
+        const normalized = window.AppState.normalizeTransaction({
+          ...target,
           ...values,
-          amount: Number(values.amount || 0),
+          id: target.id,
+          createdAt: target.createdAt,
           updatedAt: new Date().toISOString(),
         });
+        Object.assign(target, normalized);
       }
 
       function savingsEntry(type, date, amount, note) {
@@ -664,7 +667,7 @@
       }
 
       function vehicleTransactions() {
-        return state.transactions.filter((item) => item.category === "Kendaraan" || item.vehicleId);
+        return state.transactions.filter((item) => item.category === "Kendaraan" || item.vehicleId || item.sourceModule === "vehicles");
       }
 
       function upsertVehicleTransaction(record, subcategory, amount, date, description) {
@@ -2784,8 +2787,19 @@
 
       function exportCsv() {
         const rows = [
-          ["Tanggal", "Kategori", "Deskripsi", "Tipe", "Nominal"],
-          ...state.transactions.map((item) => [item.date, item.category, item.description, item.type === "income" ? "Pemasukan" : "Pengeluaran", item.amount]),
+          ["Tanggal", "Kategori", "Subkategori", "Deskripsi", "Tipe", "Nominal", "Sumber", "Source ID", "Dibuat", "Diperbarui"],
+          ...state.transactions.map((item) => [
+            item.date,
+            item.category,
+            item.subcategory || "",
+            item.description,
+            item.type === "income" ? "Pemasukan" : "Pengeluaran",
+            item.amount,
+            item.sourceModule || "manual",
+            item.sourceId || "",
+            item.createdAt || "",
+            item.updatedAt || "",
+          ]),
         ];
         const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
         downloadFile(`transaksi-keuangan-${todayDate()}.csv`, csv, "text/csv;charset=utf-8");
