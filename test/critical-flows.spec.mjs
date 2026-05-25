@@ -72,6 +72,7 @@ function upsertVehicleTransaction(state, record, subcategory, amount, date, desc
     vehicleId: record.vehicleId,
     vehicleRecordId: record.id,
     vehicleRecordType: subcategory,
+    walletId: record.walletId || state.wallets[0]?.id || "",
     updatedAt: new Date().toISOString(),
   };
   if (existing) {
@@ -81,6 +82,17 @@ function upsertVehicleTransaction(state, record, subcategory, amount, date, desc
   const transaction = window.AppState.tx("vehicle-transaction", "expense", date, "Kendaraan", description, value, payload);
   state.transactions.push(transaction);
   return transaction.id;
+}
+
+function recalculateWalletBalances(state) {
+  state.wallets.forEach((wallet) => {
+    wallet.currentBalance = Number(wallet.initialBalance || 0);
+  });
+  state.transactions.forEach((transaction) => {
+    const wallet = state.wallets.find((item) => item.id === transaction.walletId);
+    if (!wallet) return;
+    wallet.currentBalance += transaction.type === "income" ? Number(transaction.amount || 0) : -Number(transaction.amount || 0);
+  });
 }
 
 const out = [];
@@ -97,18 +109,37 @@ assert(window.AppAuth.loadSessionUser(sessionStorageKey, window.AppAuth.loadUser
 out.push("registrasi/login:ok");
 
 const state = normalizeState({});
-const transaction = window.AppState.tx("transaction-1", "expense", "2026-05-25", "Makanan", "Sarapan", 25000);
+const cashWallet = state.wallets[0];
+const bankWallet = state.wallets[1];
+assert(cashWallet?.id && bankWallet?.id, "Dompet default tidak tersedia.");
+
+const transaction = window.AppState.tx("transaction-1", "expense", "2026-05-25", "Makanan", "Sarapan", 25000, { walletId: cashWallet.id });
 state.transactions.push(transaction);
 window.AppStorage.saveState(storageKey, state);
 const storedAfterAdd = window.AppStorage.loadState(storageKey, normalizeState, () => normalizeState({}));
-assert(storedAfterAdd.transactions.some((item) => item.id === "transaction-1" && item.amount === 25000), "Tambah transaksi tidak tersimpan.");
+assert(storedAfterAdd.transactions.some((item) => item.id === "transaction-1" && item.amount === 25000 && item.walletId === cashWallet.id), "Tambah transaksi tidak tersimpan dengan dompet.");
 out.push("tambah transaksi:ok");
+
+const incomeToCash = window.AppState.tx("transaction-income-cash", "income", "2026-05-25", "Gaji", "Gaji", 100000, { walletId: cashWallet.id });
+const incomeToBank = window.AppState.tx("transaction-income-bank", "income", "2026-05-25", "Transfer", "Masuk bank", 200000, { walletId: bankWallet.id });
+state.transactions.push(incomeToCash, incomeToBank);
+recalculateWalletBalances(state);
+assert(cashWallet.currentBalance === Number(cashWallet.initialBalance || 0) + 75000, "Saldo Cash tidak sesuai setelah pemasukan dan pengeluaran.");
+assert(bankWallet.currentBalance === Number(bankWallet.initialBalance || 0) + 200000, "Saldo Bank tidak sesuai setelah pemasukan.");
+
+Object.assign(transaction, window.AppState.normalizeTransaction({ ...transaction, walletId: bankWallet.id, amount: 50000, updatedAt: new Date().toISOString() }));
+recalculateWalletBalances(state);
+assert(cashWallet.currentBalance === Number(cashWallet.initialBalance || 0) + 100000, "Saldo Cash tidak kembali benar setelah transaksi dipindah.");
+assert(bankWallet.currentBalance === Number(bankWallet.initialBalance || 0) + 150000, "Saldo Bank tidak sesuai setelah transaksi dipindah.");
+out.push("saldo dompet:ok");
 
 markDeleted(state, "transactions", "transaction-1");
 state.transactions = state.transactions.filter((item) => item.id !== "transaction-1");
+recalculateWalletBalances(state);
 const normalizedAfterDelete = normalizeState(state);
 assert(!normalizedAfterDelete.transactions.some((item) => item.id === "transaction-1"), "Hapus transaksi masih menampilkan data.");
 assert(normalizedAfterDelete.deleted.transactions.includes("transaction-1"), "Hapus transaksi tidak menyimpan deletion marker.");
+assert(bankWallet.currentBalance === Number(bankWallet.initialBalance || 0) + 200000, "Saldo dompet tidak kembali benar setelah transaksi dihapus.");
 out.push("hapus transaksi:ok");
 
 const savingsGoal = window.AppState.savingsGoal("savings-1", "2026-05-25", "Dana Darurat", 10000000, "2027-05-25", [
@@ -120,12 +151,13 @@ assert(normalizedSavings.savings[0].entries[0].amount === 500000, "Tambah tabung
 out.push("tambah tabungan:ok");
 
 state.vehicles.push({ id: "vehicle-1", name: "Motor Test", plate: "B 1234 TST", currentKm: 12000, type: "Motor" });
-const serviceRecord = { id: "service-1", vehicleId: "vehicle-1" };
+const serviceRecord = { id: "service-1", vehicleId: "vehicle-1", walletId: cashWallet.id };
 serviceRecord.transactionId = upsertVehicleTransaction(state, serviceRecord, "Service", 150000, "2026-05-25", "Service rutin");
 state.vehicleServices.push({ ...serviceRecord, serviceDate: "2026-05-25", serviceKm: 12000, serviceType: "Service rutin", cost: 150000 });
 const vehicleTransaction = state.transactions.find((item) => item.id === serviceRecord.transactionId);
 assert(vehicleTransaction?.category === "Kendaraan", "Biaya kendaraan tidak masuk transaksi kategori Kendaraan.");
 assert(vehicleTransaction?.sourceModule === "vehicles" && vehicleTransaction?.sourceId === "service-1", "Relasi transaksi kendaraan tidak lengkap.");
+assert(vehicleTransaction?.walletId === cashWallet.id, "Transaksi kendaraan tidak menyimpan dompet.");
 out.push("kendaraan otomatis transaksi:ok");
 
 let upsertPayload = null;

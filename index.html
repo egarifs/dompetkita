@@ -214,6 +214,20 @@
           </div>
 
           <div class="dashboard-sections" id="dashboardSections">
+            <section class="panel" data-home-section="wallets">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <h3>Saldo Dompet</h3>
+                  <p>Pantau saldo berdasarkan sumber uang.</p>
+                </div>
+                <div class="row-actions">
+                  <button class="button" type="button" data-open-form="wallet">Tambah Dompet</button>
+                  <button class="button primary" type="button" data-view="wallets">Buka Dompet</button>
+                </div>
+              </div>
+              <div class="wallet-list" id="homeWalletList"></div>
+            </section>
+
             <section class="panel" data-home-section="chartBudget">
               <div class="panel-header">
                 <div class="panel-title">
@@ -326,6 +340,31 @@
               </div>
             </div>
             <div class="budget-list" id="allSavingsList"></div>
+          </section>
+        </section>
+
+        <section class="view" id="walletsView">
+          <section class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h3>Dompet</h3>
+                <p>Kelola dompet dan pantau saldo setiap sumber uang.</p>
+              </div>
+              <button class="button primary" type="button" data-open-form="wallet">Tambah Dompet</button>
+            </div>
+            <div class="compact-stats">
+              <article class="stat-card">
+                <span class="stat-label">Total Saldo Dompet</span>
+                <strong class="stat-value" id="walletTotalBalance">Rp0</strong>
+                <span class="stat-sub">Akumulasi semua dompet</span>
+              </article>
+              <article class="stat-card">
+                <span class="stat-label">Jumlah Dompet</span>
+                <strong class="stat-value" id="walletCount">0</strong>
+                <span class="stat-sub">Dompet aktif</span>
+              </article>
+            </div>
+            <div class="wallet-list" id="walletList"></div>
           </section>
         </section>
 
@@ -654,7 +693,10 @@
                       <strong>Dompet</strong>
                       <span id="walletSummary">Tunai, Bank</span>
                     </div>
-                    <button class="button" type="button" data-open-form="wallet">Kelola</button>
+                    <div class="row-actions">
+                      <button class="button" type="button" data-open-form="wallet">Tambah</button>
+                      <button class="button primary" type="button" data-view="wallets">Kelola</button>
+                    </div>
                   </div>
                   <div class="settings-item">
                     <div>

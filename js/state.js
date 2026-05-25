@@ -36,6 +36,47 @@ window.AppState = {
     return "";
   },
 
+  walletIdFromName(name = "") {
+    const slug = String(name || "wallet")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    return `wallet-${slug || "default"}`;
+  },
+
+  normalizeWallet(item, index = 0) {
+    const now = new Date().toISOString();
+    if (typeof item === "string") {
+      return {
+        id: window.AppState.walletIdFromName(item),
+        userId: "",
+        name: item,
+        initialBalance: 0,
+        currentBalance: 0,
+        type: item.toLowerCase().includes("bank") ? "Bank" : "Cash",
+        color: "",
+        icon: "",
+        createdAt: now,
+        updatedAt: now,
+      };
+    }
+    const name = item?.name || item?.label || `Dompet ${index + 1}`;
+    const createdAt = item?.createdAt || now;
+    return {
+      ...item,
+      id: item?.id || window.AppState.walletIdFromName(name),
+      userId: item?.userId || "",
+      name,
+      initialBalance: Number(item?.initialBalance ?? item?.openingBalance ?? 0),
+      currentBalance: Number(item?.currentBalance ?? item?.initialBalance ?? item?.openingBalance ?? 0),
+      type: item?.type || "Cash",
+      color: item?.color || "",
+      icon: item?.icon || "",
+      createdAt,
+      updatedAt: item?.updatedAt || createdAt,
+    };
+  },
+
   tx(id, type, date, category, description, amount, meta = {}) {
     const timestamp = meta.createdAt || new Date().toISOString();
     return {
@@ -49,6 +90,7 @@ window.AppState = {
       subcategory: meta.subcategory || "",
       sourceModule: window.AppState.transactionSourceModule(meta),
       sourceId: window.AppState.transactionSourceId(meta),
+      walletId: meta.walletId || meta.dompetId || "",
       createdAt: timestamp,
       updatedAt: meta.updatedAt || timestamp,
     };
@@ -69,6 +111,7 @@ window.AppState = {
       subcategory: item.subcategory || "",
       sourceModule,
       sourceId,
+      walletId: item.walletId || item.dompetId || "",
       createdAt: timestamp,
       updatedAt: item.updatedAt || timestamp,
     };
@@ -137,6 +180,7 @@ window.AppState = {
       savings: window.AppState.deletionList(data, "savings"),
       billReminders: window.AppState.deletionList(data, "billReminders"),
       recurring: window.AppState.deletionList(data, "recurring"),
+      wallets: window.AppState.deletionList(data, "wallets"),
       vehicles: window.AppState.deletionList(data, "vehicles"),
       vehicleServices: window.AppState.deletionList(data, "vehicleServices"),
       vehicleOilChanges: window.AppState.deletionList(data, "vehicleOilChanges"),
@@ -152,13 +196,13 @@ window.AppState = {
       savings: window.AppState.withoutDeleted(Array.isArray(data.savings) ? data.savings : [], deleted.savings).map(window.AppState.normalizeSavingsGoal),
       billReminders: window.AppState.withoutDeleted(Array.isArray(data.billReminders) ? data.billReminders : [], deleted.billReminders),
       recurring: window.AppState.withoutDeleted(Array.isArray(data.recurring) ? data.recurring : [], deleted.recurring),
+      wallets: window.AppState.withoutDeleted(Array.isArray(data.wallets) && data.wallets.length ? data.wallets : ["Cash", "Bank"], deleted.wallets).map(window.AppState.normalizeWallet),
       vehicles: window.AppState.withoutDeleted(Array.isArray(data.vehicles) ? data.vehicles : [], deleted.vehicles),
       vehicleServices: window.AppState.withoutDeleted(Array.isArray(data.vehicleServices) ? data.vehicleServices : [], deleted.vehicleServices),
       vehicleOilChanges: window.AppState.withoutDeleted(Array.isArray(data.vehicleOilChanges) ? data.vehicleOilChanges : [], deleted.vehicleOilChanges),
       vehicleParts: window.AppState.withoutDeleted(Array.isArray(data.vehicleParts) ? data.vehicleParts : [], deleted.vehicleParts),
       vehicleTaxes: window.AppState.withoutDeleted(Array.isArray(data.vehicleTaxes) ? data.vehicleTaxes : [], deleted.vehicleTaxes),
       categories: Array.isArray(data.categories) && data.categories.length ? data.categories : [...defaultCategories],
-      wallets: Array.isArray(data.wallets) && data.wallets.length ? data.wallets : ["Tunai", "Bank"],
       deleted,
       settings: {
         reminderEnabled: Boolean(data.settings?.reminderEnabled),
@@ -169,7 +213,7 @@ window.AppState = {
         pin: data.settings?.pin || "",
         homeSectionOrder: Array.isArray(data.settings?.homeSectionOrder) && data.settings.homeSectionOrder.length
           ? data.settings.homeSectionOrder
-          : ["chartBudget", "budgetMonth", "insight", "actionSummary", "latestTransactions", "savings", "billReminder"],
+          : ["wallets", "chartBudget", "budgetMonth", "insight", "actionSummary", "latestTransactions", "savings", "billReminder"],
         incomeVisible: Boolean(data.settings?.incomeVisible),
         totalBalanceVisible: Boolean(data.settings?.totalBalanceVisible),
         remainingBudgetVisible: Boolean(data.settings?.remainingBudgetVisible),
@@ -235,7 +279,11 @@ window.AppState = {
       ],
       recurring: [{ id: id(), type: "expense", category: "Tagihan", description: "Internet bulanan", amount: 330000, frequency: "monthly", day: 7, active: true }],
       categories: [...defaultCategories],
-      wallets: ["Tunai", "Bank", "E-Wallet"],
+      wallets: [
+        { id: "wallet-cash", userId: "", name: "Cash", initialBalance: 500000, currentBalance: 0, type: "Cash", color: "", icon: "", createdAt: `${month}-01T00:00:00.000Z`, updatedAt: `${month}-01T00:00:00.000Z` },
+        { id: "wallet-bank-bca", userId: "", name: "Bank BCA", initialBalance: 2000000, currentBalance: 0, type: "Bank", color: "", icon: "", createdAt: `${month}-01T00:00:00.000Z`, updatedAt: `${month}-01T00:00:00.000Z` },
+        { id: "wallet-e-wallet", userId: "", name: "E-Wallet", initialBalance: 150000, currentBalance: 0, type: "E-Wallet", color: "", icon: "", createdAt: `${month}-01T00:00:00.000Z`, updatedAt: `${month}-01T00:00:00.000Z` },
+      ],
       settings: { reminderEnabled: false, reminderTime: "20:00", darkMode: false, language: "id", pin: "" },
     };
   },

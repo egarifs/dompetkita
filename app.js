@@ -111,6 +111,7 @@
           home: ["Beranda Keuangan", "Pantau pengeluaran bulan berjalan, saldo, dan sisa anggaran."],
           reports: ["Laporan", "Lihat semua transaksi dan pola pengeluaran per kategori."],
           budgets: ["Anggaran", "Atur batas pengeluaran dan pantau hutang piutang."],
+          wallets: ["Dompet", "Kelola saldo Cash, Bank, E-Wallet, dan sumber uang lainnya."],
           vehicles: ["Kendaraan", "Pantau service, oli, part, pajak, dan biaya kendaraan."],
           account: ["Akun", "Kelola profil, akses, ekspor data, dan pengaturan aplikasi."],
           thanks: ["Thanks", "Dukung pengembangan aplikasi melalui rekening yang tersedia."],
@@ -120,6 +121,7 @@
           home: ["Finance Dashboard", "Track this month's spending, balance, and remaining budget."],
           reports: ["Reports", "View all transactions and category spending patterns."],
           budgets: ["Budget", "Set spending limits and monitor debts."],
+          wallets: ["Wallets", "Manage Cash, Bank, E-Wallet, and other money sources."],
           vehicles: ["Vehicles", "Track service, oil, parts, taxes, and vehicle costs."],
           account: ["Account", "Manage profile, access, exports, and app settings."],
           thanks: ["Thanks", "Support app development through the available bank account."],
@@ -130,7 +132,7 @@
       const state = loadState();
       let categories = state.categories?.length ? state.categories : [...defaultCategories];
       state.categories = categories;
-      const defaultHomeSectionOrder = ["chartBudget", "budgetMonth", "insight", "actionSummary", "latestTransactions", "savings", "billReminder", "vehicles"];
+      const defaultHomeSectionOrder = ["wallets", "chartBudget", "budgetMonth", "insight", "actionSummary", "latestTransactions", "savings", "billReminder", "vehicles"];
       state.settings.homeSectionOrder = normalizeHomeSectionOrder(state.settings?.homeSectionOrder);
       let users = window.AppAuth.loadUsers(authStorageKey);
       let currentUser = loadSessionUser();
@@ -486,6 +488,7 @@
           savings: mergeDeletedIds(cloud, local, "savings"),
           billReminders: mergeDeletedIds(cloud, local, "billReminders"),
           recurring: mergeDeletedIds(cloud, local, "recurring"),
+          wallets: mergeDeletedIds(cloud, local, "wallets"),
           vehicles: mergeDeletedIds(cloud, local, "vehicles"),
           vehicleServices: mergeDeletedIds(cloud, local, "vehicleServices"),
           vehicleOilChanges: mergeDeletedIds(cloud, local, "vehicleOilChanges"),
@@ -502,13 +505,13 @@
           savings: withoutDeleted(mergeSavingsGoals(cloud.savings, local.savings), deleted.savings),
           billReminders: withoutDeleted(mergeById(cloud.billReminders, local.billReminders), deleted.billReminders),
           recurring: withoutDeleted(mergeById(cloud.recurring, local.recurring), deleted.recurring),
+          wallets: withoutDeleted(mergeById(cloud.wallets, local.wallets), deleted.wallets),
           vehicles: withoutDeleted(mergeById(cloud.vehicles, local.vehicles), deleted.vehicles),
           vehicleServices: withoutDeleted(mergeById(cloud.vehicleServices, local.vehicleServices), deleted.vehicleServices),
           vehicleOilChanges: withoutDeleted(mergeById(cloud.vehicleOilChanges, local.vehicleOilChanges), deleted.vehicleOilChanges),
           vehicleParts: withoutDeleted(mergeById(cloud.vehicleParts, local.vehicleParts), deleted.vehicleParts),
           vehicleTaxes: withoutDeleted(mergeById(cloud.vehicleTaxes, local.vehicleTaxes), deleted.vehicleTaxes),
           categories: [...new Set([...cloud.categories, ...local.categories])],
-          wallets: [...new Set([...cloud.wallets, ...local.wallets])],
           settings: { ...cloud.settings, ...local.settings },
           syncStatus: local.syncStatus === "pending" || local.syncStatus === "failed" ? local.syncStatus : cloud.syncStatus,
           localChangedAt: local.localChangedAt || cloud.localChangedAt,
@@ -783,6 +786,61 @@
         return window.AppState.billReminder(id(), title, category, amount, dueDate, note, status);
       }
 
+      function currentUserId() {
+        return currentUser?.cloudId || currentUser?.id || currentUser?.username || "";
+      }
+
+      function walletRecord(name, initialBalance = 0, type = "Cash") {
+        const timestamp = new Date().toISOString();
+        return window.AppState.normalizeWallet({
+          id: id(),
+          userId: currentUserId(),
+          name,
+          initialBalance,
+          currentBalance: initialBalance,
+          type,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        });
+      }
+
+      function walletName(walletId) {
+        return state.wallets.find((wallet) => wallet.id === walletId)?.name || "Tanpa dompet";
+      }
+
+      function walletInUse(walletId) {
+        return state.transactions.some((item) => item.walletId === walletId);
+      }
+
+      function walletOptions(selectedId = "") {
+        if (!state.wallets.length) return `<option value="">Belum ada dompet</option>`;
+        return state.wallets.map((wallet) => `<option value="${wallet.id}" ${wallet.id === selectedId ? "selected" : ""}>${escapeHtml(wallet.name)} - ${money(wallet.currentBalance || 0)}</option>`).join("");
+      }
+
+      function defaultWalletId() {
+        return state.wallets[0]?.id || "";
+      }
+
+      function ensureTransactionWallets() {
+        if (!state.wallets.length) return;
+        const defaultWalletId = state.wallets[0].id;
+        state.transactions.forEach((transaction) => {
+          if (!transaction.walletId) transaction.walletId = defaultWalletId;
+        });
+      }
+
+      function recalculateWalletBalances() {
+        state.wallets.forEach((wallet) => {
+          wallet.currentBalance = Number(wallet.initialBalance || 0);
+        });
+        state.transactions.forEach((transaction) => {
+          const wallet = state.wallets.find((item) => item.id === transaction.walletId);
+          if (!wallet) return;
+          const amount = Number(transaction.amount || 0);
+          wallet.currentBalance += transaction.type === "income" ? amount : -amount;
+        });
+      }
+
       function vehicleName(vehicleId) {
         const vehicle = state.vehicles.find((item) => item.id === vehicleId);
         return vehicle ? vehicle.name : "Kendaraan";
@@ -840,6 +898,7 @@
           description,
           sourceModule: "vehicles",
           sourceId: record.id,
+          walletId: record.walletId || defaultWalletId(),
           vehicleId: record.vehicleId,
           vehicleRecordId: record.id,
           vehicleRecordType: subcategory,
@@ -927,7 +986,7 @@
 
         document.querySelector("#monthExpense").textContent = money(currentExpense);
         document.querySelector("#monthIncome").textContent = money(currentIncome);
-        document.querySelector("#totalBalance").textContent = money(totalBalanceUntil());
+        document.querySelector("#totalBalance").textContent = money(state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0));
         document.querySelector("#remainingBudget").textContent = money(remaining);
         document.querySelector("#debtSummary").textContent = money(unpaidReceivable - unpaidPayable);
 
@@ -964,7 +1023,7 @@
 
         document.querySelector("#monthExpense").textContent = money(currentExpense);
         document.querySelector("#monthIncome").textContent = money(currentIncome);
-        document.querySelector("#totalBalance").textContent = money(totalBalanceUntil());
+        document.querySelector("#totalBalance").textContent = money(state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0));
         document.querySelector("#remainingBudget").textContent = money(remaining);
         document.querySelector("#debtSummary").textContent = money(unpaidReceivable - unpaidPayable);
 
@@ -1061,6 +1120,7 @@
               <tr>
                 <th>Tanggal</th>
                 <th>Kategori</th>
+                <th>Dompet</th>
                 <th>Deskripsi</th>
                 <th>Tipe</th>
                 <th>Nominal</th>
@@ -1072,6 +1132,7 @@
                 <tr>
                   <td>${escapeHtml(item.date)}</td>
                   <td><span class="pill">${escapeHtml(item.category)}</span></td>
+                  <td>${escapeHtml(walletName(item.walletId))}</td>
                   <td>${escapeHtml(item.description)}</td>
                   <td><span class="pill ${item.type}">${item.type === "income" ? "Pemasukan" : "Pengeluaran"}</span></td>
                   <td class="amount ${item.type}">${item.type === "income" ? "+" : "-"} ${money(item.amount)}</td>
@@ -1253,6 +1314,50 @@
         renderVehicleTaxes();
         renderVehicleExpenseFilters();
         renderVehicleExpenses();
+      }
+
+      function walletCard(wallet, compact = false) {
+        const isMinus = Number(wallet.currentBalance || 0) < 0;
+        return `
+          <article class="wallet-card ${isMinus ? "negative" : ""}">
+            <div>
+              <span class="stat-label">${escapeHtml(wallet.type || "Dompet")}</span>
+              <strong>${escapeHtml(wallet.name)}</strong>
+              <span class="stat-sub">Saldo awal ${money(wallet.initialBalance || 0)}</span>
+            </div>
+            <div class="wallet-balance">
+              <strong>${money(wallet.currentBalance || 0)}</strong>
+              ${isMinus ? `<span class="pill expense">Minus</span>` : `<span class="pill income">Aktif</span>`}
+            </div>
+            ${compact ? "" : `
+              <div class="row-actions wallet-actions">
+                <button class="icon-button" type="button" data-edit-wallet="${wallet.id}" title="Edit dompet">${editIcon()}</button>
+                <button class="icon-button danger" type="button" data-delete-wallet="${wallet.id}" title="Hapus dompet">${trashIcon()}</button>
+              </div>
+            `}
+          </article>
+        `;
+      }
+
+      function renderWallets() {
+        recalculateWalletBalances();
+        const total = state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0);
+        const homeTarget = document.querySelector("#homeWalletList");
+        if (homeTarget) {
+          homeTarget.innerHTML = state.wallets.length
+            ? state.wallets.slice(0, 4).map((wallet) => walletCard(wallet, true)).join("")
+            : `<div class="empty"><p>Belum ada dompet.</p><button class="button primary" type="button" data-open-form="wallet">Tambah Dompet</button></div>`;
+        }
+        const walletTarget = document.querySelector("#walletList");
+        if (walletTarget) {
+          walletTarget.innerHTML = state.wallets.length
+            ? state.wallets.map((wallet) => walletCard(wallet)).join("")
+            : `<div class="empty"><p>Belum ada dompet.</p><button class="button primary" type="button" data-open-form="wallet">Tambah Dompet</button></div>`;
+        }
+        const totalLabel = document.querySelector("#walletTotalBalance");
+        if (totalLabel) totalLabel.textContent = money(total);
+        const countLabel = document.querySelector("#walletCount");
+        if (countLabel) countLabel.textContent = String(state.wallets.length);
       }
 
       function renderVehicleDashboard() {
@@ -1850,6 +1955,7 @@
       function dashboardSectionLabel(section) {
         const labels = {
           chartBudget: "Grafik Saldo dan Anggaran",
+          wallets: "Saldo Dompet",
           budgetMonth: "Anggaran Bulan Ini",
           insight: "Insight",
           actionSummary: "Ringkasan Tindakan",
@@ -1876,7 +1982,9 @@
         document.querySelector("#syncStatus").textContent = isGuest() ? "Mode tamu aktif. Login atau registrasi untuk menyimpan data." : syncStatusText();
         document.querySelector("#syncNowButton").disabled = isGuest() || !isCloudSyncAllowed() || cloudSync.isSaving;
         document.querySelector("#reminderStatus").textContent = state.settings.reminderEnabled ? `Aktif pukul ${state.settings.reminderTime}` : "Belum aktif";
-        document.querySelector("#walletSummary").textContent = state.wallets.join(", ") || "Belum ada dompet";
+        document.querySelector("#walletSummary").textContent = state.wallets.length
+          ? `${state.wallets.length} dompet, total ${money(state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0))}`
+          : "Belum ada dompet";
         document.querySelector("#categorySummary").textContent = `${categories.length} kategori aktif`;
         document.querySelector("#dashboardMenuSummary").textContent = state.settings.homeSectionOrder.map(dashboardSectionLabel).join(", ");
         document.querySelector("#pinSummary").textContent = state.settings.pin ? "PIN sudah disimpan di perangkat ini." : "PIN belum aktif.";
@@ -1896,11 +2004,14 @@
         categories = state.categories?.length ? state.categories : [...defaultCategories];
         state.categories = categories;
         ensureVehicleCategory();
+        ensureTransactionWallets();
+        recalculateWalletBalances();
         renderDashboardMenuOrder();
         applyDarkMode();
         saveState();
         applyLanguage();
         renderCategoryOptions();
+        renderWallets();
         renderStats();
         renderChart();
         renderMonthOptions();
@@ -1939,9 +2050,23 @@
           openAuthRequiredModal();
           return;
         }
+        if (!state.wallets.length) {
+          document.querySelector("#modalTitle").textContent = "Dompet Diperlukan";
+          document.querySelector("#modalBody").innerHTML = `
+            <div class="form">
+              <div class="empty">
+                <p>Buat dompet terlebih dahulu sebelum menambahkan transaksi.</p>
+                <button class="button primary" type="button" data-open-form="wallet">Tambah Dompet</button>
+              </div>
+            </div>
+          `;
+          showModal();
+          return;
+        }
         document.querySelector("#modalTitle").textContent = editingTransaction ? "Edit Transaksi" : "Tambah Transaksi";
         const selectedType = editingTransaction?.type || "expense";
         const selectedCategory = editingTransaction?.category || categories[0] || "Lainnya";
+        const selectedWallet = editingTransaction?.walletId || defaultWalletId();
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="transactionForm">
             <div class="form-grid">
@@ -1969,6 +2094,13 @@
                   <input id="transactionAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${editingTransaction ? formatNumber(editingTransaction.amount) : ""}" required />
                 </div>
               </div>
+            </div>
+            <div class="field">
+              <label for="transactionWallet">Dompet</label>
+              <select id="transactionWallet" required>
+                <option value="">Pilih dompet</option>
+                ${walletOptions(selectedWallet)}
+              </select>
             </div>
             <div class="field">
               <label for="transactionDescription">Deskripsi (opsional)</label>
@@ -2009,10 +2141,17 @@
             category: document.querySelector("#transactionCategory").value,
             amount: parseFormattedNumber(document.querySelector("#transactionAmount").value),
             description: document.querySelector("#transactionDescription").value.trim(),
+            walletId: document.querySelector("#transactionWallet").value,
             sourceModule: editingTransaction?.sourceModule || "manual",
             sourceId: editingTransaction?.sourceId || "",
             subcategory: editingTransaction?.subcategory || "",
           };
+          if (!values.walletId) {
+            alert("Dompet wajib dipilih.");
+            submitButton.disabled = false;
+            submitButton.textContent = editingTransaction ? "Simpan Perubahan" : "Simpan Transaksi";
+            return;
+          }
           if (editingTransaction) {
             updateTransactionRecord(editingTransaction, values);
           } else {
@@ -2167,6 +2306,7 @@
 
       function openRecurringForm() {
         if (!requireSignedIn()) return;
+        if (!state.wallets.length) return openTransactionForm();
         document.querySelector("#modalTitle").textContent = "Tambah Transaksi Berulang";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="recurringForm">
@@ -2194,6 +2334,13 @@
               </div>
             </div>
             <div class="field">
+              <label for="recurringWallet">Dompet</label>
+              <select id="recurringWallet" required>
+                <option value="">Pilih dompet</option>
+                ${walletOptions(defaultWalletId())}
+              </select>
+            </div>
+            <div class="field">
               <label for="recurringDescription">Deskripsi</label>
               <textarea id="recurringDescription" required></textarea>
             </div>
@@ -2214,6 +2361,7 @@
             type: document.querySelector("#recurringType").value,
             category: document.querySelector("#recurringCategory").value,
             amount: Number(document.querySelector("#recurringAmount").value),
+            walletId: document.querySelector("#recurringWallet").value,
             day: Number(document.querySelector("#recurringDay").value),
             description: document.querySelector("#recurringDescription").value.trim(),
             frequency: "monthly",
@@ -2312,32 +2460,56 @@
         });
       }
 
-      function openWalletForm() {
+      function openWalletForm(walletId = "") {
         if (!requireSignedIn()) return;
-        document.querySelector("#modalTitle").textContent = "Kelola Dompet";
+        const editing = walletId ? state.wallets.find((wallet) => wallet.id === walletId) : null;
+        document.querySelector("#modalTitle").textContent = editing ? "Edit Dompet" : "Tambah Dompet";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="walletForm">
-            <div class="field">
-              <label>Dompet saat ini</label>
-              <div class="compact-list">${state.wallets.map((wallet) => `<span class="pill">${escapeHtml(wallet)}</span>`).join("")}</div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="walletName">Nama dompet</label>
+                <input id="walletName" type="text" value="${escapeHtml(editing?.name || "")}" placeholder="Contoh: Cash, Bank BCA, Dana" required />
+              </div>
+              <div class="field">
+                <label for="walletType">Tipe dompet</label>
+                <select id="walletType" required>
+                  ${["Cash", "Bank", "E-Wallet", "Savings"].map((type) => `<option value="${type}" ${editing?.type === type ? "selected" : ""}>${type}</option>`).join("")}
+                </select>
+              </div>
             </div>
             <div class="field">
-              <label for="walletName">Nama dompet baru</label>
-              <input id="walletName" type="text" placeholder="Contoh: BCA, Dana, Tunai" required />
+              <label for="walletInitialBalance">Saldo awal</label>
+              <div class="currency-input">
+                <span>Rp</span>
+                <input id="walletInitialBalance" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.initialBalance) : ""}" placeholder="0" required />
+              </div>
             </div>
             <div class="row-actions">
               <button class="button" type="button" data-close-modal>Batal</button>
-              <button class="button primary" type="submit">Tambah Dompet</button>
+              <button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Tambah Dompet"}</button>
             </div>
           </form>
         `;
         showModal();
-        document.querySelector("#walletForm").addEventListener("submit", (event) => {
+        attachRupiahInput("#walletInitialBalance");
+        document.querySelector("#walletForm").addEventListener("submit", async (event) => {
           event.preventDefault();
-          const wallet = document.querySelector("#walletName").value.trim();
-          if (wallet && !state.wallets.includes(wallet)) state.wallets.push(wallet);
+          const name = document.querySelector("#walletName").value.trim();
+          const initialBalance = parseFormattedNumber(document.querySelector("#walletInitialBalance").value);
+          const type = document.querySelector("#walletType").value;
+          if (!name) return alert("Nama dompet wajib diisi.");
+          if (Number.isNaN(initialBalance) || initialBalance < 0) return alert("Saldo awal harus angka valid dan tidak boleh negatif.");
+          const duplicate = state.wallets.some((wallet) => wallet.id !== editing?.id && wallet.name.toLowerCase() === name.toLowerCase());
+          if (duplicate) return alert("Nama dompet sudah digunakan.");
+          if (editing) {
+            Object.assign(editing, { name, initialBalance, type, userId: editing.userId || currentUserId(), updatedAt: new Date().toISOString() });
+          } else {
+            state.wallets.push(walletRecord(name, initialBalance, type));
+          }
           closeModal();
-          renderAll();
+          await persistChanges(editing ? "Dompet diperbarui di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun." : "Dompet dibuat di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+          showSnackbar(editing ? "Dompet berhasil diperbarui." : "Dompet berhasil dibuat.");
         });
       }
 
@@ -2697,6 +2869,7 @@
             <details class="form-step" open>
               <summary>1. Service</summary>
               <div class="field"><label for="serviceVehicle">Kendaraan</label><select id="serviceVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
+              <div class="field"><label for="serviceWallet">Dompet</label><select id="serviceWallet" required>${walletOptions(editing?.walletId || defaultWalletId())}</select></div>
               <div class="form-grid"><div class="field"><label for="serviceDate">Tanggal service</label><input id="serviceDate" type="date" value="${editing?.serviceDate || todayDate()}" required /></div><div class="field"><label for="serviceKm">Kilometer</label><input id="serviceKm" type="number" min="0" value="${editing?.serviceKm || ""}" required /></div></div>
             </details>
             <details class="form-step">
@@ -2716,7 +2889,7 @@
           const serviceKm = Number(document.querySelector("#serviceKm").value || 0);
           if (cost < 0 || serviceKm < 0) return alert("Biaya dan kilometer tidak boleh negatif.");
           const record = editing || { id: id() };
-          Object.assign(record, { vehicleId: document.querySelector("#serviceVehicle").value, serviceDate: document.querySelector("#serviceDate").value, serviceKm, serviceType: document.querySelector("#serviceType").value.trim(), workshop: document.querySelector("#serviceWorkshop").value.trim(), cost, note: document.querySelector("#serviceNote").value.trim() });
+          Object.assign(record, { vehicleId: document.querySelector("#serviceVehicle").value, walletId: document.querySelector("#serviceWallet").value, serviceDate: document.querySelector("#serviceDate").value, serviceKm, serviceType: document.querySelector("#serviceType").value.trim(), workshop: document.querySelector("#serviceWorkshop").value.trim(), cost, note: document.querySelector("#serviceNote").value.trim() });
           record.transactionId = upsertVehicleTransaction(record, "Service", cost, record.serviceDate, record.note || record.serviceType);
           if (!editing) state.vehicleServices.push(record);
           closeModal();
@@ -2733,6 +2906,7 @@
             <details class="form-step" open>
               <summary>1. Data terakhir</summary>
               <div class="field"><label for="oilVehicle">Kendaraan</label><select id="oilVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
+              <div class="field"><label for="oilWallet">Dompet</label><select id="oilWallet" required>${walletOptions(editing?.walletId || defaultWalletId())}</select></div>
               <div class="form-grid"><div class="field"><label for="oilDate">Tanggal terakhir ganti oli</label><input id="oilDate" type="date" value="${editing?.lastOilDate || todayDate()}" required /></div><div class="field"><label for="oilKm">Kilometer terakhir</label><input id="oilKm" type="number" min="0" value="${editing?.lastOilKm || ""}" required /></div></div>
             </details>
             <details class="form-step">
@@ -2753,7 +2927,7 @@
           event.preventDefault();
           const cost = parseFormattedNumber(document.querySelector("#oilCost").value);
           const record = editing || { id: id() };
-          Object.assign(record, { vehicleId: document.querySelector("#oilVehicle").value, lastOilDate: document.querySelector("#oilDate").value, lastOilKm: Number(document.querySelector("#oilKm").value || 0), intervalKm: Number(document.querySelector("#oilIntervalKm").value || 0), intervalMonths: Number(document.querySelector("#oilIntervalMonths").value || 0), oilBrand: document.querySelector("#oilBrand").value.trim(), cost, note: document.querySelector("#oilNote").value.trim() });
+          Object.assign(record, { vehicleId: document.querySelector("#oilVehicle").value, walletId: document.querySelector("#oilWallet").value, lastOilDate: document.querySelector("#oilDate").value, lastOilKm: Number(document.querySelector("#oilKm").value || 0), intervalKm: Number(document.querySelector("#oilIntervalKm").value || 0), intervalMonths: Number(document.querySelector("#oilIntervalMonths").value || 0), oilBrand: document.querySelector("#oilBrand").value.trim(), cost, note: document.querySelector("#oilNote").value.trim() });
           if ([cost, record.lastOilKm, record.intervalKm, record.intervalMonths].some((value) => value < 0)) return alert("Biaya, kilometer, dan interval tidak boleh negatif.");
           record.transactionId = upsertVehicleTransaction(record, "Oli", cost, record.lastOilDate, record.note || `Ganti oli ${record.oilBrand}`);
           if (!editing) state.vehicleOilChanges.push(record);
@@ -2771,6 +2945,7 @@
             <details class="form-step" open>
               <summary>1. Part dan tanggal</summary>
               <div class="field"><label for="partVehicle">Kendaraan</label><select id="partVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
+              <div class="field"><label for="partWallet">Dompet</label><select id="partWallet" required>${walletOptions(editing?.walletId || defaultWalletId())}</select></div>
               <div class="form-grid"><div class="field"><label for="partName">Nama part</label><input id="partName" required value="${escapeHtml(editing?.partName || "")}" placeholder="Ban, aki, kampas rem" /></div><div class="field"><label for="partDate">Tanggal penggantian</label><input id="partDate" type="date" value="${editing?.replacementDate || todayDate()}" required /></div></div>
             </details>
             <details class="form-step">
@@ -2792,7 +2967,7 @@
           event.preventDefault();
           const cost = parseFormattedNumber(document.querySelector("#partCost").value);
           const record = editing || { id: id() };
-          Object.assign(record, { vehicleId: document.querySelector("#partVehicle").value, partName: document.querySelector("#partName").value.trim(), replacementDate: document.querySelector("#partDate").value, replacementKm: Number(document.querySelector("#partKm").value || 0), lifeKm: Number(document.querySelector("#partLifeKm").value || 0), lifeMonths: Number(document.querySelector("#partLifeMonths").value || 0), cost, note: document.querySelector("#partNote").value.trim() });
+          Object.assign(record, { vehicleId: document.querySelector("#partVehicle").value, walletId: document.querySelector("#partWallet").value, partName: document.querySelector("#partName").value.trim(), replacementDate: document.querySelector("#partDate").value, replacementKm: Number(document.querySelector("#partKm").value || 0), lifeKm: Number(document.querySelector("#partLifeKm").value || 0), lifeMonths: Number(document.querySelector("#partLifeMonths").value || 0), cost, note: document.querySelector("#partNote").value.trim() });
           if ([cost, record.replacementKm, record.lifeKm, record.lifeMonths].some((value) => value < 0)) return alert("Biaya, kilometer, dan estimasi umur tidak boleh negatif.");
           record.transactionId = upsertVehicleTransaction(record, "Spare Part", cost, record.replacementDate, record.note || `Ganti ${record.partName}`);
           if (!editing) state.vehicleParts.push(record);
@@ -2810,6 +2985,7 @@
             <details class="form-step" open>
               <summary>1. Jatuh tempo</summary>
               <div class="field"><label for="taxVehicle">Kendaraan</label><select id="taxVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
+              <div class="field"><label for="taxWallet">Dompet</label><select id="taxWallet" required>${walletOptions(editing?.walletId || defaultWalletId())}</select></div>
               <div class="form-grid"><div class="field"><label for="taxAnnualDue">Jatuh tempo tahunan</label><input id="taxAnnualDue" type="date" value="${editing?.annualDueDate || ""}" required /></div><div class="field"><label for="taxFiveYearDue">Jatuh tempo 5 tahunan</label><input id="taxFiveYearDue" type="date" value="${editing?.fiveYearDueDate || ""}" /></div></div>
             </details>
             <details class="form-step">
@@ -2831,7 +3007,7 @@
           const estimatedCost = parseFormattedNumber(document.querySelector("#taxCost").value);
           if (estimatedCost < 0) return alert("Biaya pajak tidak boleh negatif.");
           const record = editing || { id: id() };
-          Object.assign(record, { vehicleId: document.querySelector("#taxVehicle").value, annualDueDate: document.querySelector("#taxAnnualDue").value, fiveYearDueDate: document.querySelector("#taxFiveYearDue").value, estimatedCost, status: document.querySelector("#taxStatus").value, paidDate: document.querySelector("#taxPaidDate").value, note: document.querySelector("#taxNote").value.trim() });
+          Object.assign(record, { vehicleId: document.querySelector("#taxVehicle").value, walletId: document.querySelector("#taxWallet").value, annualDueDate: document.querySelector("#taxAnnualDue").value, fiveYearDueDate: document.querySelector("#taxFiveYearDue").value, estimatedCost, status: document.querySelector("#taxStatus").value, paidDate: document.querySelector("#taxPaidDate").value, note: document.querySelector("#taxNote").value.trim() });
           if (record.status === "paid" && !record.paidDate) return alert("Tanggal pembayaran wajib diisi jika pajak sudah dibayar.");
           if (record.status === "paid") record.transactionId = upsertVehicleTransaction(record, "Pajak", estimatedCost, record.paidDate, record.note || "Pajak kendaraan");
           else removeVehicleTransaction(record);
@@ -2847,6 +3023,7 @@
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="vehicleExpenseForm">
             <div class="form-grid"><div class="field"><label for="expenseVehicle">Kendaraan</label><select id="expenseVehicle" required>${vehicleOptions()}</select></div><div class="field"><label for="expenseType">Jenis biaya</label><select id="expenseType"><option>Bensin</option><option>Lainnya</option></select></div></div>
+            <div class="field"><label for="expenseWallet">Dompet</label><select id="expenseWallet" required>${walletOptions(defaultWalletId())}</select></div>
             <div class="form-grid"><div class="field"><label for="expenseDate">Tanggal</label><input id="expenseDate" type="date" value="${todayDate()}" required /></div><div class="field"><label for="expenseAmount">Nominal</label><div class="currency-input"><span>Rp</span><input id="expenseAmount" type="text" inputmode="numeric" required placeholder="0" /></div></div></div>
             <div class="field"><label for="expenseNote">Catatan</label><textarea id="expenseNote" placeholder="Contoh: Bensin full tank"></textarea></div>
             <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">Simpan Biaya</button></div>
@@ -2858,7 +3035,7 @@
           event.preventDefault();
           const amount = parseFormattedNumber(document.querySelector("#expenseAmount").value);
           if (amount < 0) return alert("Nominal biaya tidak boleh negatif.");
-          const record = { id: id(), vehicleId: document.querySelector("#expenseVehicle").value };
+          const record = { id: id(), vehicleId: document.querySelector("#expenseVehicle").value, walletId: document.querySelector("#expenseWallet").value };
           upsertVehicleTransaction(record, document.querySelector("#expenseType").value, amount, document.querySelector("#expenseDate").value, document.querySelector("#expenseNote").value.trim() || document.querySelector("#expenseType").value);
           closeModal();
           await persistChanges("Biaya kendaraan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
@@ -3141,11 +3318,12 @@
 
       function exportCsv() {
         const rows = [
-          ["Tanggal", "Kategori", "Subkategori", "Deskripsi", "Tipe", "Nominal", "Sumber", "Source ID", "Dibuat", "Diperbarui"],
+          ["Tanggal", "Kategori", "Subkategori", "Dompet", "Deskripsi", "Tipe", "Nominal", "Sumber", "Source ID", "Dibuat", "Diperbarui"],
           ...state.transactions.map((item) => [
             item.date,
             item.category,
             item.subcategory || "",
+            walletName(item.walletId),
             item.description,
             item.type === "income" ? "Pemasukan" : "Pengeluaran",
             item.amount,
@@ -3177,7 +3355,7 @@
           <html>
             <head><meta charset="UTF-8" /></head>
             <body>
-              ${table("Transaksi", ["Tanggal", "Kategori", "Subkategori", "Deskripsi", "Tipe", "Nominal", "Sumber", "Dibuat", "Diperbarui"], state.transactions.map((item) => [item.date, item.category, item.subcategory || "", item.description, item.type, item.amount, item.sourceModule || "manual", item.createdAt || "", item.updatedAt || ""]))}
+              ${table("Transaksi", ["Tanggal", "Kategori", "Subkategori", "Dompet", "Deskripsi", "Tipe", "Nominal", "Sumber", "Dibuat", "Diperbarui"], state.transactions.map((item) => [item.date, item.category, item.subcategory || "", walletName(item.walletId), item.description, item.type, item.amount, item.sourceModule || "manual", item.createdAt || "", item.updatedAt || ""]))}
               ${table("Anggaran", ["Kategori", "Batas"], state.budgets.map((item) => [item.category, item.limit]))}
               ${table("Hutang Piutang", ["Tanggal", "Jatuh Tempo", "Jenis", "Nama", "Deskripsi", "Nominal", "Status"], state.debts.map((item) => [item.date, item.dueDate, item.kind, item.person, item.description, item.amount, item.status]))}
               ${table("Tabungan", ["Judul", "Kategori", "Target", "Terkumpul", "Target Tanggal"], state.savings.map((item) => [item.title, item.category, item.target, savingsBalance(item), item.targetDate]))}
@@ -3208,6 +3386,7 @@
           if (exists) return;
           state.transactions.push(transactionRecord(item.type, date, item.category, `${item.description} (berulang)`, Number(item.amount), {
             recurringId: item.id,
+            walletId: item.walletId || defaultWalletId(),
             sourceModule: "recurring",
             sourceId: item.id,
           }));
@@ -3761,6 +3940,36 @@
 
         if (event.target.closest("[data-close-modal]")) closeModal();
 
+        const walletEditButton = event.target.closest("[data-edit-wallet]");
+        if (walletEditButton) {
+          if (!requireSignedIn()) return;
+          openWalletForm(walletEditButton.dataset.editWallet);
+          return;
+        }
+
+        const walletDeleteButton = event.target.closest("[data-delete-wallet]");
+        if (walletDeleteButton) {
+          if (!requireSignedIn()) return;
+          const target = state.wallets.find((wallet) => wallet.id === walletDeleteButton.dataset.deleteWallet);
+          if (!target) return;
+          if (walletInUse(target.id)) {
+            alert("Dompet tidak bisa dihapus karena sudah digunakan pada transaksi.");
+            return;
+          }
+          const snapshot = cloneData(target);
+          await deleteWithUndo({
+            confirmMessage: `Hapus dompet "${target.name}"?`,
+            deleteMessage: "Dompet dihapus.",
+            failedMessage: "Dompet sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.",
+            deleteFn: () => {
+              markDeleted("wallets", target.id);
+              state.wallets = state.wallets.filter((wallet) => wallet.id !== target.id);
+            },
+            undoFn: () => restoreItems("wallets", snapshot),
+          });
+          return;
+        }
+
         const editButton = event.target.closest("[data-edit-transaction]");
         if (editButton) {
           if (!requireSignedIn()) return;
@@ -4151,7 +4360,7 @@
           const normalized = normalizeState(fresh);
           applyState({
             ...normalized,
-            deleted: { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [] },
+            deleted: { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], wallets: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [] },
           });
           renderAll();
         }
@@ -4170,7 +4379,7 @@
           state.vehicleOilChanges = [];
           state.vehicleParts = [];
           state.vehicleTaxes = [];
-          state.deleted = { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [] };
+          state.deleted = { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], wallets: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [] };
           persistChanges("Data sudah dikosongkan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
         }
       });
