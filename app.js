@@ -1086,7 +1086,10 @@
                 <strong>${escapeHtml(vehicle.name)}</strong>
                 <span>${escapeHtml(vehicle.brand || "-")} ${escapeHtml(vehicle.model || "")} - ${escapeHtml(vehicle.plate)}</span>
               </div>
-              <button class="icon-button danger" type="button" data-delete-vehicle="${vehicle.id}" title="Hapus kendaraan">${trashIcon()}</button>
+              <div class="row-actions">
+                <button class="icon-button" type="button" data-edit-vehicle="${vehicle.id}" title="Edit kendaraan">${editIcon()}</button>
+                <button class="icon-button danger" type="button" data-delete-vehicle="${vehicle.id}" title="Hapus kendaraan">${trashIcon()}</button>
+              </div>
             </div>
             <div class="compact-list">
               <span class="pill">${escapeHtml(vehicle.type || "-")}</span>
@@ -1104,7 +1107,7 @@
         target.innerHTML = state.vehicleServices.length ? [...state.vehicleServices].sort((a, b) => b.serviceDate.localeCompare(a.serviceDate)).map((item) => `
           <article class="debt-row">
             <div class="debt-row-top"><div><strong>${escapeHtml(item.serviceType)}</strong><span>${escapeHtml(vehicleName(item.vehicleId))} - ${escapeHtml(item.workshop || "-")}</span></div><span>${money(item.cost || 0)}</span></div>
-            <div class="compact-list"><span class="pill">${escapeHtml(item.serviceDate)}</span><span class="pill">${formatNumber(item.serviceKm || 0)} km</span><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleServices" data-record-id="${item.id}" title="Hapus service">${trashIcon()}</button></div>
+            <div class="compact-list"><span class="pill">${escapeHtml(item.serviceDate)}</span><span class="pill">${formatNumber(item.serviceKm || 0)} km</span><button class="icon-button" type="button" data-edit-vehicle-record="vehicleServices" data-record-id="${item.id}" title="Edit service">${editIcon()}</button><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleServices" data-record-id="${item.id}" title="Hapus service">${trashIcon()}</button></div>
           </article>
         `).join("") : `<div class="empty"><p>Belum ada riwayat service.</p></div>`;
       }
@@ -1118,7 +1121,7 @@
           return `
             <article class="debt-row">
               <div class="debt-row-top"><div><strong>Ganti Oli ${escapeHtml(item.oilBrand || "")}</strong><span>${escapeHtml(vehicleName(item.vehicleId))}</span></div>${vehicleBadge(status)}</div>
-              <div class="compact-list"><span class="pill">Berikutnya ${oilNextDate(item) || "-"}</span><span class="pill">${formatNumber(oilNextKm(item))} km</span><span class="pill">${money(item.cost || 0)}</span><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleOilChanges" data-record-id="${item.id}" title="Hapus oli">${trashIcon()}</button></div>
+              <div class="compact-list"><span class="pill">Berikutnya ${oilNextDate(item) || "-"}</span><span class="pill">${formatNumber(oilNextKm(item))} km</span><span class="pill">${money(item.cost || 0)}</span><button class="icon-button" type="button" data-edit-vehicle-record="vehicleOilChanges" data-record-id="${item.id}" title="Edit oli">${editIcon()}</button><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleOilChanges" data-record-id="${item.id}" title="Hapus oli">${trashIcon()}</button></div>
             </article>
           `;
         }).join("") : `<div class="empty"><p>Belum ada jadwal ganti oli.</p></div>`;
@@ -1133,7 +1136,7 @@
           return `
             <article class="debt-row">
               <div class="debt-row-top"><div><strong>${escapeHtml(item.partName)}</strong><span>${escapeHtml(vehicleName(item.vehicleId))}</span></div>${vehicleBadge(status)}</div>
-              <div class="compact-list"><span class="pill">Berikutnya ${partNextDate(item) || "-"}</span><span class="pill">${formatNumber(partNextKm(item))} km</span><span class="pill">${money(item.cost || 0)}</span><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleParts" data-record-id="${item.id}" title="Hapus part">${trashIcon()}</button></div>
+              <div class="compact-list"><span class="pill">Berikutnya ${partNextDate(item) || "-"}</span><span class="pill">${formatNumber(partNextKm(item))} km</span><span class="pill">${money(item.cost || 0)}</span><button class="icon-button" type="button" data-edit-vehicle-record="vehicleParts" data-record-id="${item.id}" title="Edit part">${editIcon()}</button><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleParts" data-record-id="${item.id}" title="Hapus part">${trashIcon()}</button></div>
             </article>
           `;
         }).join("") : `<div class="empty"><p>Belum ada penggantian part.</p></div>`;
@@ -1147,7 +1150,7 @@
           return `
             <article class="debt-row">
               <div class="debt-row-top"><div><strong>Pajak ${escapeHtml(vehicleName(item.vehicleId))}</strong><span>Tahunan ${escapeHtml(item.annualDueDate)} - 5 tahunan ${escapeHtml(item.fiveYearDueDate || "-")}</span></div>${vehicleBadge(status)}</div>
-              <div class="compact-list"><span class="pill">${item.status === "paid" ? "Sudah dibayar" : "Belum dibayar"}</span><span class="pill">${money(item.estimatedCost || 0)}</span><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleTaxes" data-record-id="${item.id}" title="Hapus pajak">${trashIcon()}</button></div>
+              <div class="compact-list"><span class="pill">${item.status === "paid" ? "Sudah dibayar" : "Belum dibayar"}</span><span class="pill">${money(item.estimatedCost || 0)}</span><button class="icon-button" type="button" data-edit-vehicle-record="vehicleTaxes" data-record-id="${item.id}" title="Edit pajak">${editIcon()}</button><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleTaxes" data-record-id="${item.id}" title="Hapus pajak">${trashIcon()}</button></div>
             </article>
           `;
         }).join("") : `<div class="empty"><p>Belum ada data pajak kendaraan.</p></div>`;
@@ -1296,6 +1299,7 @@
                 <span class="pill">${escapeHtml(item.category || "Tagihan")}</span>
                 <span class="pill ${item.status === "paid" ? "income" : "expense"}">${item.status === "paid" ? "Lunas" : "Belum lunas"}</span>
                 <button class="button" type="button" data-toggle-bill="${item.id}">${item.status === "paid" ? "Batal Lunas" : "Tandai Lunas"}</button>
+                <button class="icon-button" type="button" title="Edit tagihan" data-edit-bill="${item.id}">${editIcon()}</button>
                 <button class="icon-button" type="button" title="Hapus tagihan" data-delete-bill="${item.id}">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M5 7h14M10 11v6M14 11v6M8 7l1-3h6l1 3M7 7l1 13h8l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -1887,56 +1891,58 @@
         });
       }
 
-      function openBillReminderForm() {
+      function openBillReminderForm(reminderId = "") {
         if (!requireSignedIn()) return;
-        document.querySelector("#modalTitle").textContent = "Tambah Reminder Tagihan";
+        const editing = reminderId ? state.billReminders.find((item) => item.id === reminderId) : null;
+        document.querySelector("#modalTitle").textContent = editing ? "Edit Reminder Tagihan" : "Tambah Reminder Tagihan";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="billReminderForm">
             <div class="field">
               <label for="billTitle">Nama tagihan</label>
-              <input id="billTitle" type="text" placeholder="Contoh: Internet, listrik, cicilan" required />
+              <input id="billTitle" type="text" value="${escapeHtml(editing?.title || "")}" placeholder="Contoh: Internet, listrik, cicilan" required />
             </div>
             <div class="field">
               <label for="billCategory">Kategori</label>
               <select id="billCategory">
-                ${categories.map((category) => `<option value="${category}">${category}</option>`).join("")}
+                ${categories.map((category) => `<option value="${category}" ${category === editing?.category ? "selected" : ""}>${category}</option>`).join("")}
               </select>
             </div>
             <div class="field">
               <label for="billAmount">Nominal</label>
               <div class="currency-input">
                 <span>Rp</span>
-                <input id="billAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="0" required />
+                <input id="billAmount" type="text" inputmode="numeric" autocomplete="off" value="${editing ? formatNumber(editing.amount) : ""}" placeholder="0" required />
               </div>
             </div>
             <div class="field">
               <label for="billDueDate">Jatuh tempo</label>
-              <input id="billDueDate" type="date" value="${todayDate()}" required />
+              <input id="billDueDate" type="date" value="${editing?.dueDate || todayDate()}" required />
             </div>
             <div class="field">
               <label for="billNote">Catatan</label>
-              <input id="billNote" type="text" placeholder="Opsional" />
+              <input id="billNote" type="text" value="${escapeHtml(editing?.note || "")}" placeholder="Opsional" />
             </div>
             <div class="row-actions">
               <button class="button" type="button" data-close-modal>Batal</button>
-              <button class="button primary" type="submit">Simpan</button>
+              <button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan"}</button>
             </div>
           </form>
         `;
         showModal();
         attachRupiahInput("#billAmount");
-        document.querySelector("#billReminderForm").addEventListener("submit", (event) => {
+        document.querySelector("#billReminderForm").addEventListener("submit", async (event) => {
           event.preventDefault();
-          state.billReminders.push(billReminder(
-            document.querySelector("#billTitle").value.trim(),
-            document.querySelector("#billCategory").value,
-            parseFormattedNumber(document.querySelector("#billAmount").value),
-            document.querySelector("#billDueDate").value,
-            document.querySelector("#billNote").value.trim(),
-            "unpaid",
-          ));
+          const values = {
+            title: document.querySelector("#billTitle").value.trim(),
+            category: document.querySelector("#billCategory").value,
+            amount: parseFormattedNumber(document.querySelector("#billAmount").value),
+            dueDate: document.querySelector("#billDueDate").value,
+            note: document.querySelector("#billNote").value.trim(),
+          };
+          if (editing) Object.assign(editing, values);
+          else state.billReminders.push(billReminder(values.title, values.category, values.amount, values.dueDate, values.note, "unpaid"));
           closeModal();
-          renderAll();
+          await persistChanges("Reminder tagihan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
         });
       }
 
@@ -2083,27 +2089,28 @@
         return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
       }
 
-      function openSavingsGoalForm() {
+      function openSavingsGoalForm(goalId = "") {
         if (!requireSignedIn()) return;
-        document.querySelector("#modalTitle").textContent = "Tambah Tujuan Tabungan";
+        const editing = goalId ? state.savings.find((item) => item.id === goalId) : null;
+        document.querySelector("#modalTitle").textContent = editing ? "Edit Tujuan Tabungan" : "Tambah Tujuan Tabungan";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="savingsGoalForm">
             <div class="field">
               <label for="savingsCategory">Kategori</label>
               <select id="savingsCategory" required>
-                ${savingCategories.map((category) => `<option value="${category}">${category}</option>`).join("")}
+                ${savingCategories.map((category) => `<option value="${category}" ${category === editing?.category ? "selected" : ""}>${category}</option>`).join("")}
               </select>
             </div>
             <div class="field">
               <label for="savingsTarget">Nominal Target</label>
               <div class="currency-input">
                 <span>Rp</span>
-                <input id="savingsTarget" type="text" inputmode="numeric" autocomplete="off" placeholder="0" required />
+                <input id="savingsTarget" type="text" inputmode="numeric" autocomplete="off" value="${editing ? formatNumber(editing.target) : ""}" placeholder="0" required />
               </div>
             </div>
             <div class="field">
               <label for="savingsTargetDate">Kapan ingin dicapai</label>
-              <input id="savingsTargetDate" type="date" value="${targetDateFromShortcut(12)}" required />
+              <input id="savingsTargetDate" type="date" value="${editing?.targetDate || targetDateFromShortcut(12)}" required />
             </div>
             <div class="compact-list">
               <button class="button" type="button" data-target-months="6">6 Bulan</button>
@@ -2113,7 +2120,7 @@
             </div>
             <div class="row-actions">
               <button class="button" type="button" data-close-modal>Batal</button>
-              <button class="button primary" type="submit">Simpan</button>
+              <button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan"}</button>
             </div>
           </form>
         `;
@@ -2130,12 +2137,20 @@
           submitButton.disabled = true;
           submitButton.textContent = "Menyimpan...";
           const category = document.querySelector("#savingsCategory").value;
-          state.savings.push(savingsGoal(category, parseFormattedNumber(document.querySelector("#savingsTarget").value), document.querySelector("#savingsTargetDate").value));
+          if (editing) {
+            editing.title = category;
+            editing.category = category;
+            editing.target = parseFormattedNumber(document.querySelector("#savingsTarget").value);
+            editing.targetDate = document.querySelector("#savingsTargetDate").value;
+            touchSavingsGoal(editing);
+          } else {
+            state.savings.push(savingsGoal(category, parseFormattedNumber(document.querySelector("#savingsTarget").value), document.querySelector("#savingsTargetDate").value));
+          }
           saveState();
           closeModal();
           await persistChanges("Tujuan tabungan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
           openView("savings");
-          showSnackbar("Tujuan tabungan berhasil disimpan.");
+          showSnackbar(editing ? "Tujuan tabungan berhasil diperbarui." : "Tujuan tabungan berhasil disimpan.");
         });
       }
 
@@ -2172,6 +2187,7 @@
               <div class="stat-sub">${percent}% tercapai - Target tanggal ${escapeHtml(goal.targetDate || "-")}</div>
             </div>
             <div class="row-actions">
+              <button class="button" type="button" data-edit-savings="${goal.id}">Edit Tujuan</button>
               <button class="button danger" type="button" data-delete-savings="${goal.id}">Hapus</button>
               <button class="button danger" type="button" data-savings-entry="withdraw" data-goal-id="${goal.id}">Tarik</button>
               <button class="button primary" type="button" data-savings-entry="deposit" data-goal-id="${goal.id}">Tambah</button>
@@ -2238,30 +2254,31 @@
         });
       }
 
-      function openVehicleForm() {
+      function openVehicleForm(vehicleId = "") {
         if (!requireSignedIn()) return;
-        document.querySelector("#modalTitle").textContent = "Tambah Kendaraan";
+        const editing = vehicleId ? state.vehicles.find((item) => item.id === vehicleId) : null;
+        document.querySelector("#modalTitle").textContent = editing ? "Edit Kendaraan" : "Tambah Kendaraan";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="vehicleForm">
             <div class="form-grid">
-              <div class="field"><label for="vehicleName">Nama kendaraan</label><input id="vehicleName" required placeholder="Contoh: Avanza Putih" /></div>
-              <div class="field"><label for="vehiclePlate">Nomor plat</label><input id="vehiclePlate" required placeholder="B 1234 ABC" /></div>
+              <div class="field"><label for="vehicleName">Nama kendaraan</label><input id="vehicleName" required value="${escapeHtml(editing?.name || "")}" placeholder="Contoh: Avanza Putih" /></div>
+              <div class="field"><label for="vehiclePlate">Nomor plat</label><input id="vehiclePlate" required value="${escapeHtml(editing?.plate || "")}" placeholder="B 1234 ABC" /></div>
             </div>
             <div class="form-grid">
-              <div class="field"><label for="vehicleBrand">Merk</label><input id="vehicleBrand" placeholder="Toyota" /></div>
-              <div class="field"><label for="vehicleModel">Model</label><input id="vehicleModel" placeholder="Avanza" /></div>
+              <div class="field"><label for="vehicleBrand">Merk</label><input id="vehicleBrand" value="${escapeHtml(editing?.brand || "")}" placeholder="Toyota" /></div>
+              <div class="field"><label for="vehicleModel">Model</label><input id="vehicleModel" value="${escapeHtml(editing?.model || "")}" placeholder="Avanza" /></div>
             </div>
             <div class="form-grid">
-              <div class="field"><label for="vehicleYear">Tahun</label><input id="vehicleYear" type="number" min="1900" max="2100" placeholder="2020" /></div>
-              <div class="field"><label for="vehicleType">Jenis kendaraan</label><select id="vehicleType"><option>Mobil</option><option>Motor</option></select></div>
+              <div class="field"><label for="vehicleYear">Tahun</label><input id="vehicleYear" type="number" min="1900" max="2100" value="${escapeHtml(editing?.year || "")}" placeholder="2020" /></div>
+              <div class="field"><label for="vehicleType">Jenis kendaraan</label><select id="vehicleType"><option ${editing?.type === "Mobil" ? "selected" : ""}>Mobil</option><option ${editing?.type === "Motor" ? "selected" : ""}>Motor</option></select></div>
             </div>
             <div class="form-grid">
-              <div class="field"><label for="vehicleTransmission">Transmisi</label><input id="vehicleTransmission" placeholder="Manual / Matic" /></div>
-              <div class="field"><label for="vehicleCurrentKm">Kilometer saat ini</label><input id="vehicleCurrentKm" type="number" min="0" value="0" required /></div>
+              <div class="field"><label for="vehicleTransmission">Transmisi</label><input id="vehicleTransmission" value="${escapeHtml(editing?.transmission || "")}" placeholder="Manual / Matic" /></div>
+              <div class="field"><label for="vehicleCurrentKm">Kilometer saat ini</label><input id="vehicleCurrentKm" type="number" min="0" value="${editing?.currentKm ?? 0}" required /></div>
             </div>
-            <div class="field"><label for="vehiclePurchaseDate">Tanggal pembelian</label><input id="vehiclePurchaseDate" type="date" /></div>
-            <div class="field"><label for="vehicleNote">Catatan tambahan</label><textarea id="vehicleNote" placeholder="Catatan tambahan"></textarea></div>
-            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">Simpan Kendaraan</button></div>
+            <div class="field"><label for="vehiclePurchaseDate">Tanggal pembelian</label><input id="vehiclePurchaseDate" type="date" value="${editing?.purchaseDate || ""}" /></div>
+            <div class="field"><label for="vehicleNote">Catatan tambahan</label><textarea id="vehicleNote" placeholder="Catatan tambahan">${escapeHtml(editing?.note || "")}</textarea></div>
+            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Kendaraan"}</button></div>
           </form>
         `;
         showModal();
@@ -2269,8 +2286,7 @@
           event.preventDefault();
           const currentKm = Number(document.querySelector("#vehicleCurrentKm").value || 0);
           if (currentKm < 0) return alert("Kilometer tidak boleh negatif.");
-          state.vehicles.push({
-            id: id(),
+          const values = {
             name: document.querySelector("#vehicleName").value.trim(),
             brand: document.querySelector("#vehicleBrand").value.trim(),
             model: document.querySelector("#vehicleModel").value.trim(),
@@ -2281,7 +2297,9 @@
             currentKm,
             purchaseDate: document.querySelector("#vehiclePurchaseDate").value,
             note: document.querySelector("#vehicleNote").value.trim(),
-          });
+          };
+          if (editing) Object.assign(editing, values);
+          else state.vehicles.push({ id: id(), ...values });
           closeModal();
           await persistChanges("Data kendaraan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
           openView("vehicles");
@@ -2295,17 +2313,18 @@
         return false;
       }
 
-      function openVehicleServiceForm() {
+      function openVehicleServiceForm(recordId = "") {
         if (!requireSignedIn() || !requireVehicleData()) return;
-        document.querySelector("#modalTitle").textContent = "Tambah Riwayat Service";
+        const editing = recordId ? state.vehicleServices.find((item) => item.id === recordId) : null;
+        document.querySelector("#modalTitle").textContent = editing ? "Edit Riwayat Service" : "Tambah Riwayat Service";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="vehicleServiceForm">
-            <div class="field"><label for="serviceVehicle">Kendaraan</label><select id="serviceVehicle" required>${vehicleOptions()}</select></div>
-            <div class="form-grid"><div class="field"><label for="serviceDate">Tanggal service</label><input id="serviceDate" type="date" value="${todayDate()}" required /></div><div class="field"><label for="serviceKm">Kilometer</label><input id="serviceKm" type="number" min="0" required /></div></div>
-            <div class="form-grid"><div class="field"><label for="serviceType">Jenis service</label><input id="serviceType" required placeholder="Service berkala" /></div><div class="field"><label for="serviceWorkshop">Nama bengkel</label><input id="serviceWorkshop" placeholder="Nama bengkel" /></div></div>
-            <div class="field"><label for="serviceCost">Biaya service</label><div class="currency-input"><span>Rp</span><input id="serviceCost" type="text" inputmode="numeric" placeholder="0" /></div></div>
-            <div class="field"><label for="serviceNote">Catatan service</label><textarea id="serviceNote"></textarea></div>
-            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">Simpan Service</button></div>
+            <div class="field"><label for="serviceVehicle">Kendaraan</label><select id="serviceVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
+            <div class="form-grid"><div class="field"><label for="serviceDate">Tanggal service</label><input id="serviceDate" type="date" value="${editing?.serviceDate || todayDate()}" required /></div><div class="field"><label for="serviceKm">Kilometer</label><input id="serviceKm" type="number" min="0" value="${editing?.serviceKm || ""}" required /></div></div>
+            <div class="form-grid"><div class="field"><label for="serviceType">Jenis service</label><input id="serviceType" required value="${escapeHtml(editing?.serviceType || "")}" placeholder="Service berkala" /></div><div class="field"><label for="serviceWorkshop">Nama bengkel</label><input id="serviceWorkshop" value="${escapeHtml(editing?.workshop || "")}" placeholder="Nama bengkel" /></div></div>
+            <div class="field"><label for="serviceCost">Biaya service</label><div class="currency-input"><span>Rp</span><input id="serviceCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.cost) : ""}" placeholder="0" /></div></div>
+            <div class="field"><label for="serviceNote">Catatan service</label><textarea id="serviceNote">${escapeHtml(editing?.note || "")}</textarea></div>
+            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Service"}</button></div>
           </form>
         `;
         showModal();
@@ -2315,25 +2334,27 @@
           const cost = parseFormattedNumber(document.querySelector("#serviceCost").value);
           const serviceKm = Number(document.querySelector("#serviceKm").value || 0);
           if (cost < 0 || serviceKm < 0) return alert("Biaya dan kilometer tidak boleh negatif.");
-          const record = { id: id(), vehicleId: document.querySelector("#serviceVehicle").value, serviceDate: document.querySelector("#serviceDate").value, serviceKm, serviceType: document.querySelector("#serviceType").value.trim(), workshop: document.querySelector("#serviceWorkshop").value.trim(), cost, note: document.querySelector("#serviceNote").value.trim() };
+          const record = editing || { id: id() };
+          Object.assign(record, { vehicleId: document.querySelector("#serviceVehicle").value, serviceDate: document.querySelector("#serviceDate").value, serviceKm, serviceType: document.querySelector("#serviceType").value.trim(), workshop: document.querySelector("#serviceWorkshop").value.trim(), cost, note: document.querySelector("#serviceNote").value.trim() });
           record.transactionId = upsertVehicleTransaction(record, "Service", cost, record.serviceDate, record.note || record.serviceType);
-          state.vehicleServices.push(record);
+          if (!editing) state.vehicleServices.push(record);
           closeModal();
           await persistChanges("Riwayat service tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
         });
       }
 
-      function openVehicleOilForm() {
+      function openVehicleOilForm(recordId = "") {
         if (!requireSignedIn() || !requireVehicleData()) return;
-        document.querySelector("#modalTitle").textContent = "Tambah Jadwal Ganti Oli";
+        const editing = recordId ? state.vehicleOilChanges.find((item) => item.id === recordId) : null;
+        document.querySelector("#modalTitle").textContent = editing ? "Edit Jadwal Ganti Oli" : "Tambah Jadwal Ganti Oli";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="vehicleOilForm">
-            <div class="field"><label for="oilVehicle">Kendaraan</label><select id="oilVehicle" required>${vehicleOptions()}</select></div>
-            <div class="form-grid"><div class="field"><label for="oilDate">Tanggal terakhir ganti oli</label><input id="oilDate" type="date" value="${todayDate()}" required /></div><div class="field"><label for="oilKm">Kilometer terakhir</label><input id="oilKm" type="number" min="0" required /></div></div>
-            <div class="form-grid"><div class="field"><label for="oilIntervalKm">Interval kilometer</label><input id="oilIntervalKm" type="number" min="0" value="5000" required /></div><div class="field"><label for="oilIntervalMonths">Interval bulan</label><input id="oilIntervalMonths" type="number" min="0" value="6" required /></div></div>
-            <div class="form-grid"><div class="field"><label for="oilBrand">Merk oli</label><input id="oilBrand" placeholder="Shell, Yamalube, dll" /></div><div class="field"><label for="oilCost">Biaya oli</label><div class="currency-input"><span>Rp</span><input id="oilCost" type="text" inputmode="numeric" placeholder="0" /></div></div></div>
-            <div class="field"><label for="oilNote">Catatan</label><textarea id="oilNote"></textarea></div>
-            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">Simpan Oli</button></div>
+            <div class="field"><label for="oilVehicle">Kendaraan</label><select id="oilVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
+            <div class="form-grid"><div class="field"><label for="oilDate">Tanggal terakhir ganti oli</label><input id="oilDate" type="date" value="${editing?.lastOilDate || todayDate()}" required /></div><div class="field"><label for="oilKm">Kilometer terakhir</label><input id="oilKm" type="number" min="0" value="${editing?.lastOilKm || ""}" required /></div></div>
+            <div class="form-grid"><div class="field"><label for="oilIntervalKm">Interval kilometer</label><input id="oilIntervalKm" type="number" min="0" value="${editing?.intervalKm || 5000}" required /></div><div class="field"><label for="oilIntervalMonths">Interval bulan</label><input id="oilIntervalMonths" type="number" min="0" value="${editing?.intervalMonths || 6}" required /></div></div>
+            <div class="form-grid"><div class="field"><label for="oilBrand">Merk oli</label><input id="oilBrand" value="${escapeHtml(editing?.oilBrand || "")}" placeholder="Shell, Yamalube, dll" /></div><div class="field"><label for="oilCost">Biaya oli</label><div class="currency-input"><span>Rp</span><input id="oilCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.cost) : ""}" placeholder="0" /></div></div></div>
+            <div class="field"><label for="oilNote">Catatan</label><textarea id="oilNote">${escapeHtml(editing?.note || "")}</textarea></div>
+            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Oli"}</button></div>
           </form>
         `;
         showModal();
@@ -2341,26 +2362,28 @@
         document.querySelector("#vehicleOilForm").addEventListener("submit", async (event) => {
           event.preventDefault();
           const cost = parseFormattedNumber(document.querySelector("#oilCost").value);
-          const record = { id: id(), vehicleId: document.querySelector("#oilVehicle").value, lastOilDate: document.querySelector("#oilDate").value, lastOilKm: Number(document.querySelector("#oilKm").value || 0), intervalKm: Number(document.querySelector("#oilIntervalKm").value || 0), intervalMonths: Number(document.querySelector("#oilIntervalMonths").value || 0), oilBrand: document.querySelector("#oilBrand").value.trim(), cost, note: document.querySelector("#oilNote").value.trim() };
+          const record = editing || { id: id() };
+          Object.assign(record, { vehicleId: document.querySelector("#oilVehicle").value, lastOilDate: document.querySelector("#oilDate").value, lastOilKm: Number(document.querySelector("#oilKm").value || 0), intervalKm: Number(document.querySelector("#oilIntervalKm").value || 0), intervalMonths: Number(document.querySelector("#oilIntervalMonths").value || 0), oilBrand: document.querySelector("#oilBrand").value.trim(), cost, note: document.querySelector("#oilNote").value.trim() });
           if ([cost, record.lastOilKm, record.intervalKm, record.intervalMonths].some((value) => value < 0)) return alert("Biaya, kilometer, dan interval tidak boleh negatif.");
           record.transactionId = upsertVehicleTransaction(record, "Oli", cost, record.lastOilDate, record.note || `Ganti oli ${record.oilBrand}`);
-          state.vehicleOilChanges.push(record);
+          if (!editing) state.vehicleOilChanges.push(record);
           closeModal();
           await persistChanges("Jadwal oli tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
         });
       }
 
-      function openVehiclePartForm() {
+      function openVehiclePartForm(recordId = "") {
         if (!requireSignedIn() || !requireVehicleData()) return;
-        document.querySelector("#modalTitle").textContent = "Tambah Penggantian Part";
+        const editing = recordId ? state.vehicleParts.find((item) => item.id === recordId) : null;
+        document.querySelector("#modalTitle").textContent = editing ? "Edit Penggantian Part" : "Tambah Penggantian Part";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="vehiclePartForm">
-            <div class="field"><label for="partVehicle">Kendaraan</label><select id="partVehicle" required>${vehicleOptions()}</select></div>
-            <div class="form-grid"><div class="field"><label for="partName">Nama part</label><input id="partName" required placeholder="Ban, aki, kampas rem" /></div><div class="field"><label for="partDate">Tanggal penggantian</label><input id="partDate" type="date" value="${todayDate()}" required /></div></div>
-            <div class="form-grid"><div class="field"><label for="partKm">Kilometer saat diganti</label><input id="partKm" type="number" min="0" required /></div><div class="field"><label for="partLifeKm">Estimasi umur kilometer</label><input id="partLifeKm" type="number" min="0" value="10000" /></div></div>
-            <div class="form-grid"><div class="field"><label for="partLifeMonths">Estimasi umur bulan</label><input id="partLifeMonths" type="number" min="0" value="12" /></div><div class="field"><label for="partCost">Biaya part</label><div class="currency-input"><span>Rp</span><input id="partCost" type="text" inputmode="numeric" placeholder="0" /></div></div></div>
-            <div class="field"><label for="partNote">Catatan</label><textarea id="partNote"></textarea></div>
-            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">Simpan Part</button></div>
+            <div class="field"><label for="partVehicle">Kendaraan</label><select id="partVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
+            <div class="form-grid"><div class="field"><label for="partName">Nama part</label><input id="partName" required value="${escapeHtml(editing?.partName || "")}" placeholder="Ban, aki, kampas rem" /></div><div class="field"><label for="partDate">Tanggal penggantian</label><input id="partDate" type="date" value="${editing?.replacementDate || todayDate()}" required /></div></div>
+            <div class="form-grid"><div class="field"><label for="partKm">Kilometer saat diganti</label><input id="partKm" type="number" min="0" value="${editing?.replacementKm || ""}" required /></div><div class="field"><label for="partLifeKm">Estimasi umur kilometer</label><input id="partLifeKm" type="number" min="0" value="${editing?.lifeKm || 10000}" /></div></div>
+            <div class="form-grid"><div class="field"><label for="partLifeMonths">Estimasi umur bulan</label><input id="partLifeMonths" type="number" min="0" value="${editing?.lifeMonths || 12}" /></div><div class="field"><label for="partCost">Biaya part</label><div class="currency-input"><span>Rp</span><input id="partCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.cost) : ""}" placeholder="0" /></div></div></div>
+            <div class="field"><label for="partNote">Catatan</label><textarea id="partNote">${escapeHtml(editing?.note || "")}</textarea></div>
+            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Part"}</button></div>
           </form>
         `;
         showModal();
@@ -2368,26 +2391,28 @@
         document.querySelector("#vehiclePartForm").addEventListener("submit", async (event) => {
           event.preventDefault();
           const cost = parseFormattedNumber(document.querySelector("#partCost").value);
-          const record = { id: id(), vehicleId: document.querySelector("#partVehicle").value, partName: document.querySelector("#partName").value.trim(), replacementDate: document.querySelector("#partDate").value, replacementKm: Number(document.querySelector("#partKm").value || 0), lifeKm: Number(document.querySelector("#partLifeKm").value || 0), lifeMonths: Number(document.querySelector("#partLifeMonths").value || 0), cost, note: document.querySelector("#partNote").value.trim() };
+          const record = editing || { id: id() };
+          Object.assign(record, { vehicleId: document.querySelector("#partVehicle").value, partName: document.querySelector("#partName").value.trim(), replacementDate: document.querySelector("#partDate").value, replacementKm: Number(document.querySelector("#partKm").value || 0), lifeKm: Number(document.querySelector("#partLifeKm").value || 0), lifeMonths: Number(document.querySelector("#partLifeMonths").value || 0), cost, note: document.querySelector("#partNote").value.trim() });
           if ([cost, record.replacementKm, record.lifeKm, record.lifeMonths].some((value) => value < 0)) return alert("Biaya, kilometer, dan estimasi umur tidak boleh negatif.");
           record.transactionId = upsertVehicleTransaction(record, "Spare Part", cost, record.replacementDate, record.note || `Ganti ${record.partName}`);
-          state.vehicleParts.push(record);
+          if (!editing) state.vehicleParts.push(record);
           closeModal();
           await persistChanges("Data part tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
         });
       }
 
-      function openVehicleTaxForm() {
+      function openVehicleTaxForm(recordId = "") {
         if (!requireSignedIn() || !requireVehicleData()) return;
-        document.querySelector("#modalTitle").textContent = "Tambah Pajak Kendaraan";
+        const editing = recordId ? state.vehicleTaxes.find((item) => item.id === recordId) : null;
+        document.querySelector("#modalTitle").textContent = editing ? "Edit Pajak Kendaraan" : "Tambah Pajak Kendaraan";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="vehicleTaxForm">
-            <div class="field"><label for="taxVehicle">Kendaraan</label><select id="taxVehicle" required>${vehicleOptions()}</select></div>
-            <div class="form-grid"><div class="field"><label for="taxAnnualDue">Jatuh tempo tahunan</label><input id="taxAnnualDue" type="date" required /></div><div class="field"><label for="taxFiveYearDue">Jatuh tempo 5 tahunan</label><input id="taxFiveYearDue" type="date" /></div></div>
-            <div class="form-grid"><div class="field"><label for="taxCost">Estimasi biaya pajak</label><div class="currency-input"><span>Rp</span><input id="taxCost" type="text" inputmode="numeric" placeholder="0" /></div></div><div class="field"><label for="taxStatus">Status pembayaran</label><select id="taxStatus"><option value="unpaid">Belum dibayar</option><option value="paid">Sudah dibayar</option></select></div></div>
-            <div class="field"><label for="taxPaidDate">Tanggal pembayaran</label><input id="taxPaidDate" type="date" /></div>
-            <div class="field"><label for="taxNote">Catatan</label><textarea id="taxNote"></textarea></div>
-            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">Simpan Pajak</button></div>
+            <div class="field"><label for="taxVehicle">Kendaraan</label><select id="taxVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
+            <div class="form-grid"><div class="field"><label for="taxAnnualDue">Jatuh tempo tahunan</label><input id="taxAnnualDue" type="date" value="${editing?.annualDueDate || ""}" required /></div><div class="field"><label for="taxFiveYearDue">Jatuh tempo 5 tahunan</label><input id="taxFiveYearDue" type="date" value="${editing?.fiveYearDueDate || ""}" /></div></div>
+            <div class="form-grid"><div class="field"><label for="taxCost">Estimasi biaya pajak</label><div class="currency-input"><span>Rp</span><input id="taxCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.estimatedCost) : ""}" placeholder="0" /></div></div><div class="field"><label for="taxStatus">Status pembayaran</label><select id="taxStatus"><option value="unpaid" ${editing?.status !== "paid" ? "selected" : ""}>Belum dibayar</option><option value="paid" ${editing?.status === "paid" ? "selected" : ""}>Sudah dibayar</option></select></div></div>
+            <div class="field"><label for="taxPaidDate">Tanggal pembayaran</label><input id="taxPaidDate" type="date" value="${editing?.paidDate || ""}" /></div>
+            <div class="field"><label for="taxNote">Catatan</label><textarea id="taxNote">${escapeHtml(editing?.note || "")}</textarea></div>
+            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Pajak"}</button></div>
           </form>
         `;
         showModal();
@@ -2396,10 +2421,12 @@
           event.preventDefault();
           const estimatedCost = parseFormattedNumber(document.querySelector("#taxCost").value);
           if (estimatedCost < 0) return alert("Biaya pajak tidak boleh negatif.");
-          const record = { id: id(), vehicleId: document.querySelector("#taxVehicle").value, annualDueDate: document.querySelector("#taxAnnualDue").value, fiveYearDueDate: document.querySelector("#taxFiveYearDue").value, estimatedCost, status: document.querySelector("#taxStatus").value, paidDate: document.querySelector("#taxPaidDate").value, note: document.querySelector("#taxNote").value.trim() };
+          const record = editing || { id: id() };
+          Object.assign(record, { vehicleId: document.querySelector("#taxVehicle").value, annualDueDate: document.querySelector("#taxAnnualDue").value, fiveYearDueDate: document.querySelector("#taxFiveYearDue").value, estimatedCost, status: document.querySelector("#taxStatus").value, paidDate: document.querySelector("#taxPaidDate").value, note: document.querySelector("#taxNote").value.trim() });
           if (record.status === "paid" && !record.paidDate) return alert("Tanggal pembayaran wajib diisi jika pajak sudah dibayar.");
           if (record.status === "paid") record.transactionId = upsertVehicleTransaction(record, "Pajak", estimatedCost, record.paidDate, record.note || "Pajak kendaraan");
-          state.vehicleTaxes.push(record);
+          else removeVehicleTransaction(record);
+          if (!editing) state.vehicleTaxes.push(record);
           closeModal();
           await persistChanges("Data pajak tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
         });
@@ -3337,9 +3364,23 @@
           openSavingsDetail(savingsCard.dataset.openSavings);
         }
 
+        const savingsEditButton = event.target.closest("[data-edit-savings]");
+        if (savingsEditButton) {
+          if (!requireSignedIn()) return;
+          openSavingsGoalForm(savingsEditButton.dataset.editSavings);
+          return;
+        }
+
         const savingsEntryButton = event.target.closest("[data-savings-entry]");
         if (savingsEntryButton) {
           openSavingsEntryForm(savingsEntryButton.dataset.goalId, savingsEntryButton.dataset.savingsEntry);
+        }
+
+        const vehicleEditButton = event.target.closest("[data-edit-vehicle]");
+        if (vehicleEditButton) {
+          if (!requireSignedIn()) return;
+          openVehicleForm(vehicleEditButton.dataset.editVehicle);
+          return;
         }
 
         const vehicleDeleteButton = event.target.closest("[data-delete-vehicle]");
@@ -3379,6 +3420,18 @@
             state[collection] = state[collection].filter((item) => item.id !== target.id);
             await persistChanges("Data kendaraan sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
           }
+          return;
+        }
+
+        const vehicleRecordEditButton = event.target.closest("[data-edit-vehicle-record]");
+        if (vehicleRecordEditButton) {
+          if (!requireSignedIn()) return;
+          const collection = vehicleRecordEditButton.dataset.editVehicleRecord;
+          const recordId = vehicleRecordEditButton.dataset.recordId;
+          if (collection === "vehicleServices") openVehicleServiceForm(recordId);
+          if (collection === "vehicleOilChanges") openVehicleOilForm(recordId);
+          if (collection === "vehicleParts") openVehiclePartForm(recordId);
+          if (collection === "vehicleTaxes") openVehicleTaxForm(recordId);
           return;
         }
 
@@ -3434,6 +3487,13 @@
             target.status = target.status === "paid" ? "unpaid" : "paid";
             await persistChanges();
           }
+        }
+
+        const billEditButton = event.target.closest("[data-edit-bill]");
+        if (billEditButton) {
+          if (!requireSignedIn()) return;
+          openBillReminderForm(billEditButton.dataset.editBill);
+          return;
         }
 
         const billDeleteButton = event.target.closest("[data-delete-bill]");
