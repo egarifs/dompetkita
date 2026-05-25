@@ -3612,6 +3612,7 @@
         document.querySelector("#appShell").classList.remove("hidden");
         if (!isGuest() && isCloudSyncAllowed()) {
           const shouldUploadLocal = hasUnsyncedChanges;
+          if (!shouldUploadLocal) applyState(emptyState());
           await loadCloudState({ saveAfterLoad: shouldUploadLocal });
           if (shouldUploadLocal && !cloudSync.lastError) {
             hasUnsyncedChanges = false;
@@ -4048,17 +4049,23 @@
         return buildUserFromCloud(user);
       }
 
-      function logout(message = "") {
+      async function logout(message = "") {
+        const logoutMessage = typeof message === "string" ? message : "";
         stopIdleLogoutTimer();
         localStorage.removeItem(sessionStorageKey);
         stopCloudRealtimeSync();
-        if (cloudSync.enabled) setupCloudClient()?.auth.signOut();
+        if (cloudSync.enabled) {
+          try {
+            await setupCloudClient()?.auth.signOut();
+          } catch {
+            // User is leaving the app session; keep logout flow moving even if cloud sign out is temporarily unavailable.
+          }
+        }
         currentUser = null;
-        const stored = loadState();
-        applyState(stored);
+        applyState(emptyState());
         openView("home");
         showLogin();
-        if (message) alert(message);
+        if (logoutMessage) alert(logoutMessage);
       }
 
       async function autoLoginRememberedUser() {
@@ -4628,7 +4635,9 @@
         state.settings.language = event.target.value;
         persistChanges("Pengaturan bahasa tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
       });
-      document.querySelector("#logoutButton").addEventListener("click", logout);
+      document.querySelector("#logoutButton").addEventListener("click", () => {
+        logout();
+      });
       document.querySelector("#deleteAccountButton").addEventListener("click", deleteCurrentAccount);
       document.querySelector("#loadDemoButton").addEventListener("click", () => {
         if (!isGuest()) {
