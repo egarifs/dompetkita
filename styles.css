@@ -552,11 +552,6 @@
         min-height: 184px;
       }
 
-      .total-balance-card .stat-value {
-        margin-top: 14px;
-        font-size: clamp(2.1rem, 6vw, 3.2rem);
-      }
-
       .stats-carousel {
         display: grid;
         grid-auto-flow: column;
@@ -1733,10 +1728,6 @@
         .total-balance-card {
           min-height: 164px;
           padding: 18px;
-        }
-
-        .total-balance-card .stat-value {
-          font-size: clamp(2rem, 9vw, 2.65rem);
         }
 
         .stats-carousel {
