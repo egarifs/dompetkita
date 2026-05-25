@@ -136,7 +136,7 @@
       const state = loadState();
       let categories = state.categories?.length ? state.categories : [...defaultCategories];
       state.categories = categories;
-      const defaultHomeSectionOrder = ["wallets", "chartBudget", "budgetMonth", "insight", "actionSummary", "latestTransactions", "savings", "billReminder", "vehicles"];
+      const defaultHomeSectionOrder = ["wallets", "chartBudget", "budgetMonth", "insight", "actionSummary", "savings", "billReminder", "vehicles"];
       state.settings.homeSectionOrder = normalizeHomeSectionOrder(state.settings?.homeSectionOrder);
       let users = window.AppAuth.loadUsers(authStorageKey);
       let currentUser = loadSessionUser();
@@ -1324,7 +1324,8 @@
       function renderTransactions() {
         renderWalletFilterOptions();
         renderCategoryChips();
-        document.querySelector("#latestTransactions").innerHTML = transactionRows(state.transactions, 5);
+        const latestTarget = document.querySelector("#latestTransactions");
+        if (latestTarget) latestTarget.innerHTML = transactionRows(state.transactions, 5);
         const query = document.querySelector("#searchInput")?.value.toLowerCase().trim() || "";
         const month = document.querySelector("#monthFilter")?.value || "all";
         const type = document.querySelector("#typeFilter")?.value || "all";
@@ -2135,7 +2136,6 @@
           budgetMonth: "Anggaran Bulan Ini",
           insight: "Insight",
           actionSummary: "Ringkasan Tindakan",
-          latestTransactions: "Transaksi Terbaru",
           savings: "Tabungan",
           billReminder: "Reminder Tagihan",
           vehicles: "Kendaraan",
