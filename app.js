@@ -128,7 +128,7 @@
       const state = loadState();
       let categories = state.categories?.length ? state.categories : [...defaultCategories];
       state.categories = categories;
-      const defaultHomeSectionOrder = ["chartBudget", "budgetMonth", "insight", "latestTransactions", "savings", "billReminder", "vehicles"];
+      const defaultHomeSectionOrder = ["chartBudget", "budgetMonth", "insight", "actionSummary", "latestTransactions", "savings", "billReminder", "vehicles"];
       state.settings.homeSectionOrder = normalizeHomeSectionOrder(state.settings?.homeSectionOrder);
       let users = window.AppAuth.loadUsers(authStorageKey);
       let currentUser = loadSessionUser();
@@ -1341,6 +1341,150 @@
         `).join("");
       }
 
+      function transactionsSince(days) {
+        const start = new Date(`${todayDate()}T00:00:00`);
+        start.setDate(start.getDate() - Number(days || 0));
+        const startKey = new Date(start.getTime() - start.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        return state.transactions.filter((item) => item.date >= startKey && item.date <= todayDate());
+      }
+
+      function categoryGrowthActions(month = currentMonthKey()) {
+        const previousMonth = previousMonthKey(month);
+        return categories
+          .map((category) => {
+            const current = expenseForCategory(category, month);
+            const previous = transactionsByMonth(previousMonth)
+              .filter((item) => item.type === "expense" && item.category === category)
+              .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+            const change = previous > 0 ? ((current - previous) / previous) * 100 : 0;
+            return { category, current, previous, change };
+          })
+          .filter((item) => item.current > item.previous && item.previous > 0 && item.change >= 30)
+          .sort((a, b) => b.change - a.change);
+      }
+
+      function budgetSuggestionAction(month = currentMonthKey()) {
+        const budgetRows = state.budgets
+          .map((budget) => {
+            const spent = expenseForCategory(budget.category, month);
+            const limit = Number(budget.limit || 0);
+            const percent = limit ? Math.round((spent / limit) * 100) : 0;
+            return { category: budget.category, spent, limit, percent };
+          })
+          .filter((item) => item.spent > 0)
+          .sort((a, b) => b.percent - a.percent || b.spent - a.spent);
+        if (!budgetRows.length) {
+          const topCategory = categories
+            .map((category) => ({ category, spent: expenseForCategory(category, month) }))
+            .filter((item) => item.spent > 0)
+            .sort((a, b) => b.spent - a.spent)[0];
+          if (!topCategory) return null;
+          const suggestedLimit = Math.ceil((topCategory.spent * 1.1) / 10000) * 10000;
+          return {
+            title: "Saran budget bulan depan",
+            text: `Mulai buat budget ${topCategory.category} sekitar ${money(suggestedLimit)} berdasarkan pemakaian bulan ini.`,
+            tone: "debt",
+          };
+        }
+        const target = budgetRows[0];
+        const suggested = Math.ceil(Math.max(target.spent * 1.1, target.limit || target.spent) / 10000) * 10000;
+        return {
+          title: "Saran budget bulan depan",
+          text: target.limit
+            ? `Kategori ${target.category} sudah terpakai ${target.percent}%. Pertimbangkan budget sekitar ${money(suggested)} bulan depan.`
+            : `Mulai buat budget ${target.category} sekitar ${money(suggested)} berdasarkan pemakaian bulan ini.`,
+          tone: target.percent >= 100 ? "expense" : "debt",
+        };
+      }
+
+      function upcomingBillAction() {
+        const bills = state.billReminders
+          .filter((item) => item.status !== "paid" && item.dueDate)
+          .map((item) => ({ ...item, days: daysUntil(item.dueDate) }))
+          .filter((item) => item.days <= 7)
+          .sort((a, b) => a.days - b.days);
+        if (!bills.length) return null;
+        const bill = bills[0];
+        const label = bill.days < 0 ? `terlambat ${Math.abs(bill.days)} hari` : bill.days === 0 ? "jatuh tempo hari ini" : `${bill.days} hari lagi`;
+        return {
+          title: "Tagihan mendekati jatuh tempo",
+          text: `${bill.title} ${label} dengan nominal ${money(bill.amount)}.`,
+          tone: bill.days < 0 ? "expense" : "debt",
+        };
+      }
+
+      function vehicleAttentionAction() {
+        const actions = [];
+        state.vehicles.forEach((vehicle) => {
+          const oil = latestVehicleOil(vehicle.id);
+          const part = nearestVehiclePart(vehicle.id);
+          const tax = vehicleTax(vehicle.id);
+          const checks = [
+            oil ? { label: "ganti oli", status: vehicleStatusBySchedule(oilNextDate(oil), oilNextKm(oil) - Number(vehicle.currentKm || 0)) } : null,
+            part ? { label: `ganti ${part.partName || "part"}`, status: vehicleStatusBySchedule(partNextDate(part), partNextKm(part) - Number(vehicle.currentKm || 0)) } : null,
+            tax ? { label: "pajak tahunan", status: vehicleStatusBySchedule(tax.annualDueDate) } : null,
+          ].filter(Boolean);
+          checks
+            .filter((item) => item.status.className === "danger" || item.status.className === "warn")
+            .forEach((item) => actions.push({ vehicle, ...item }));
+        });
+        if (!actions.length) return null;
+        const priority = actions.sort((a, b) => (a.status.className === "danger" ? -1 : 1) - (b.status.className === "danger" ? -1 : 1))[0];
+        return {
+          title: "Kendaraan butuh perhatian",
+          text: `${priority.vehicle.name} perlu cek ${priority.label}. Status: ${priority.status.label}.`,
+          tone: priority.status.className === "danger" ? "expense" : "debt",
+        };
+      }
+
+      function renderActionSummary() {
+        const weeklyExpenses = transactionsSince(6)
+          .filter((item) => item.type === "expense")
+          .sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0));
+        const growth = categoryGrowthActions()[0];
+        const budgetSuggestion = budgetSuggestionAction();
+        const upcomingBill = upcomingBillAction();
+        const vehicleAttention = vehicleAttentionAction();
+        const actions = [];
+
+        if (weeklyExpenses.length) {
+          const expense = weeklyExpenses[0];
+          actions.push({
+            title: "Pengeluaran terbesar minggu ini",
+            text: `${expense.description || expense.category} sebesar ${money(expense.amount)} pada ${expense.date}.`,
+            tone: "expense",
+          });
+        }
+
+        if (growth) {
+          actions.push({
+            title: "Kategori naik drastis",
+            text: `${growth.category} naik ${growth.change.toFixed(0)}% dari bulan lalu, dari ${money(growth.previous)} menjadi ${money(growth.current)}.`,
+            tone: "expense",
+          });
+        }
+
+        [budgetSuggestion, upcomingBill, vehicleAttention].filter(Boolean).forEach((item) => actions.push(item));
+
+        if (!actions.length) {
+          actions.push({
+            title: "Belum ada prioritas mendesak",
+            text: "Data masih aman. Tambahkan transaksi, budget, reminder tagihan, atau data kendaraan agar ringkasan tindakan semakin akurat.",
+            tone: "income",
+          });
+        }
+
+        document.querySelector("#actionSummaryList").innerHTML = actions.slice(0, 5).map((item) => `
+          <article class="action-summary-card">
+            <div class="debt-row-top">
+              <strong>${escapeHtml(item.title)}</strong>
+              <span class="pill ${item.tone}">Aksi</span>
+            </div>
+            <p>${escapeHtml(item.text)}</p>
+          </article>
+        `).join("");
+      }
+
       function renderBillReminders() {
         const reminders = [...state.billReminders].sort((a, b) => {
           if (a.status !== b.status) return a.status === "unpaid" ? -1 : 1;
@@ -1552,6 +1696,7 @@
           chartBudget: "Grafik Saldo dan Anggaran",
           budgetMonth: "Anggaran Bulan Ini",
           insight: "Insight",
+          actionSummary: "Ringkasan Tindakan",
           latestTransactions: "Transaksi Terbaru",
           savings: "Tabungan",
           billReminder: "Reminder Tagihan",
@@ -1608,6 +1753,7 @@
         renderSavings();
         renderVehicles();
         renderInsights();
+        renderActionSummary();
         renderBillReminders();
         renderDebts();
         renderCategoryBreakdown();
