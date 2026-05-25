@@ -4,6 +4,8 @@
         sessionStorageKey,
         rememberedLoginKey,
         failedLoginKey,
+        IDLE_TIMEOUT_MINUTES,
+        WARNING_BEFORE_LOGOUT_MINUTES,
         splashReadDelay,
         localSplashQuotes,
         savingCategories,
@@ -135,6 +137,14 @@
       let guestTransactionAdds = 0;
       let snackbarTimer = null;
       let hasUnsyncedChanges = state.syncStatus === "pending" || state.syncStatus === "failed";
+      const idleTimeoutMs = IDLE_TIMEOUT_MINUTES * 60 * 1000;
+      const idleWarningMs = WARNING_BEFORE_LOGOUT_MINUTES * 60 * 1000;
+      const idleWarningDelayMs = Math.max(0, idleTimeoutMs - idleWarningMs);
+      let idleWarningTimer = null;
+      let idleLogoutTimer = null;
+      let idleTrackingActive = false;
+      let idleWarningOpen = false;
+      const idleActivityEvents = ["click", "scroll", "keydown", "touchstart", "pointerdown"];
 
 
       function loadUsers() {
@@ -212,6 +222,89 @@
 
       function loadSessionUser() {
         return window.AppAuth.loadSessionUser(sessionStorageKey, users || loadUsers());
+      }
+
+      function clearIdleLogoutTimers() {
+        clearTimeout(idleWarningTimer);
+        clearTimeout(idleLogoutTimer);
+        idleWarningTimer = null;
+        idleLogoutTimer = null;
+      }
+
+      function isIdleLogoutEligible() {
+        return Boolean(currentUser && document.querySelector("#appShell:not(.hidden)"));
+      }
+
+      function hideIdleWarning() {
+        if (!idleWarningOpen) return;
+        idleWarningOpen = false;
+        closeModal();
+      }
+
+      function handleUserActivity() {
+        if (!idleTrackingActive || !isIdleLogoutEligible()) return;
+        resetIdleLogoutTimer();
+      }
+
+      function startIdleActivityListeners() {
+        if (idleTrackingActive) return;
+        idleActivityEvents.forEach((eventName) => {
+          document.addEventListener(eventName, handleUserActivity, { passive: true, capture: eventName === "scroll" });
+        });
+        idleTrackingActive = true;
+      }
+
+      function stopIdleActivityListeners() {
+        if (!idleTrackingActive) return;
+        idleActivityEvents.forEach((eventName) => {
+          document.removeEventListener(eventName, handleUserActivity, { capture: eventName === "scroll" });
+        });
+        idleTrackingActive = false;
+      }
+
+      function showIdleWarning() {
+        if (!isIdleLogoutEligible()) return;
+        idleWarningOpen = true;
+        document.querySelector("#modalTitle").textContent = "Sesi Hampir Berakhir";
+        document.querySelector("#modalBody").innerHTML = `
+          <div class="form">
+            <p style="color: var(--muted); line-height: 1.55">Anda akan keluar otomatis karena tidak ada aktivitas.</p>
+            <div class="row-actions">
+              <button class="button" type="button" id="idleStayButton">Tetap Masuk</button>
+              <button class="button danger" type="button" id="idleLogoutNowButton">Logout Sekarang</button>
+            </div>
+          </div>
+        `;
+        showModal();
+        document.querySelector("#idleStayButton").addEventListener("click", () => {
+          hideIdleWarning();
+          resetIdleLogoutTimer();
+        });
+        document.querySelector("#idleLogoutNowButton").addEventListener("click", () => {
+          logout("Sesi Anda berakhir karena tidak ada aktivitas.");
+        });
+      }
+
+      function resetIdleLogoutTimer() {
+        if (!isIdleLogoutEligible()) return;
+        clearIdleLogoutTimers();
+        hideIdleWarning();
+        idleWarningTimer = setTimeout(showIdleWarning, idleWarningDelayMs);
+        idleLogoutTimer = setTimeout(() => {
+          logout("Sesi Anda berakhir karena tidak ada aktivitas.");
+        }, idleTimeoutMs);
+      }
+
+      function startIdleLogoutTimer() {
+        if (!isIdleLogoutEligible()) return;
+        startIdleActivityListeners();
+        resetIdleLogoutTimer();
+      }
+
+      function stopIdleLogoutTimer() {
+        clearIdleLogoutTimers();
+        stopIdleActivityListeners();
+        idleWarningOpen = false;
       }
 
 
@@ -3174,9 +3267,11 @@
         }
         if (!isGuest() && isCloudSyncAllowed()) startCloudRealtimeSync();
         renderAll();
+        startIdleLogoutTimer();
       }
 
       function showLogin() {
+        stopIdleLogoutTimer();
         document.querySelector("#splashScreen").classList.add("hidden");
         document.querySelector("#authScreen").classList.remove("hidden");
         document.querySelector("#appShell").classList.add("hidden");
@@ -3578,7 +3673,8 @@
         return buildUserFromCloud(user);
       }
 
-      function logout() {
+      function logout(message = "") {
+        stopIdleLogoutTimer();
         localStorage.removeItem(sessionStorageKey);
         stopCloudRealtimeSync();
         if (cloudSync.enabled) setupCloudClient()?.auth.signOut();
@@ -3587,6 +3683,7 @@
         applyState(stored);
         openView("home");
         showLogin();
+        if (message) alert(message);
       }
 
       async function autoLoginRememberedUser() {
