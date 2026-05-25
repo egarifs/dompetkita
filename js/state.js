@@ -213,7 +213,7 @@ window.AppState = {
         pin: data.settings?.pin || "",
         homeSectionOrder: Array.isArray(data.settings?.homeSectionOrder) && data.settings.homeSectionOrder.length
           ? data.settings.homeSectionOrder
-          : ["wallets", "chartBudget", "budgetMonth", "insight", "actionSummary", "savings", "billReminder"],
+          : ["wallets", "insight", "latestTransactions"],
         incomeVisible: Boolean(data.settings?.incomeVisible),
         totalBalanceVisible: Boolean(data.settings?.totalBalanceVisible),
         remainingBudgetVisible: Boolean(data.settings?.remainingBudgetVisible),

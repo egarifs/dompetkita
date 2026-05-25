@@ -136,7 +136,7 @@
       const state = loadState();
       let categories = state.categories?.length ? state.categories : [...defaultCategories];
       state.categories = categories;
-      const defaultHomeSectionOrder = ["wallets", "chartBudget", "budgetMonth", "insight", "actionSummary", "savings", "billReminder", "vehicles"];
+      const defaultHomeSectionOrder = ["wallets", "insight", "latestTransactions"];
       state.settings.homeSectionOrder = normalizeHomeSectionOrder(state.settings?.homeSectionOrder);
       let users = window.AppAuth.loadUsers(authStorageKey);
       let currentUser = loadSessionUser();
@@ -2131,14 +2131,9 @@
 
       function dashboardSectionLabel(section) {
         const labels = {
-          chartBudget: "Grafik Saldo dan Anggaran",
           wallets: "Saldo Dompet",
-          budgetMonth: "Anggaran Bulan Ini",
           insight: "Insight",
-          actionSummary: "Ringkasan Tindakan",
-          savings: "Tabungan",
-          billReminder: "Reminder Tagihan",
-          vehicles: "Kendaraan",
+          latestTransactions: "Transaksi Terbaru",
         };
         return labels[section] || section;
       }
@@ -4162,6 +4157,18 @@
         if (categoryChip) {
           selectedCategoryFilter = categoryChip.dataset.categoryFilter;
           renderTransactions();
+          return;
+        }
+
+        const syncShortcut = event.target.closest("[data-sync-shortcut]");
+        if (syncShortcut) {
+          if (!requireSignedIn()) return;
+          if (!isCloudSyncAllowed()) {
+            showSnackbar("Sinkronisasi cloud sedang nonaktif.", "error");
+            return;
+          }
+          const synced = await syncCloudState();
+          showSnackbar(synced ? "Data berhasil disinkronkan." : "Cloud belum bisa disinkronkan.", synced ? "success" : "error");
           return;
         }
 

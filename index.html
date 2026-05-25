@@ -218,9 +218,16 @@
                 <span class="stat-sub">Bersih belum lunas</span>
               </article>
             </div>
-            <div class="quick-actions" aria-label="Aksi cepat">
-              <button class="quick-action" type="button" data-open-form="wallet">Tambah Dompet</button>
-              <button class="quick-action" type="button" data-open-form="savingsGoal">Tambah Tabungan</button>
+            <div class="shortcut-grid" aria-label="Menu shortcut">
+              <button class="shortcut-item" type="button" data-open-form="transaction"><span>+</span><strong>Tambah</strong></button>
+              <button class="shortcut-item" type="button" data-view="reports"><span>↕</span><strong>Transaksi</strong></button>
+              <button class="shortcut-item" type="button" data-view="wallets"><span>□</span><strong>Dompet</strong></button>
+              <button class="shortcut-item" type="button" data-view="budgets"><span>%</span><strong>Budget</strong></button>
+              <button class="shortcut-item" type="button" data-view="savings"><span>◎</span><strong>Goals</strong></button>
+              <button class="shortcut-item" type="button" data-view="analytics"><span>▥</span><strong>Reports</strong></button>
+              <button class="shortcut-item" type="button" data-sync-shortcut><span>↻</span><strong>Sync</strong></button>
+              <button class="shortcut-item" type="button" data-view="account"><span>⚙</span><strong>Pengaturan</strong></button>
+              <button class="shortcut-item" type="button" data-view="account"><span>…</span><strong>Lainnya</strong></button>
             </div>
           </section>
 
@@ -239,32 +246,6 @@
               <div class="wallet-list" id="homeWalletList"></div>
             </section>
 
-            <section class="panel" data-home-section="chartBudget">
-              <div class="panel-header">
-                <div class="panel-title">
-                  <h3>Grafik Saldo dan Anggaran</h3>
-                  <p>Pergerakan total saldo dan sisa anggaran selama bulan berjalan.</p>
-                </div>
-              </div>
-              <div class="chart-wrap">
-                <div class="chart-box" id="balanceChart"></div>
-                <div class="chart-legend">
-                  <span class="legend-item"><i class="legend-dot" style="background: var(--primary)"></i>Total saldo</span>
-                  <span class="legend-item"><i class="legend-dot" style="background: var(--violet)"></i>Sisa anggaran</span>
-                </div>
-              </div>
-            </section>
-
-            <section class="panel" data-home-section="budgetMonth">
-              <div class="panel-header">
-                <div class="panel-title">
-                  <h3>Anggaran Bulan Ini</h3>
-                  <p>Ringkasan pemakaian anggaran per kategori.</p>
-                </div>
-              </div>
-              <div class="budget-list" id="homeBudgetList"></div>
-            </section>
-
             <section class="panel" data-home-section="insight">
             <div class="panel-header">
               <div class="panel-title">
@@ -275,17 +256,18 @@
             <div class="debt-list" id="insightList"></div>
           </section>
 
-            <section class="panel" data-home-section="actionSummary">
-              <div class="panel-header">
-                <div class="panel-title">
-                  <h3>Ringkasan Tindakan</h3>
-                  <p>Prioritas yang perlu dicek minggu ini dari transaksi, budget, tagihan, dan kendaraan.</p>
-                </div>
+            <section class="panel" data-home-section="latestTransactions">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h3>Transaksi Terbaru</h3>
+                <p>Beberapa transaksi terakhir. Detail lengkap ada di menu Transaksi.</p>
               </div>
-              <div class="action-summary-list" id="actionSummaryList"></div>
-            </section>
+              <button class="button" type="button" data-view="reports">Lihat Semua</button>
+            </div>
+            <div class="table-wrap" id="latestTransactions"></div>
+          </section>
 
-            <section class="panel" data-home-section="savings">
+            <section class="panel hidden" data-home-section="savings">
             <div class="panel-header">
               <div class="panel-title">
                 <h3>Tabungan</h3>
@@ -300,7 +282,7 @@
             <div class="budget-list" id="homeSavingsList"></div>
           </section>
 
-            <section class="panel" data-home-section="billReminder">
+            <section class="panel hidden" data-home-section="billReminder">
             <div class="panel-header">
               <div class="panel-title">
                 <h3>Reminder Tagihan</h3>
@@ -311,7 +293,7 @@
             <div class="debt-list" id="billReminderList"></div>
           </section>
 
-          <section class="panel" data-home-section="vehicles">
+          <section class="panel hidden" data-home-section="vehicles">
             <div class="panel-header">
               <div class="panel-title">
                 <h3>Kendaraan</h3>
@@ -519,7 +501,33 @@
         </section>
 
         <section class="view" id="analyticsView">
-          <div class="report-grid">
+          <section class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h3>Grafik Saldo dan Anggaran</h3>
+                <p>Pergerakan total saldo dan sisa anggaran selama bulan berjalan.</p>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <div class="chart-box" id="balanceChart"></div>
+              <div class="chart-legend">
+                <span class="legend-item"><i class="legend-dot" style="background: var(--primary)"></i>Total saldo</span>
+                <span class="legend-item"><i class="legend-dot" style="background: var(--violet)"></i>Sisa anggaran</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" style="margin-top: 14px">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h3>Anggaran Bulan Ini</h3>
+                <p>Ringkasan pemakaian anggaran per kategori.</p>
+              </div>
+            </div>
+            <div class="budget-list" id="homeBudgetList"></div>
+          </section>
+
+          <div class="report-grid" style="margin-top: 14px">
             <section class="panel">
               <div class="panel-header">
                 <div class="panel-title">
@@ -732,7 +740,7 @@
                   <div class="settings-item">
                     <div>
                       <strong>Urutan Menu Dashboard</strong>
-                      <span id="dashboardMenuSummary">Grafik Saldo dan Anggaran, Anggaran Bulan Ini, Insight, Tabungan, Reminder Tagihan</span>
+                      <span id="dashboardMenuSummary">Saldo Dompet, Insight, Transaksi Terbaru</span>
                     </div>
                     <button class="button" type="button" data-open-form="dashboardMenu">Kelola</button>
                   </div>
