@@ -173,6 +173,7 @@
             <p id="pageSubtitle">Pantau pengeluaran bulan berjalan, saldo, dan sisa anggaran.</p>
           </div>
           <div class="top-actions">
+            <span class="sync-badge" id="topSyncBadge">Lokal</span>
             <button class="button hidden" id="installAppButton" type="button">Pasang App</button>
             <button class="button" id="loadDemoButton" type="button">Muat Contoh</button>
             <button class="button primary" type="button" data-open-form="transaction">Transaksi Baru</button>
@@ -216,6 +217,11 @@
                 <strong class="stat-value" id="debtSummary">Rp0</strong>
                 <span class="stat-sub">Bersih belum lunas</span>
               </article>
+            </div>
+            <div class="quick-actions" aria-label="Aksi cepat">
+              <button class="quick-action" type="button" data-open-form="transaction">Tambah Transaksi</button>
+              <button class="quick-action" type="button" data-open-form="wallet">Tambah Dompet</button>
+              <button class="quick-action" type="button" data-open-form="savingsGoal">Tambah Tabungan</button>
             </div>
           </section>
 
@@ -499,12 +505,27 @@
             <div class="table-tools">
               <input id="searchInput" type="search" placeholder="Cari deskripsi atau kategori" />
               <select id="monthFilter" aria-label="Filter bulan"></select>
+              <select id="walletFilter" aria-label="Filter dompet">
+                <option value="all">Semua dompet</option>
+              </select>
               <select id="typeFilter" aria-label="Filter tipe">
                 <option value="all">Semua tipe</option>
                 <option value="expense">Pengeluaran</option>
                 <option value="income">Pemasukan</option>
               </select>
             </div>
+            <div class="filter-strip" aria-label="Filter cepat tanggal">
+              <button class="filter-chip active" type="button" data-quick-range="month">Bulan ini</button>
+              <button class="filter-chip" type="button" data-quick-range="week">Minggu ini</button>
+              <button class="filter-chip" type="button" data-quick-range="today">Hari ini</button>
+              <button class="filter-chip" type="button" data-quick-range="all">Semua</button>
+            </div>
+            <div class="segmented-tabs" aria-label="Filter tipe transaksi">
+              <button class="segment active" type="button" data-transaction-type-tab="all">Semua</button>
+              <button class="segment" type="button" data-transaction-type-tab="income">Pemasukan</button>
+              <button class="segment" type="button" data-transaction-type-tab="expense">Pengeluaran</button>
+            </div>
+            <div class="filter-strip" id="categoryChipList" aria-label="Filter kategori"></div>
             <div class="table-wrap" id="allTransactions"></div>
           </section>
         </section>
@@ -837,6 +858,7 @@
     </div>
 
     <div class="snackbar" id="snackbar" role="status" aria-live="polite"></div>
+    <button class="mobile-fab" type="button" data-open-form="transaction" aria-label="Tambah transaksi">+</button>
 
     <script src="./config.js"></script>
     <script src="./app-meta.js"></script>

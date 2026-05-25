@@ -143,6 +143,8 @@
       let guestTransactionAdds = 0;
       let snackbarTimer = null;
       let hasUnsyncedChanges = state.syncStatus === "pending" || state.syncStatus === "failed";
+      let quickTransactionRange = "month";
+      let selectedCategoryFilter = "all";
       const idleTimeoutMs = IDLE_TIMEOUT_MINUTES * 60 * 1000;
       const idleWarningMs = WARNING_BEFORE_LOGOUT_MINUTES * 60 * 1000;
       const idleWarningDelayMs = Math.max(0, idleTimeoutMs - idleWarningMs);
@@ -1169,10 +1171,65 @@
         }).format(date);
       }
 
+      function transactionDateTimeLabel(value) {
+        if (!value) return "-";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return new Intl.DateTimeFormat("id-ID", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(date);
+      }
+
+      function quickRangeMatch(item, range) {
+        if (range === "all") return true;
+        const itemDate = new Date(`${item.date}T00:00:00`);
+        if (Number.isNaN(itemDate.getTime())) return false;
+        const today = new Date();
+        const startToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const itemDay = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+        if (range === "today") return itemDay.getTime() === startToday.getTime();
+        if (range === "week") {
+          const day = startToday.getDay() || 7;
+          const startWeek = new Date(startToday);
+          startWeek.setDate(startToday.getDate() - day + 1);
+          return itemDay >= startWeek && itemDay <= startToday;
+        }
+        return monthOf(item) === currentMonthKey();
+      }
+
+      function renderCategoryChips() {
+        const target = document.querySelector("#categoryChipList");
+        if (!target) return;
+        const usedCategories = [...new Set(state.transactions.map((item) => item.category).filter(Boolean))];
+        const items = ["all", ...usedCategories];
+        target.innerHTML = items.map((category) => `
+          <button class="filter-chip ${selectedCategoryFilter === category ? "active" : ""}" type="button" data-category-filter="${escapeHtml(category)}">
+            ${category === "all" ? "Semua kategori" : escapeHtml(category)}
+          </button>
+        `).join("");
+      }
+
+      function renderWalletFilterOptions() {
+        const select = document.querySelector("#walletFilter");
+        if (!select) return;
+        const current = select.value || "all";
+        select.innerHTML = `<option value="all">Semua dompet</option>${state.wallets.map((wallet) => `<option value="${wallet.id}">${escapeHtml(wallet.name)}</option>`).join("")}`;
+        select.value = [...select.options].some((option) => option.value === current) ? current : "all";
+      }
+
       function transactionRows(items, limit = null) {
         const visible = [...items].sort((a, b) => b.date.localeCompare(a.date)).slice(0, limit ?? items.length);
         if (!visible.length) {
-          return `<div class="empty"><p>Belum ada transaksi.</p></div>`;
+          return `
+            <div class="empty">
+              <p>Belum ada transaksi yang cocok dengan filter ini.</p>
+              <button class="button primary" type="button" data-open-form="transaction">Tambah Transaksi</button>
+            </div>
+          `;
         }
 
         return `
@@ -1225,8 +1282,10 @@
             <section class="receipt-preview">
               ${receiptUrl
                 ? `<img src="${escapeHtml(receiptUrl)}" alt="Foto struk transaksi" />`
-                : `<div class="receipt-empty"><strong>Belum ada foto struk</strong><span>Foto struk bisa ditambahkan ketika fitur upload struk tersedia.</span></div>`}
+                : `<div class="receipt-empty"><strong>Belum ada foto struk</strong><span>Unggah foto struk agar transaksi lebih mudah diaudit.</span></div>`}
             </section>
+            <label class="button receipt-upload" for="receiptUploadInput">Unggah Foto Struk</label>
+            <input class="hidden" id="receiptUploadInput" type="file" accept="image/*" data-receipt-transaction="${item.id}" />
             <section class="transaction-detail-summary">
               <div>
                 <span class="stat-label">Nominal</span>
@@ -1238,6 +1297,7 @@
               <span class="pill">${escapeHtml(transactionDateLabel(item.date))}</span>
               <span class="pill">${escapeHtml(walletName(item.walletId))}</span>
               <span class="pill">${escapeHtml(item.category || "Lainnya")}</span>
+              <span class="pill">${escapeHtml(item.sourceModule || "manual")}</span>
             </div>
             <div class="debt-row">
               <div class="debt-row-top">
@@ -1246,6 +1306,10 @@
                   <span>${escapeHtml(item.description || "-")}</span>
                 </div>
               </div>
+            </div>
+            <div class="compact-list transaction-detail-meta">
+              <span class="pill">Dibuat ${escapeHtml(transactionDateTimeLabel(item.createdAt))}</span>
+              <span class="pill">Diubah ${escapeHtml(transactionDateTimeLabel(item.updatedAt))}</span>
             </div>
             <div class="row-actions">
               <button class="button" type="button" data-close-modal>Tutup</button>
@@ -1258,14 +1322,20 @@
       }
 
       function renderTransactions() {
+        renderWalletFilterOptions();
+        renderCategoryChips();
         document.querySelector("#latestTransactions").innerHTML = transactionRows(state.transactions, 5);
         const query = document.querySelector("#searchInput")?.value.toLowerCase().trim() || "";
         const month = document.querySelector("#monthFilter")?.value || "all";
         const type = document.querySelector("#typeFilter")?.value || "all";
+        const wallet = document.querySelector("#walletFilter")?.value || "all";
         const filtered = state.transactions
           .filter((item) => month === "all" || monthOf(item) === month)
           .filter((item) => type === "all" || item.type === type)
-          .filter((item) => `${item.category} ${item.description}`.toLowerCase().includes(query));
+          .filter((item) => wallet === "all" || item.walletId === wallet)
+          .filter((item) => selectedCategoryFilter === "all" || item.category === selectedCategoryFilter)
+          .filter((item) => quickRangeMatch(item, quickTransactionRange))
+          .filter((item) => `${item.category} ${item.description} ${walletName(item.walletId)}`.toLowerCase().includes(query));
         document.querySelector("#allTransactions").innerHTML = transactionRows(filtered);
       }
 
@@ -1646,6 +1716,7 @@
             title: "Kategori terbesar bulan ini",
             text: `${categoryTotals[0].category} adalah kategori pengeluaran terbesar dengan total ${money(categoryTotals[0].total)}.`,
             tone: "debt",
+            category: categoryTotals[0].category,
           });
         }
 
@@ -1661,6 +1732,7 @@
                 title: `Pengeluaran ${category}`,
                 text: `Pengeluaran ${category.toLowerCase()} bulan ini ${change > 0 ? "naik" : "turun"} ${Math.abs(change).toFixed(0)}% dari bulan lalu.`,
                 tone: change > 0 ? "expense" : "income",
+                category,
               });
             }
           }
@@ -1696,7 +1768,7 @@
         }
 
         document.querySelector("#insightList").innerHTML = insights.slice(0, 5).map((item) => `
-          <article class="debt-row">
+          <article class="debt-row ${item.category ? "clickable-row" : ""}" ${item.category ? `data-insight-category="${escapeHtml(item.category)}"` : ""}>
             <div class="debt-row-top">
               <strong>${escapeHtml(item.title)}</strong>
               <span class="pill ${item.tone}">Insight</span>
@@ -2079,6 +2151,11 @@
         document.querySelector("#profileRole").textContent = isGuest() ? "Tamu" : currentUser.role === "admin" ? "Admin" : "User";
         document.querySelector("#profilePinStatus").textContent = state.settings.pin ? "PIN aktif" : "PIN belum aktif";
         document.querySelector("#profileSyncStatus").textContent = isGuest() ? "Demo" : cloudSync.enabled ? "Cloud" : "Lokal";
+        const topSyncBadge = document.querySelector("#topSyncBadge");
+        if (topSyncBadge) {
+          topSyncBadge.textContent = isGuest() ? "Demo" : syncStatusText();
+          topSyncBadge.className = `sync-badge ${state.syncStatus === "failed" || cloudSync.lastError ? "error" : state.syncStatus === "pending" ? "pending" : ""}`;
+        }
         document.querySelector("#appVersionLabel").textContent = `v${appVersion}`;
         document.querySelector("#darkModeToggle").checked = Boolean(state.settings.darkMode);
         document.querySelector("#cloudSyncToggle").checked = state.settings.cloudSyncEnabled !== false;
@@ -3551,6 +3628,26 @@
         if (!isGuest() && isCloudSyncAllowed()) startCloudRealtimeSync();
         renderAll();
         startIdleLogoutTimer();
+        maybeShowWalletOnboarding();
+      }
+
+      function maybeShowWalletOnboarding() {
+        if (!currentUser || isGuest()) return;
+        const key = `dompify_onboarding_wallet_${currentUser.username || currentUser.id}`;
+        if (sessionStorage.getItem(key)) return;
+        if (state.transactions.length || state.wallets.length > 2) return;
+        sessionStorage.setItem(key, "1");
+        document.querySelector("#modalTitle").textContent = "Mulai dari Dompet";
+        document.querySelector("#modalBody").innerHTML = `
+          <div class="form">
+            <div class="empty">
+              <p>Buat atau sesuaikan dompet pertama agar saldo transaksi lebih rapi sejak awal.</p>
+              <button class="button primary" type="button" data-open-form="wallet">Atur Dompet</button>
+              <button class="button" type="button" data-close-modal>Nanti</button>
+            </div>
+          </div>
+        `;
+        showModal();
       }
 
       function showLogin() {
@@ -4044,6 +4141,41 @@
 
         if (event.target.closest("[data-close-modal]")) closeModal();
 
+        const rangeButton = event.target.closest("[data-quick-range]");
+        if (rangeButton) {
+          quickTransactionRange = rangeButton.dataset.quickRange;
+          document.querySelectorAll("[data-quick-range]").forEach((button) => button.classList.toggle("active", button === rangeButton));
+          renderTransactions();
+          return;
+        }
+
+        const typeTab = event.target.closest("[data-transaction-type-tab]");
+        if (typeTab) {
+          const select = document.querySelector("#typeFilter");
+          if (select) select.value = typeTab.dataset.transactionTypeTab;
+          document.querySelectorAll("[data-transaction-type-tab]").forEach((button) => button.classList.toggle("active", button === typeTab));
+          renderTransactions();
+          return;
+        }
+
+        const categoryChip = event.target.closest("[data-category-filter]");
+        if (categoryChip) {
+          selectedCategoryFilter = categoryChip.dataset.categoryFilter;
+          renderTransactions();
+          return;
+        }
+
+        const insightCategory = event.target.closest("[data-insight-category]");
+        if (insightCategory) {
+          selectedCategoryFilter = insightCategory.dataset.insightCategory;
+          quickTransactionRange = "month";
+          document.querySelector("#typeFilter").value = "expense";
+          document.querySelectorAll("[data-transaction-type-tab]").forEach((button) => button.classList.toggle("active", button.dataset.transactionTypeTab === "expense"));
+          openView("reports");
+          renderTransactions();
+          return;
+        }
+
         const walletEditButton = event.target.closest("[data-edit-wallet]");
         if (walletEditButton) {
           if (!requireSignedIn()) return;
@@ -4343,6 +4475,23 @@
         }
       });
 
+      document.body.addEventListener("change", (event) => {
+        const input = event.target.closest("[data-receipt-transaction]");
+        if (!input || !input.files?.[0]) return;
+        const target = state.transactions.find((item) => item.id === input.dataset.receiptTransaction);
+        if (!target) return;
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = async () => {
+          target.receiptImage = String(reader.result || "");
+          target.updatedAt = new Date().toISOString();
+          await persistChanges("Foto struk tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+          showSnackbar("Foto struk berhasil disimpan.");
+          openTransactionDetail(target.id);
+        };
+        reader.readAsDataURL(file);
+      });
+
       document.querySelector("#closeModalButton").addEventListener("click", closeModal);
       document.querySelector("#modal").addEventListener("click", (event) => {
         if (event.target.id === "modal") closeModal();
@@ -4409,11 +4558,17 @@
         renderTransactions();
       });
       document.querySelector("#monthFilter").addEventListener("change", () => {
+        quickTransactionRange = document.querySelector("#monthFilter").value === "all" ? "all" : "month";
+        document.querySelectorAll("[data-quick-range]").forEach((button) => button.classList.toggle("active", button.dataset.quickRange === quickTransactionRange));
         renderTransactions();
         renderCategoryBreakdown();
         renderDailyExpenses();
       });
-      document.querySelector("#typeFilter").addEventListener("change", renderTransactions);
+      document.querySelector("#typeFilter").addEventListener("change", (event) => {
+        document.querySelectorAll("[data-transaction-type-tab]").forEach((button) => button.classList.toggle("active", button.dataset.transactionTypeTab === event.target.value));
+        renderTransactions();
+      });
+      document.querySelector("#walletFilter").addEventListener("change", renderTransactions);
       document.querySelector("#vehicleExpenseVehicleFilter").addEventListener("change", renderVehicleExpenses);
       document.querySelector("#vehicleExpenseMonthFilter").addEventListener("change", renderVehicleExpenses);
       document.querySelector("#vehicleExpenseTypeFilter").addEventListener("change", renderVehicleExpenses);
