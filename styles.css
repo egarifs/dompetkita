@@ -1382,6 +1382,10 @@
         color: #f2f3ef;
         box-shadow: var(--shadow-2);
         padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
         font-size: 0.92rem;
         font-weight: 750;
         line-height: 1.4;
@@ -1394,11 +1398,28 @@
       .snackbar.show {
         transform: translateY(0);
         opacity: 1;
+        pointer-events: auto;
       }
 
       .snackbar.error {
         background: var(--error-container);
         color: var(--on-error-container);
+      }
+
+      .snackbar-action {
+        border: 0;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.16);
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 850;
+        padding: 7px 12px;
+        white-space: nowrap;
+      }
+
+      .snackbar-action:hover {
+        background: rgba(255, 255, 255, 0.24);
       }
 
       .hidden {

@@ -146,15 +146,30 @@
         window.AppAuth.saveUsers(authStorageKey, users);
       }
 
-      function showSnackbar(message, tone = "success") {
+      function showSnackbar(message, tone = "success", action = null) {
         const snackbar = document.querySelector("#snackbar");
         if (!snackbar) return;
-        snackbar.textContent = message;
+        snackbar.innerHTML = "";
+        const text = document.createElement("span");
+        text.textContent = message;
+        snackbar.appendChild(text);
+        if (action?.label && typeof action.onClick === "function") {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "snackbar-action";
+          button.textContent = action.label;
+          button.addEventListener("click", async () => {
+            clearTimeout(snackbarTimer);
+            snackbar.className = "snackbar";
+            await action.onClick();
+          }, { once: true });
+          snackbar.appendChild(button);
+        }
         snackbar.className = `snackbar show ${tone === "error" ? "error" : ""}`;
         clearTimeout(snackbarTimer);
         snackbarTimer = setTimeout(() => {
           snackbar.className = "snackbar";
-        }, 3200);
+        }, action ? 6000 : 3200);
       }
 
       function loadRememberedLogin() {
@@ -319,6 +334,54 @@
         if (!state.deleted) state.deleted = {};
         if (!Array.isArray(state.deleted[collection])) state.deleted[collection] = [];
         if (!state.deleted[collection].includes(itemId)) state.deleted[collection].push(itemId);
+      }
+
+      function unmarkDeleted(collection, itemIds) {
+        const ids = new Set((Array.isArray(itemIds) ? itemIds : [itemIds]).filter(Boolean));
+        if (!ids.size || !Array.isArray(state.deleted?.[collection])) return;
+        state.deleted[collection] = state.deleted[collection].filter((itemId) => !ids.has(itemId));
+      }
+
+      function cloneData(value) {
+        if (value === undefined || value === null) return value;
+        return JSON.parse(JSON.stringify(value));
+      }
+
+      function restoreItems(collection, items) {
+        const list = Array.isArray(items) ? items : [items];
+        if (!Array.isArray(state[collection])) return;
+        const existing = new Map(state[collection].map((item) => [item.id, item]));
+        list.filter(Boolean).forEach((item) => {
+          const restored = cloneData(item);
+          if (existing.has(restored.id)) Object.assign(existing.get(restored.id), restored);
+          else state[collection].push(restored);
+        });
+        unmarkDeleted(collection, list.map((item) => item?.id));
+      }
+
+      async function deleteWithUndo(options) {
+        const {
+          confirmMessage,
+          deleteMessage = "Data dihapus.",
+          failedMessage = "Data sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.",
+          undoMessage = "Penghapusan dibatalkan.",
+          deleteFn,
+          undoFn,
+          afterDelete,
+        } = options;
+        if (confirmMessage && !confirm(confirmMessage)) return false;
+        deleteFn();
+        if (typeof afterDelete === "function") afterDelete();
+        await persistChanges(failedMessage);
+        showSnackbar(deleteMessage, "success", {
+          label: "Undo",
+          onClick: async () => {
+            undoFn();
+            await persistChanges("Undo tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+            showSnackbar(undoMessage);
+          },
+        });
+        return true;
       }
 
       function mergeStateData(cloudData, localData) {
@@ -2769,38 +2832,41 @@
             alert("Pilih minimal satu jenis data yang akan direset.");
             return;
           }
-          if (!confirm(`Reset data bulan ${monthLabel(month)}? Data yang dihapus tidak akan tampil lagi setelah sync.`)) return;
-
-          let removed = 0;
-          if (resetTransactions) {
-            const targets = state.transactions.filter((item) => monthOf(item) === month);
-            targets.forEach((item) => markDeleted("transactions", item.id));
-            state.transactions = state.transactions.filter((item) => monthOf(item) !== month);
-            removed += targets.length;
-          }
-          if (resetDebts) {
-            const targets = state.debts.filter((item) => item.date?.slice(0, 7) === month || item.dueDate?.slice(0, 7) === month);
-            targets.forEach((item) => markDeleted("debts", item.id));
-            state.debts = state.debts.filter((item) => item.date?.slice(0, 7) !== month && item.dueDate?.slice(0, 7) !== month);
-            removed += targets.length;
-          }
-          if (resetBills) {
-            const targets = state.billReminders.filter((item) => item.dueDate?.slice(0, 7) === month);
-            targets.forEach((item) => markDeleted("billReminders", item.id));
-            state.billReminders = state.billReminders.filter((item) => item.dueDate?.slice(0, 7) !== month);
-            removed += targets.length;
-          }
-          if (resetSavings) {
-            state.savings.forEach((goal) => {
-              const before = goal.entries?.length || 0;
-              goal.entries = (goal.entries || []).filter((entry) => monthOf(entry) !== month);
-              removed += before - goal.entries.length;
-            });
-          }
-
-          closeModal();
-          await persistChanges("Reset bulanan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-          alert(removed ? `${removed} data bulan ${monthLabel(month)} berhasil direset.` : `Tidak ada data pada bulan ${monthLabel(month)}.`);
+          const snapshots = {
+            transactions: resetTransactions ? cloneData(state.transactions.filter((item) => monthOf(item) === month)) : [],
+            debts: resetDebts ? cloneData(state.debts.filter((item) => item.date?.slice(0, 7) === month || item.dueDate?.slice(0, 7) === month)) : [],
+            billReminders: resetBills ? cloneData(state.billReminders.filter((item) => item.dueDate?.slice(0, 7) === month)) : [],
+            savings: resetSavings ? cloneData(state.savings) : [],
+          };
+          const savingsEntryCount = resetSavings
+            ? state.savings.reduce((sum, goal) => sum + (goal.entries || []).filter((entry) => monthOf(entry) === month).length, 0)
+            : 0;
+          const removed = snapshots.transactions.length + snapshots.debts.length + snapshots.billReminders.length + savingsEntryCount;
+          await deleteWithUndo({
+            confirmMessage: `Reset data bulan ${monthLabel(month)}?`,
+            deleteMessage: removed ? `${removed} data bulan ${monthLabel(month)} dihapus.` : `Tidak ada data pada bulan ${monthLabel(month)}.`,
+            failedMessage: "Reset bulanan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.",
+            deleteFn: () => {
+              snapshots.transactions.forEach((item) => markDeleted("transactions", item.id));
+              state.transactions = resetTransactions ? state.transactions.filter((item) => monthOf(item) !== month) : state.transactions;
+              snapshots.debts.forEach((item) => markDeleted("debts", item.id));
+              state.debts = resetDebts ? state.debts.filter((item) => item.date?.slice(0, 7) !== month && item.dueDate?.slice(0, 7) !== month) : state.debts;
+              snapshots.billReminders.forEach((item) => markDeleted("billReminders", item.id));
+              state.billReminders = resetBills ? state.billReminders.filter((item) => item.dueDate?.slice(0, 7) !== month) : state.billReminders;
+              if (resetSavings) {
+                state.savings.forEach((goal) => {
+                  goal.entries = (goal.entries || []).filter((entry) => monthOf(entry) !== month);
+                });
+              }
+            },
+            undoFn: () => {
+              restoreItems("transactions", snapshots.transactions);
+              restoreItems("debts", snapshots.debts);
+              restoreItems("billReminders", snapshots.billReminders);
+              if (resetSavings) state.savings = cloneData(snapshots.savings);
+            },
+            afterDelete: closeModal,
+          });
         });
       }
 
@@ -3560,23 +3626,37 @@
         if (deleteButton) {
           if (!requireSignedIn()) return;
           const target = state.transactions.find((item) => item.id === deleteButton.dataset.deleteTransaction);
-          if (target && confirm(`Hapus transaksi "${target.description}"?`)) {
-            markDeleted("transactions", target.id);
-            state.transactions = state.transactions.filter((item) => item.id !== target.id);
-            await persistChanges("Transaksi sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-          }
+          if (!target) return;
+          const snapshot = cloneData(target);
+          await deleteWithUndo({
+            confirmMessage: `Hapus transaksi "${target.description || target.category}"?`,
+            deleteMessage: "Transaksi dihapus.",
+            failedMessage: "Transaksi sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.",
+            deleteFn: () => {
+              markDeleted("transactions", target.id);
+              state.transactions = state.transactions.filter((item) => item.id !== target.id);
+            },
+            undoFn: () => restoreItems("transactions", snapshot),
+          });
         }
 
         const savingsDeleteButton = event.target.closest("[data-delete-savings]");
         if (savingsDeleteButton) {
           if (!requireSignedIn()) return;
           const target = state.savings.find((item) => item.id === savingsDeleteButton.dataset.deleteSavings);
-          if (target && confirm(`Hapus tabungan "${target.title}"?`)) {
-            markDeleted("savings", target.id);
-            state.savings = state.savings.filter((item) => item.id !== target.id);
-            closeModal();
-            await persistChanges("Tabungan sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-          }
+          if (!target) return;
+          const snapshot = cloneData(target);
+          await deleteWithUndo({
+            confirmMessage: `Hapus tabungan "${target.title}"?`,
+            deleteMessage: "Tabungan dihapus.",
+            failedMessage: "Tabungan sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.",
+            deleteFn: () => {
+              markDeleted("savings", target.id);
+              state.savings = state.savings.filter((item) => item.id !== target.id);
+            },
+            undoFn: () => restoreItems("savings", snapshot),
+            afterDelete: closeModal,
+          });
           return;
         }
 
@@ -3614,19 +3694,40 @@
             + state.vehicleParts.filter((item) => item.vehicleId === target.id).length
             + state.vehicleTaxes.filter((item) => item.vehicleId === target.id).length
             + vehicleTransactions().filter((item) => item.vehicleId === target.id).length;
-          if (!confirm(`Hapus kendaraan "${target.name}"${relatedCount ? " beserta data terkaitnya" : ""}?`)) return;
-          markDeleted("vehicles", target.id);
-          state.vehicles = state.vehicles.filter((item) => item.id !== target.id);
-          for (const collection of ["vehicleServices", "vehicleOilChanges", "vehicleParts", "vehicleTaxes"]) {
-            state[collection].filter((item) => item.vehicleId === target.id).forEach((item) => {
-              markDeleted(collection, item.id);
-              removeVehicleTransaction(item);
-            });
-            state[collection] = state[collection].filter((item) => item.vehicleId !== target.id);
-          }
-          vehicleTransactions().filter((item) => item.vehicleId === target.id).forEach((item) => markDeleted("transactions", item.id));
-          state.transactions = state.transactions.filter((item) => item.vehicleId !== target.id);
-          await persistChanges("Data kendaraan sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+          const related = {
+            vehicle: cloneData(target),
+            vehicleServices: cloneData(state.vehicleServices.filter((item) => item.vehicleId === target.id)),
+            vehicleOilChanges: cloneData(state.vehicleOilChanges.filter((item) => item.vehicleId === target.id)),
+            vehicleParts: cloneData(state.vehicleParts.filter((item) => item.vehicleId === target.id)),
+            vehicleTaxes: cloneData(state.vehicleTaxes.filter((item) => item.vehicleId === target.id)),
+            transactions: cloneData(vehicleTransactions().filter((item) => item.vehicleId === target.id)),
+          };
+          await deleteWithUndo({
+            confirmMessage: `Hapus kendaraan "${target.name}"${relatedCount ? " beserta data terkaitnya" : ""}?`,
+            deleteMessage: "Data kendaraan dihapus.",
+            failedMessage: "Data kendaraan sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.",
+            deleteFn: () => {
+              markDeleted("vehicles", target.id);
+              state.vehicles = state.vehicles.filter((item) => item.id !== target.id);
+              for (const collection of ["vehicleServices", "vehicleOilChanges", "vehicleParts", "vehicleTaxes"]) {
+                state[collection].filter((item) => item.vehicleId === target.id).forEach((item) => {
+                  markDeleted(collection, item.id);
+                  removeVehicleTransaction(item);
+                });
+                state[collection] = state[collection].filter((item) => item.vehicleId !== target.id);
+              }
+              vehicleTransactions().filter((item) => item.vehicleId === target.id).forEach((item) => markDeleted("transactions", item.id));
+              state.transactions = state.transactions.filter((item) => item.vehicleId !== target.id);
+            },
+            undoFn: () => {
+              restoreItems("vehicles", related.vehicle);
+              restoreItems("vehicleServices", related.vehicleServices);
+              restoreItems("vehicleOilChanges", related.vehicleOilChanges);
+              restoreItems("vehicleParts", related.vehicleParts);
+              restoreItems("vehicleTaxes", related.vehicleTaxes);
+              restoreItems("transactions", related.transactions);
+            },
+          });
           return;
         }
 
@@ -3635,12 +3736,25 @@
           if (!requireSignedIn()) return;
           const collection = vehicleRecordDeleteButton.dataset.deleteVehicleRecord;
           const target = state[collection]?.find((item) => item.id === vehicleRecordDeleteButton.dataset.recordId);
-          if (target && confirm("Hapus data kendaraan ini dan transaksi terkaitnya?")) {
-            markDeleted(collection, target.id);
-            removeVehicleTransaction(target);
-            state[collection] = state[collection].filter((item) => item.id !== target.id);
-            await persistChanges("Data kendaraan sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-          }
+          if (!target) return;
+          const snapshot = cloneData(target);
+          const transactionSnapshot = target.transactionId
+            ? cloneData(state.transactions.find((item) => item.id === target.transactionId))
+            : null;
+          await deleteWithUndo({
+            confirmMessage: "Hapus data kendaraan ini dan transaksi terkaitnya?",
+            deleteMessage: "Data kendaraan dihapus.",
+            failedMessage: "Data kendaraan sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.",
+            deleteFn: () => {
+              markDeleted(collection, target.id);
+              removeVehicleTransaction(target);
+              state[collection] = state[collection].filter((item) => item.id !== target.id);
+            },
+            undoFn: () => {
+              restoreItems(collection, snapshot);
+              if (transactionSnapshot) restoreItems("transactions", transactionSnapshot);
+            },
+          });
           return;
         }
 
@@ -3692,12 +3806,19 @@
         if (debtDeleteButton) {
           if (!requireSignedIn()) return;
           const target = state.debts.find((item) => item.id === debtDeleteButton.dataset.deleteDebt);
-          if (target && confirm(`Hapus catatan "${target.person}"?`)) {
-            markDeleted("debts", target.id);
-            state.debts = state.debts.filter((item) => item.id !== target.id);
-            closeModal();
-            await persistChanges("Hutang/piutang sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-          }
+          if (!target) return;
+          const snapshot = cloneData(target);
+          await deleteWithUndo({
+            confirmMessage: `Hapus catatan "${target.person}"?`,
+            deleteMessage: "Hutang/piutang dihapus.",
+            failedMessage: "Hutang/piutang sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.",
+            deleteFn: () => {
+              markDeleted("debts", target.id);
+              state.debts = state.debts.filter((item) => item.id !== target.id);
+            },
+            undoFn: () => restoreItems("debts", snapshot),
+            afterDelete: closeModal,
+          });
         }
 
         const billToggleButton = event.target.closest("[data-toggle-bill]");
@@ -3721,22 +3842,35 @@
         if (billDeleteButton) {
           if (!requireSignedIn()) return;
           const target = state.billReminders.find((item) => item.id === billDeleteButton.dataset.deleteBill);
-          if (target && confirm(`Hapus reminder tagihan "${target.title}"?`)) {
-            markDeleted("billReminders", target.id);
-            state.billReminders = state.billReminders.filter((item) => item.id !== target.id);
-            await persistChanges();
-          }
+          if (!target) return;
+          const snapshot = cloneData(target);
+          await deleteWithUndo({
+            confirmMessage: `Hapus reminder tagihan "${target.title}"?`,
+            deleteMessage: "Reminder tagihan dihapus.",
+            deleteFn: () => {
+              markDeleted("billReminders", target.id);
+              state.billReminders = state.billReminders.filter((item) => item.id !== target.id);
+            },
+            undoFn: () => restoreItems("billReminders", snapshot),
+          });
         }
 
         const recurringDeleteButton = event.target.closest("[data-delete-recurring]");
         if (recurringDeleteButton) {
           if (!requireSignedIn()) return;
           const target = state.recurring.find((item) => item.id === recurringDeleteButton.dataset.deleteRecurring);
-          if (target && confirm(`Hapus transaksi berulang "${target.description}"?`)) {
-            markDeleted("recurring", target.id);
-            state.recurring = state.recurring.filter((item) => item.id !== target.id);
-            await persistChanges("Transaksi berulang sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-          }
+          if (!target) return;
+          const snapshot = cloneData(target);
+          await deleteWithUndo({
+            confirmMessage: `Hapus transaksi berulang "${target.description}"?`,
+            deleteMessage: "Transaksi berulang dihapus.",
+            failedMessage: "Transaksi berulang sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.",
+            deleteFn: () => {
+              markDeleted("recurring", target.id);
+              state.recurring = state.recurring.filter((item) => item.id !== target.id);
+            },
+            undoFn: () => restoreItems("recurring", snapshot),
+          });
         }
       });
 
