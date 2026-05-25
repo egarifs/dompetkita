@@ -254,15 +254,7 @@
       }
 
       function loadState() {
-        try {
-          const stored = JSON.parse(localStorage.getItem(storageKey));
-          if (stored && Array.isArray(stored.transactions) && Array.isArray(stored.budgets) && Array.isArray(stored.debts)) {
-            return normalizeState(stored);
-          }
-        } catch {
-          return emptyState();
-        }
-        return emptyState();
+        return window.AppStorage.loadState(storageKey, normalizeState, emptyState);
       }
 
       function emptyState() {
@@ -271,7 +263,7 @@
 
       function saveState() {
         if (isGuest()) return;
-        localStorage.setItem(storageKey, JSON.stringify(state));
+        window.AppStorage.saveState(storageKey, state);
         if (hasUnsyncedChanges) queueCloudSave();
       }
 
@@ -282,15 +274,14 @@
 
       function setLocalSyncStatus(status) {
         state.syncStatus = status;
-        if (!isGuest()) localStorage.setItem(storageKey, JSON.stringify(state));
+        if (!isGuest()) window.AppStorage.saveState(storageKey, state);
       }
 
       function isCloudSyncAllowed() {
         return Boolean(cloudSync.enabled && state.settings.cloudSyncEnabled !== false);
       }
 
-      function replaceState(nextState) {
-        const normalized = normalizeState(nextState);
+      function applyState(normalized) {
         state.transactions = normalized.transactions;
         state.budgets = normalized.budgets;
         state.debts = normalized.debts;
@@ -307,8 +298,13 @@
         state.deleted = normalized.deleted;
         state.settings = normalized.settings;
         state.syncStatus = normalized.syncStatus;
+      }
+
+      function replaceState(nextState) {
+        const normalized = normalizeState(nextState);
+        applyState(normalized);
         if (isGuest()) return;
-        localStorage.setItem(storageKey, JSON.stringify(state));
+        window.AppStorage.saveState(storageKey, state);
       }
 
       function markDeleted(collection, itemId) {
@@ -2778,22 +2774,7 @@
               throw new Error("Format backup tidak sesuai");
             }
             const normalized = normalizeState(imported);
-            state.transactions = normalized.transactions;
-            state.budgets = normalized.budgets;
-            state.debts = normalized.debts;
-            state.savings = normalized.savings;
-            state.billReminders = normalized.billReminders;
-            state.recurring = normalized.recurring;
-            state.vehicles = normalized.vehicles;
-            state.vehicleServices = normalized.vehicleServices;
-            state.vehicleOilChanges = normalized.vehicleOilChanges;
-            state.vehicleParts = normalized.vehicleParts;
-            state.vehicleTaxes = normalized.vehicleTaxes;
-            state.categories = normalized.categories;
-            state.wallets = normalized.wallets;
-            state.deleted = normalized.deleted;
-            state.settings = normalized.settings;
-            state.syncStatus = normalized.syncStatus;
+            applyState(normalized);
             renderAll();
             alert("Backup berhasil diimpor.");
           } catch {
@@ -3240,15 +3221,7 @@
         if (cloudSync.enabled) setupCloudClient()?.auth.signOut();
         currentUser = null;
         const stored = loadState();
-        state.transactions = stored.transactions;
-        state.budgets = stored.budgets;
-        state.debts = stored.debts;
-        state.savings = stored.savings;
-        state.billReminders = stored.billReminders;
-        state.recurring = stored.recurring;
-        state.categories = stored.categories;
-        state.wallets = stored.wallets;
-        state.settings = stored.settings;
+        applyState(stored);
         openView("home");
         showLogin();
       }
@@ -3610,22 +3583,10 @@
           guestTransactionAdds = 0;
           const fresh = demoState();
           const normalized = normalizeState(fresh);
-          state.transactions = normalized.transactions;
-          state.budgets = normalized.budgets;
-          state.debts = normalized.debts;
-          state.savings = normalized.savings;
-          state.billReminders = normalized.billReminders;
-          state.recurring = normalized.recurring;
-          state.vehicles = normalized.vehicles;
-          state.vehicleServices = normalized.vehicleServices;
-          state.vehicleOilChanges = normalized.vehicleOilChanges;
-          state.vehicleParts = normalized.vehicleParts;
-          state.vehicleTaxes = normalized.vehicleTaxes;
-          state.categories = normalized.categories;
-          state.wallets = normalized.wallets;
-          state.deleted = { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [] };
-          state.settings = normalized.settings;
-          state.syncStatus = normalized.syncStatus;
+          applyState({
+            ...normalized,
+            deleted: { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [] },
+          });
           renderAll();
         }
       });
