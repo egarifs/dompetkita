@@ -245,6 +245,7 @@
 
       function handleUserActivity() {
         if (!idleTrackingActive || !isIdleLogoutEligible()) return;
+        if (idleWarningOpen) return;
         resetIdleLogoutTimer();
       }
 
@@ -265,7 +266,11 @@
       }
 
       function showIdleWarning() {
-        if (!isIdleLogoutEligible()) return;
+        if (!isIdleLogoutEligible()) {
+          hideIdleWarning();
+          clearIdleLogoutTimers();
+          return;
+        }
         idleWarningOpen = true;
         document.querySelector("#modalTitle").textContent = "Sesi Hampir Berakhir";
         document.querySelector("#modalBody").innerHTML = `
@@ -288,7 +293,11 @@
       }
 
       function resetIdleLogoutTimer() {
-        if (!isIdleLogoutEligible()) return;
+        if (!isIdleLogoutEligible()) {
+          clearIdleLogoutTimers();
+          hideIdleWarning();
+          return;
+        }
         clearIdleLogoutTimers();
         hideIdleWarning();
         idleWarningTimer = setTimeout(showIdleWarning, idleWarningDelayMs);
@@ -305,6 +314,7 @@
 
       function stopIdleLogoutTimer() {
         clearIdleLogoutTimers();
+        hideIdleWarning();
         stopIdleActivityListeners();
         idleWarningOpen = false;
       }
