@@ -754,6 +754,7 @@
 
       .table-wrap {
         overflow: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
       table {
@@ -780,6 +781,7 @@
       td {
         color: var(--on-surface);
         font-size: 0.92rem;
+        overflow-wrap: anywhere;
       }
 
       .amount {
@@ -1337,6 +1339,34 @@
         gap: 12px;
       }
 
+      .form-step {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface-container);
+        padding: 12px;
+      }
+
+      .form-step + .form-step {
+        margin-top: 12px;
+      }
+
+      .form-step summary {
+        cursor: pointer;
+        color: var(--on-surface);
+        font-weight: 850;
+        list-style-position: inside;
+      }
+
+      .form-step summary + * {
+        margin-top: 12px;
+      }
+
+      .form-step .form-grid + .form-grid,
+      .form-step .form-grid + .field,
+      .form-step .field + .field {
+        margin-top: 12px;
+      }
+
       .modal {
         position: fixed;
         inset: 0;
@@ -1355,11 +1385,18 @@
       .modal-card {
         width: min(620px, 100%);
         max-height: min(760px, calc(100vh - 36px));
-        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
         border: 1px solid var(--line);
         border-radius: var(--radius-lg);
         background: var(--surface-container-low);
         box-shadow: var(--shadow-2);
+      }
+
+      #modalBody {
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
       .modal-header {
@@ -1533,6 +1570,11 @@
           grid-template-columns: 1fr;
         }
 
+        .button,
+        .icon-button {
+          min-height: 44px;
+        }
+
         .snackbar {
           right: 16px;
           bottom: calc(96px + env(safe-area-inset-bottom));
@@ -1620,6 +1662,22 @@
           padding: 12px;
         }
 
+        .table-tools {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .table-tools > :first-child {
+          grid-column: 1 / -1;
+        }
+
+        .table-tools input,
+        .table-tools select {
+          min-height: 42px;
+          padding: 10px 12px;
+          font-size: 0.88rem;
+        }
+
         #dailyExpenseList.table-wrap {
           padding: 0;
         }
@@ -1694,6 +1752,7 @@
           border-bottom: 0;
           padding: 8px 0;
           font-size: 0.88rem;
+          min-width: 0;
         }
 
         td::before {
@@ -1725,6 +1784,18 @@
           content: "Nominal";
         }
 
+        #vehicleExpenseList td:nth-child(2)::before {
+          content: "Kendaraan";
+        }
+
+        #vehicleExpenseList td:nth-child(3)::before {
+          content: "Jenis";
+        }
+
+        #vehicleExpenseList td:nth-child(4)::before {
+          content: "Catatan";
+        }
+
         td:nth-child(6) {
           justify-content: flex-end;
           padding-top: 4px;
@@ -1733,6 +1804,10 @@
         td:nth-child(6)::before {
           content: "";
           display: none;
+        }
+
+        td > * {
+          min-width: 0;
         }
 
         .amount {
@@ -1748,6 +1823,22 @@
         .modal-card {
           max-height: calc(92vh - env(safe-area-inset-bottom));
           border-radius: 8px 8px 0 0;
+        }
+
+        #modalBody .form > .row-actions {
+          position: sticky;
+          right: 0;
+          bottom: 0;
+          left: 0;
+          z-index: 2;
+          margin: 12px -12px -12px;
+          padding: 12px;
+          border-top: 1px solid var(--line);
+          background: var(--surface-container-low);
+        }
+
+        #modalBody .form > .row-actions .button {
+          flex: 1 1 0;
         }
       }
 

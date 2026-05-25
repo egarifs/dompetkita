@@ -2533,24 +2533,33 @@
         document.querySelector("#modalTitle").textContent = editing ? "Edit Kendaraan" : "Tambah Kendaraan";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="vehicleForm">
-            <div class="form-grid">
-              <div class="field"><label for="vehicleName">Nama kendaraan</label><input id="vehicleName" required value="${escapeHtml(editing?.name || "")}" placeholder="Contoh: Avanza Putih" /></div>
-              <div class="field"><label for="vehiclePlate">Nomor plat</label><input id="vehiclePlate" required value="${escapeHtml(editing?.plate || "")}" placeholder="B 1234 ABC" /></div>
-            </div>
-            <div class="form-grid">
-              <div class="field"><label for="vehicleBrand">Merk</label><input id="vehicleBrand" value="${escapeHtml(editing?.brand || "")}" placeholder="Toyota" /></div>
-              <div class="field"><label for="vehicleModel">Model</label><input id="vehicleModel" value="${escapeHtml(editing?.model || "")}" placeholder="Avanza" /></div>
-            </div>
-            <div class="form-grid">
-              <div class="field"><label for="vehicleYear">Tahun</label><input id="vehicleYear" type="number" min="1900" max="2100" value="${escapeHtml(editing?.year || "")}" placeholder="2020" /></div>
-              <div class="field"><label for="vehicleType">Jenis kendaraan</label><select id="vehicleType"><option ${editing?.type === "Mobil" ? "selected" : ""}>Mobil</option><option ${editing?.type === "Motor" ? "selected" : ""}>Motor</option></select></div>
-            </div>
-            <div class="form-grid">
-              <div class="field"><label for="vehicleTransmission">Transmisi</label><input id="vehicleTransmission" value="${escapeHtml(editing?.transmission || "")}" placeholder="Manual / Matic" /></div>
-              <div class="field"><label for="vehicleCurrentKm">Kilometer saat ini</label><input id="vehicleCurrentKm" type="number" min="0" value="${editing?.currentKm ?? 0}" required /></div>
-            </div>
-            <div class="field"><label for="vehiclePurchaseDate">Tanggal pembelian</label><input id="vehiclePurchaseDate" type="date" value="${editing?.purchaseDate || ""}" /></div>
-            <div class="field"><label for="vehicleNote">Catatan tambahan</label><textarea id="vehicleNote" placeholder="Catatan tambahan">${escapeHtml(editing?.note || "")}</textarea></div>
+            <details class="form-step" open>
+              <summary>1. Identitas kendaraan</summary>
+              <div class="form-grid">
+                <div class="field"><label for="vehicleName">Nama kendaraan</label><input id="vehicleName" required value="${escapeHtml(editing?.name || "")}" placeholder="Contoh: Avanza Putih" /></div>
+                <div class="field"><label for="vehiclePlate">Nomor plat</label><input id="vehiclePlate" required value="${escapeHtml(editing?.plate || "")}" placeholder="B 1234 ABC" /></div>
+              </div>
+            </details>
+            <details class="form-step">
+              <summary>2. Detail kendaraan</summary>
+              <div class="form-grid">
+                <div class="field"><label for="vehicleBrand">Merk</label><input id="vehicleBrand" value="${escapeHtml(editing?.brand || "")}" placeholder="Toyota" /></div>
+                <div class="field"><label for="vehicleModel">Model</label><input id="vehicleModel" value="${escapeHtml(editing?.model || "")}" placeholder="Avanza" /></div>
+              </div>
+              <div class="form-grid">
+                <div class="field"><label for="vehicleYear">Tahun</label><input id="vehicleYear" type="number" min="1900" max="2100" value="${escapeHtml(editing?.year || "")}" placeholder="2020" /></div>
+                <div class="field"><label for="vehicleType">Jenis kendaraan</label><select id="vehicleType"><option ${editing?.type === "Mobil" ? "selected" : ""}>Mobil</option><option ${editing?.type === "Motor" ? "selected" : ""}>Motor</option></select></div>
+              </div>
+            </details>
+            <details class="form-step">
+              <summary>3. Kilometer dan catatan</summary>
+              <div class="form-grid">
+                <div class="field"><label for="vehicleTransmission">Transmisi</label><input id="vehicleTransmission" value="${escapeHtml(editing?.transmission || "")}" placeholder="Manual / Matic" /></div>
+                <div class="field"><label for="vehicleCurrentKm">Kilometer saat ini</label><input id="vehicleCurrentKm" type="number" min="0" value="${editing?.currentKm ?? 0}" required /></div>
+              </div>
+              <div class="field"><label for="vehiclePurchaseDate">Tanggal pembelian</label><input id="vehiclePurchaseDate" type="date" value="${editing?.purchaseDate || ""}" /></div>
+              <div class="field"><label for="vehicleNote">Catatan tambahan</label><textarea id="vehicleNote" placeholder="Catatan tambahan">${escapeHtml(editing?.note || "")}</textarea></div>
+            </details>
             <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Kendaraan"}</button></div>
           </form>
         `;
@@ -2592,11 +2601,17 @@
         document.querySelector("#modalTitle").textContent = editing ? "Edit Riwayat Service" : "Tambah Riwayat Service";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="vehicleServiceForm">
-            <div class="field"><label for="serviceVehicle">Kendaraan</label><select id="serviceVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
-            <div class="form-grid"><div class="field"><label for="serviceDate">Tanggal service</label><input id="serviceDate" type="date" value="${editing?.serviceDate || todayDate()}" required /></div><div class="field"><label for="serviceKm">Kilometer</label><input id="serviceKm" type="number" min="0" value="${editing?.serviceKm || ""}" required /></div></div>
-            <div class="form-grid"><div class="field"><label for="serviceType">Jenis service</label><input id="serviceType" required value="${escapeHtml(editing?.serviceType || "")}" placeholder="Service berkala" /></div><div class="field"><label for="serviceWorkshop">Nama bengkel</label><input id="serviceWorkshop" value="${escapeHtml(editing?.workshop || "")}" placeholder="Nama bengkel" /></div></div>
-            <div class="field"><label for="serviceCost">Biaya service</label><div class="currency-input"><span>Rp</span><input id="serviceCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.cost) : ""}" placeholder="0" /></div></div>
-            <div class="field"><label for="serviceNote">Catatan service</label><textarea id="serviceNote">${escapeHtml(editing?.note || "")}</textarea></div>
+            <details class="form-step" open>
+              <summary>1. Service</summary>
+              <div class="field"><label for="serviceVehicle">Kendaraan</label><select id="serviceVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
+              <div class="form-grid"><div class="field"><label for="serviceDate">Tanggal service</label><input id="serviceDate" type="date" value="${editing?.serviceDate || todayDate()}" required /></div><div class="field"><label for="serviceKm">Kilometer</label><input id="serviceKm" type="number" min="0" value="${editing?.serviceKm || ""}" required /></div></div>
+            </details>
+            <details class="form-step">
+              <summary>2. Biaya dan catatan</summary>
+              <div class="form-grid"><div class="field"><label for="serviceType">Jenis service</label><input id="serviceType" required value="${escapeHtml(editing?.serviceType || "")}" placeholder="Service berkala" /></div><div class="field"><label for="serviceWorkshop">Nama bengkel</label><input id="serviceWorkshop" value="${escapeHtml(editing?.workshop || "")}" placeholder="Nama bengkel" /></div></div>
+              <div class="field"><label for="serviceCost">Biaya service</label><div class="currency-input"><span>Rp</span><input id="serviceCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.cost) : ""}" placeholder="0" /></div></div>
+              <div class="field"><label for="serviceNote">Catatan service</label><textarea id="serviceNote">${escapeHtml(editing?.note || "")}</textarea></div>
+            </details>
             <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Service"}</button></div>
           </form>
         `;
@@ -2622,11 +2637,20 @@
         document.querySelector("#modalTitle").textContent = editing ? "Edit Jadwal Ganti Oli" : "Tambah Jadwal Ganti Oli";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="vehicleOilForm">
-            <div class="field"><label for="oilVehicle">Kendaraan</label><select id="oilVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
-            <div class="form-grid"><div class="field"><label for="oilDate">Tanggal terakhir ganti oli</label><input id="oilDate" type="date" value="${editing?.lastOilDate || todayDate()}" required /></div><div class="field"><label for="oilKm">Kilometer terakhir</label><input id="oilKm" type="number" min="0" value="${editing?.lastOilKm || ""}" required /></div></div>
-            <div class="form-grid"><div class="field"><label for="oilIntervalKm">Interval kilometer</label><input id="oilIntervalKm" type="number" min="0" value="${editing?.intervalKm || 5000}" required /></div><div class="field"><label for="oilIntervalMonths">Interval bulan</label><input id="oilIntervalMonths" type="number" min="0" value="${editing?.intervalMonths || 6}" required /></div></div>
-            <div class="form-grid"><div class="field"><label for="oilBrand">Merk oli</label><input id="oilBrand" value="${escapeHtml(editing?.oilBrand || "")}" placeholder="Shell, Yamalube, dll" /></div><div class="field"><label for="oilCost">Biaya oli</label><div class="currency-input"><span>Rp</span><input id="oilCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.cost) : ""}" placeholder="0" /></div></div></div>
-            <div class="field"><label for="oilNote">Catatan</label><textarea id="oilNote">${escapeHtml(editing?.note || "")}</textarea></div>
+            <details class="form-step" open>
+              <summary>1. Data terakhir</summary>
+              <div class="field"><label for="oilVehicle">Kendaraan</label><select id="oilVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
+              <div class="form-grid"><div class="field"><label for="oilDate">Tanggal terakhir ganti oli</label><input id="oilDate" type="date" value="${editing?.lastOilDate || todayDate()}" required /></div><div class="field"><label for="oilKm">Kilometer terakhir</label><input id="oilKm" type="number" min="0" value="${editing?.lastOilKm || ""}" required /></div></div>
+            </details>
+            <details class="form-step">
+              <summary>2. Interval berikutnya</summary>
+              <div class="form-grid"><div class="field"><label for="oilIntervalKm">Interval kilometer</label><input id="oilIntervalKm" type="number" min="0" value="${editing?.intervalKm || 5000}" required /></div><div class="field"><label for="oilIntervalMonths">Interval bulan</label><input id="oilIntervalMonths" type="number" min="0" value="${editing?.intervalMonths || 6}" required /></div></div>
+            </details>
+            <details class="form-step">
+              <summary>3. Biaya dan catatan</summary>
+              <div class="form-grid"><div class="field"><label for="oilBrand">Merk oli</label><input id="oilBrand" value="${escapeHtml(editing?.oilBrand || "")}" placeholder="Shell, Yamalube, dll" /></div><div class="field"><label for="oilCost">Biaya oli</label><div class="currency-input"><span>Rp</span><input id="oilCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.cost) : ""}" placeholder="0" /></div></div></div>
+              <div class="field"><label for="oilNote">Catatan</label><textarea id="oilNote">${escapeHtml(editing?.note || "")}</textarea></div>
+            </details>
             <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Oli"}</button></div>
           </form>
         `;
@@ -2651,11 +2675,21 @@
         document.querySelector("#modalTitle").textContent = editing ? "Edit Penggantian Part" : "Tambah Penggantian Part";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="vehiclePartForm">
-            <div class="field"><label for="partVehicle">Kendaraan</label><select id="partVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
-            <div class="form-grid"><div class="field"><label for="partName">Nama part</label><input id="partName" required value="${escapeHtml(editing?.partName || "")}" placeholder="Ban, aki, kampas rem" /></div><div class="field"><label for="partDate">Tanggal penggantian</label><input id="partDate" type="date" value="${editing?.replacementDate || todayDate()}" required /></div></div>
-            <div class="form-grid"><div class="field"><label for="partKm">Kilometer saat diganti</label><input id="partKm" type="number" min="0" value="${editing?.replacementKm || ""}" required /></div><div class="field"><label for="partLifeKm">Estimasi umur kilometer</label><input id="partLifeKm" type="number" min="0" value="${editing?.lifeKm || 10000}" /></div></div>
-            <div class="form-grid"><div class="field"><label for="partLifeMonths">Estimasi umur bulan</label><input id="partLifeMonths" type="number" min="0" value="${editing?.lifeMonths || 12}" /></div><div class="field"><label for="partCost">Biaya part</label><div class="currency-input"><span>Rp</span><input id="partCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.cost) : ""}" placeholder="0" /></div></div></div>
-            <div class="field"><label for="partNote">Catatan</label><textarea id="partNote">${escapeHtml(editing?.note || "")}</textarea></div>
+            <details class="form-step" open>
+              <summary>1. Part dan tanggal</summary>
+              <div class="field"><label for="partVehicle">Kendaraan</label><select id="partVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
+              <div class="form-grid"><div class="field"><label for="partName">Nama part</label><input id="partName" required value="${escapeHtml(editing?.partName || "")}" placeholder="Ban, aki, kampas rem" /></div><div class="field"><label for="partDate">Tanggal penggantian</label><input id="partDate" type="date" value="${editing?.replacementDate || todayDate()}" required /></div></div>
+            </details>
+            <details class="form-step">
+              <summary>2. Umur part</summary>
+              <div class="form-grid"><div class="field"><label for="partKm">Kilometer saat diganti</label><input id="partKm" type="number" min="0" value="${editing?.replacementKm || ""}" required /></div><div class="field"><label for="partLifeKm">Estimasi umur kilometer</label><input id="partLifeKm" type="number" min="0" value="${editing?.lifeKm || 10000}" /></div></div>
+              <div class="field"><label for="partLifeMonths">Estimasi umur bulan</label><input id="partLifeMonths" type="number" min="0" value="${editing?.lifeMonths || 12}" /></div>
+            </details>
+            <details class="form-step">
+              <summary>3. Biaya dan catatan</summary>
+              <div class="field"><label for="partCost">Biaya part</label><div class="currency-input"><span>Rp</span><input id="partCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.cost) : ""}" placeholder="0" /></div></div>
+              <div class="field"><label for="partNote">Catatan</label><textarea id="partNote">${escapeHtml(editing?.note || "")}</textarea></div>
+            </details>
             <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Part"}</button></div>
           </form>
         `;
@@ -2680,11 +2714,20 @@
         document.querySelector("#modalTitle").textContent = editing ? "Edit Pajak Kendaraan" : "Tambah Pajak Kendaraan";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="vehicleTaxForm">
-            <div class="field"><label for="taxVehicle">Kendaraan</label><select id="taxVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
-            <div class="form-grid"><div class="field"><label for="taxAnnualDue">Jatuh tempo tahunan</label><input id="taxAnnualDue" type="date" value="${editing?.annualDueDate || ""}" required /></div><div class="field"><label for="taxFiveYearDue">Jatuh tempo 5 tahunan</label><input id="taxFiveYearDue" type="date" value="${editing?.fiveYearDueDate || ""}" /></div></div>
-            <div class="form-grid"><div class="field"><label for="taxCost">Estimasi biaya pajak</label><div class="currency-input"><span>Rp</span><input id="taxCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.estimatedCost) : ""}" placeholder="0" /></div></div><div class="field"><label for="taxStatus">Status pembayaran</label><select id="taxStatus"><option value="unpaid" ${editing?.status !== "paid" ? "selected" : ""}>Belum dibayar</option><option value="paid" ${editing?.status === "paid" ? "selected" : ""}>Sudah dibayar</option></select></div></div>
-            <div class="field"><label for="taxPaidDate">Tanggal pembayaran</label><input id="taxPaidDate" type="date" value="${editing?.paidDate || ""}" /></div>
-            <div class="field"><label for="taxNote">Catatan</label><textarea id="taxNote">${escapeHtml(editing?.note || "")}</textarea></div>
+            <details class="form-step" open>
+              <summary>1. Jatuh tempo</summary>
+              <div class="field"><label for="taxVehicle">Kendaraan</label><select id="taxVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
+              <div class="form-grid"><div class="field"><label for="taxAnnualDue">Jatuh tempo tahunan</label><input id="taxAnnualDue" type="date" value="${editing?.annualDueDate || ""}" required /></div><div class="field"><label for="taxFiveYearDue">Jatuh tempo 5 tahunan</label><input id="taxFiveYearDue" type="date" value="${editing?.fiveYearDueDate || ""}" /></div></div>
+            </details>
+            <details class="form-step">
+              <summary>2. Pembayaran</summary>
+              <div class="form-grid"><div class="field"><label for="taxCost">Estimasi biaya pajak</label><div class="currency-input"><span>Rp</span><input id="taxCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.estimatedCost) : ""}" placeholder="0" /></div></div><div class="field"><label for="taxStatus">Status pembayaran</label><select id="taxStatus"><option value="unpaid" ${editing?.status !== "paid" ? "selected" : ""}>Belum dibayar</option><option value="paid" ${editing?.status === "paid" ? "selected" : ""}>Sudah dibayar</option></select></div></div>
+              <div class="field"><label for="taxPaidDate">Tanggal pembayaran</label><input id="taxPaidDate" type="date" value="${editing?.paidDate || ""}" /></div>
+            </details>
+            <details class="form-step">
+              <summary>3. Catatan</summary>
+              <div class="field"><label for="taxNote">Catatan</label><textarea id="taxNote">${escapeHtml(editing?.note || "")}</textarea></div>
+            </details>
             <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Pajak"}</button></div>
           </form>
         `;
@@ -2791,29 +2834,35 @@
         document.querySelector("#modalTitle").textContent = "Reset Data Bulanan";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="monthlyResetForm">
-            <div class="field">
-              <label for="resetMonth">Bulan yang direset</label>
-              <input id="resetMonth" type="month" value="${currentMonthKey()}" required />
-            </div>
-            <div class="field">
-              <label>Jenis data</label>
-              <label class="remember-row" for="resetTransactions">
-                <input id="resetTransactions" type="checkbox" checked />
-                Transaksi
-              </label>
-              <label class="remember-row" for="resetDebts">
-                <input id="resetDebts" type="checkbox" />
-                Hutang piutang
-              </label>
-              <label class="remember-row" for="resetBills">
-                <input id="resetBills" type="checkbox" />
-                Reminder tagihan
-              </label>
-              <label class="remember-row" for="resetSavings">
-                <input id="resetSavings" type="checkbox" />
-                Riwayat tabungan
-              </label>
-            </div>
+            <details class="form-step" open>
+              <summary>1. Pilih bulan</summary>
+              <div class="field">
+                <label for="resetMonth">Bulan yang direset</label>
+                <input id="resetMonth" type="month" value="${currentMonthKey()}" required />
+              </div>
+            </details>
+            <details class="form-step">
+              <summary>2. Pilih data</summary>
+              <div class="field">
+                <label>Jenis data</label>
+                <label class="remember-row" for="resetTransactions">
+                  <input id="resetTransactions" type="checkbox" checked />
+                  Transaksi
+                </label>
+                <label class="remember-row" for="resetDebts">
+                  <input id="resetDebts" type="checkbox" />
+                  Hutang piutang
+                </label>
+                <label class="remember-row" for="resetBills">
+                  <input id="resetBills" type="checkbox" />
+                  Reminder tagihan
+                </label>
+                <label class="remember-row" for="resetSavings">
+                  <input id="resetSavings" type="checkbox" />
+                  Riwayat tabungan
+                </label>
+              </div>
+            </details>
             <div class="row-actions">
               <button class="button" type="button" data-close-modal>Batal</button>
               <button class="button danger" type="submit">Reset Data</button>
@@ -3878,6 +3927,11 @@
       document.querySelector("#modal").addEventListener("click", (event) => {
         if (event.target.id === "modal") closeModal();
       });
+
+      document.addEventListener("invalid", (event) => {
+        const step = event.target.closest?.(".form-step");
+        if (step) step.open = true;
+      }, true);
 
       document.querySelector("#loginForm").addEventListener("submit", async (event) => {
         event.preventDefault();
