@@ -994,6 +994,7 @@
         const unpaidReceivable = state.debts.filter((item) => item.kind === "receivable" && item.status === "unpaid").reduce((sum, item) => sum + Number(item.amount), 0);
         const unpaidPayable = state.debts.filter((item) => item.kind === "payable" && item.status === "unpaid").reduce((sum, item) => sum + Number(item.amount), 0);
 
+        renderDashboardGreeting();
         document.querySelector("#monthExpense").textContent = money(currentExpense);
         document.querySelector("#monthIncome").textContent = money(currentIncome);
         document.querySelector("#totalBalance").textContent = money(state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0));
@@ -1031,6 +1032,7 @@
         const unpaidReceivable = state.debts.filter((item) => item.kind === "receivable" && item.status === "unpaid").reduce((sum, item) => sum + Number(item.amount), 0);
         const unpaidPayable = state.debts.filter((item) => item.kind === "payable" && item.status === "unpaid").reduce((sum, item) => sum + Number(item.amount), 0);
 
+        renderDashboardGreeting();
         document.querySelector("#monthExpense").textContent = money(currentExpense);
         document.querySelector("#monthIncome").textContent = money(currentIncome);
         document.querySelector("#totalBalance").textContent = money(state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0));
@@ -1116,6 +1118,25 @@
             <path d="M14 7l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
           </svg>
         `;
+      }
+
+      function renderDashboardGreeting() {
+        const hour = new Date().getHours();
+        const greeting = hour < 11 ? "Selamat pagi" : hour < 15 ? "Selamat siang" : hour < 18 ? "Selamat sore" : "Selamat malam";
+        const displayName = currentUser?.name || currentUser?.email || currentUser?.username || "Pengguna";
+        const initials = displayName
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((part) => part[0])
+          .join("")
+          .toUpperCase() || "DP";
+        const greetingTarget = document.querySelector("#dashboardGreeting");
+        const nameTarget = document.querySelector("#dashboardUserName");
+        const avatarTarget = document.querySelector("#dashboardAvatar");
+        if (greetingTarget) greetingTarget.textContent = greeting;
+        if (nameTarget) nameTarget.textContent = displayName;
+        if (avatarTarget) avatarTarget.textContent = initials;
       }
 
       function transactionRows(items, limit = null) {

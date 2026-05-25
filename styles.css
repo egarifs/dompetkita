@@ -511,6 +511,97 @@
         margin-bottom: 16px;
       }
 
+      .dashboard-hero {
+        display: grid;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .dashboard-greeting {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .avatar-badge {
+        display: grid;
+        width: 54px;
+        height: 54px;
+        place-items: center;
+        border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--line));
+        border-radius: 999px;
+        background: var(--primary-container);
+        color: var(--primary);
+        font-weight: 900;
+      }
+
+      .dashboard-greeting p {
+        margin: 0 0 4px;
+        color: var(--on-surface-variant);
+        font-size: 1rem;
+        font-weight: 750;
+      }
+
+      .dashboard-greeting strong {
+        color: var(--on-surface);
+        font-size: 1.18rem;
+        font-weight: 900;
+      }
+
+      .total-balance-card {
+        position: relative;
+        min-height: 184px;
+        overflow: hidden;
+        border: 0;
+        background:
+          radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.18) 0 72px, transparent 73px),
+          radial-gradient(circle at 0% 100%, rgba(255, 255, 255, 0.12) 0 62px, transparent 63px),
+          linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 82%, #26c485));
+        color: var(--on-primary);
+      }
+
+      .total-balance-card .stat-label,
+      .total-balance-card .stat-sub {
+        color: color-mix(in srgb, var(--on-primary) 88%, transparent);
+      }
+
+      .total-balance-card .stat-value {
+        margin-top: 14px;
+        font-size: clamp(2.1rem, 6vw, 3.2rem);
+        color: var(--on-primary);
+      }
+
+      .icon-button.light {
+        border-color: color-mix(in srgb, var(--on-primary) 22%, transparent);
+        background: color-mix(in srgb, var(--on-primary) 16%, transparent);
+        color: var(--on-primary);
+      }
+
+      .stats-carousel {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(220px, 1fr);
+        gap: 14px;
+        overflow-x: auto;
+        overscroll-behavior-inline: contain;
+        scroll-snap-type: inline mandatory;
+        padding: 2px 2px 10px;
+        scrollbar-width: thin;
+      }
+
+      .summary-card {
+        scroll-snap-align: start;
+        min-width: 0;
+      }
+
+      .income-text {
+        color: var(--income);
+      }
+
+      .expense-text {
+        color: var(--expense);
+      }
+
       .stat-card,
       .panel {
         border: 1px solid var(--line);
@@ -1648,6 +1739,34 @@
         .stat-card {
           min-height: 104px;
           padding: 12px;
+        }
+
+        .dashboard-greeting {
+          gap: 10px;
+        }
+
+        .avatar-badge {
+          width: 48px;
+          height: 48px;
+        }
+
+        .total-balance-card {
+          min-height: 164px;
+          padding: 18px;
+        }
+
+        .total-balance-card .stat-value {
+          font-size: clamp(2rem, 9vw, 2.65rem);
+        }
+
+        .stats-carousel {
+          grid-auto-columns: minmax(72%, 1fr);
+          margin-right: -12px;
+          padding-right: 12px;
+        }
+
+        .summary-card {
+          min-height: 152px;
         }
 
         .stat-label {

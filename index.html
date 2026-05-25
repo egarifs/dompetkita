@@ -180,38 +180,49 @@
         </header>
 
         <section class="view active" id="homeView">
-          <div class="stats-grid" aria-label="Ringkasan keuangan">
-            <article class="stat-card">
-              <div class="stat-label">
-                Pengeluaran Bulan Ini
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M12 3v18M17 8.5a3.5 3.5 0 0 0-3.5-2h-3A2.5 2.5 0 0 0 8 9c0 1.4 1.1 2.1 2.7 2.5l2.9.7c1.5.4 2.4 1.1 2.4 2.4A2.9 2.9 0 0 1 13.1 17h-3.2A3.9 3.9 0 0 1 6 14.8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                </svg>
+          <section class="dashboard-hero" aria-label="Ringkasan utama">
+            <div class="dashboard-greeting">
+              <div class="avatar-badge" id="dashboardAvatar">AN</div>
+              <div>
+                <p id="dashboardGreeting">Selamat pagi</p>
+                <strong id="dashboardUserName">Pengguna</strong>
               </div>
-              <strong class="stat-value" id="monthExpense">Rp0</strong>
-              <span class="stat-sub" id="expenseTrend">Belum ada pembanding</span>
-            </article>
-            <article class="stat-card">
-              <div class="stat-label">Pendapatan Bulan Ini <button class="icon-button" id="toggleMonthIncomeVisibilityButton" type="button" aria-label="Tampilkan nominal pendapatan" title="Tampilkan/Sembunyikan nominal">👁</button></div>
-              <strong class="stat-value" id="monthIncome">Rp0</strong>
-              <span class="stat-sub">Semua pemasukan tercatat</span>
-            </article>
-            <article class="stat-card">
-              <div class="stat-label">Total Saldo <button class="icon-button" id="toggleTotalBalanceVisibilityButton" type="button" aria-label="Tampilkan total saldo" title="Tampilkan/Sembunyikan nominal">👁</button></div>
+            </div>
+
+            <article class="stat-card total-balance-card">
+              <div class="stat-label">Total Saldo <button class="icon-button light" id="toggleTotalBalanceVisibilityButton" type="button" aria-label="Tampilkan total saldo" title="Tampilkan/Sembunyikan nominal">👁</button></div>
               <strong class="stat-value" id="totalBalance">Rp0</strong>
-              <span class="stat-sub">Pendapatan dikurangi pengeluaran</span>
+              <span class="stat-sub">Akumulasi semua dompet</span>
             </article>
-            <article class="stat-card">
-              <div class="stat-label">Sisa Anggaran <button class="icon-button" id="toggleRemainingBudgetVisibilityButton" type="button" aria-label="Tampilkan sisa anggaran" title="Tampilkan/Sembunyikan nominal">👁</button></div>
-              <strong class="stat-value" id="remainingBudget">Rp0</strong>
-              <span class="stat-sub" id="budgetStatus">Belum ada anggaran</span>
-            </article>
-            <article class="stat-card">
-              <div class="stat-label">Hutang Piutang <button class="icon-button" id="toggleDebtSummaryVisibilityButton" type="button" aria-label="Tampilkan hutang piutang" title="Tampilkan/Sembunyikan nominal">👁</button></div>
-              <strong class="stat-value" id="debtSummary">Rp0</strong>
-              <span class="stat-sub">Bersih belum lunas</span>
-            </article>
-          </div>
+
+            <div class="stats-carousel" aria-label="Ringkasan keuangan lainnya">
+              <article class="stat-card summary-card">
+                <div class="stat-label">Pendapatan Bulan Ini <button class="icon-button" id="toggleMonthIncomeVisibilityButton" type="button" aria-label="Tampilkan nominal pendapatan" title="Tampilkan/Sembunyikan nominal">👁</button></div>
+                <strong class="stat-value income-text" id="monthIncome">Rp0</strong>
+                <span class="stat-sub">Bulan ini</span>
+              </article>
+              <article class="stat-card summary-card">
+                <div class="stat-label">
+                  Pengeluaran Bulan Ini
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 3v18M17 8.5a3.5 3.5 0 0 0-3.5-2h-3A2.5 2.5 0 0 0 8 9c0 1.4 1.1 2.1 2.7 2.5l2.9.7c1.5.4 2.4 1.1 2.4 2.4A2.9 2.9 0 0 1 13.1 17h-3.2A3.9 3.9 0 0 1 6 14.8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                  </svg>
+                </div>
+                <strong class="stat-value expense-text" id="monthExpense">Rp0</strong>
+                <span class="stat-sub" id="expenseTrend">Belum ada pembanding</span>
+              </article>
+              <article class="stat-card summary-card">
+                <div class="stat-label">Sisa Anggaran <button class="icon-button" id="toggleRemainingBudgetVisibilityButton" type="button" aria-label="Tampilkan sisa anggaran" title="Tampilkan/Sembunyikan nominal">👁</button></div>
+                <strong class="stat-value" id="remainingBudget">Rp0</strong>
+                <span class="stat-sub" id="budgetStatus">Belum ada anggaran</span>
+              </article>
+              <article class="stat-card summary-card">
+                <div class="stat-label">Hutang Piutang <button class="icon-button" id="toggleDebtSummaryVisibilityButton" type="button" aria-label="Tampilkan hutang piutang" title="Tampilkan/Sembunyikan nominal">👁</button></div>
+                <strong class="stat-value" id="debtSummary">Rp0</strong>
+                <span class="stat-sub">Bersih belum lunas</span>
+              </article>
+            </div>
+          </section>
 
           <div class="dashboard-sections" id="dashboardSections">
             <section class="panel" data-home-section="wallets">
