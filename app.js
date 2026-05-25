@@ -33,6 +33,11 @@
         pollTimer: null,
         lastSyncedAt: null,
         lastError: "",
+        retryTimer: null,
+        retryCount: 0,
+        nextRetryAt: null,
+        conflictDetected: false,
+        conflictMessage: "",
       };
       let deferredInstallPrompt = null;
 
@@ -270,6 +275,7 @@
       function markDataChanged() {
         hasUnsyncedChanges = true;
         state.syncStatus = "pending";
+        state.localChangedAt = new Date().toISOString();
       }
 
       function setLocalSyncStatus(status) {
@@ -298,6 +304,7 @@
         state.deleted = normalized.deleted;
         state.settings = normalized.settings;
         state.syncStatus = normalized.syncStatus;
+        state.localChangedAt = normalized.localChangedAt;
       }
 
       function replaceState(nextState) {
@@ -347,6 +354,8 @@
           categories: [...new Set([...cloud.categories, ...local.categories])],
           wallets: [...new Set([...cloud.wallets, ...local.wallets])],
           settings: { ...cloud.settings, ...local.settings },
+          syncStatus: local.syncStatus === "pending" || local.syncStatus === "failed" ? local.syncStatus : cloud.syncStatus,
+          localChangedAt: local.localChangedAt || cloud.localChangedAt,
           deleted,
         });
       }
@@ -365,8 +374,52 @@
           cloudSync,
           currentUser,
           cloudUserKey,
-          saveCloudState,
+          saveCloudState: savePendingCloudChanges,
         });
+      }
+
+      function clearSyncRetry() {
+        clearTimeout(cloudSync.retryTimer);
+        cloudSync.retryTimer = null;
+        cloudSync.retryCount = 0;
+        cloudSync.nextRetryAt = null;
+      }
+
+      function scheduleSyncRetry() {
+        if (!hasUnsyncedChanges || !isCloudSyncAllowed() || isGuest()) return;
+        clearTimeout(cloudSync.retryTimer);
+        const delay = Math.min(60000, 5000 * (2 ** cloudSync.retryCount));
+        cloudSync.retryCount += 1;
+        cloudSync.nextRetryAt = new Date(Date.now() + delay).toISOString();
+        renderAccount();
+        cloudSync.retryTimer = setTimeout(async () => {
+          cloudSync.retryTimer = null;
+          if (!hasUnsyncedChanges || !isCloudSyncAllowed() || isGuest()) return;
+          const saved = await savePendingCloudChanges();
+          if (!saved) showSnackbar("Sinkronisasi cloud masih gagal. Data tetap aman di lokal.", "error");
+          renderAccount();
+        }, delay);
+      }
+
+      function handleCloudSaveResult(saved) {
+        if (saved) {
+          hasUnsyncedChanges = false;
+          cloudSync.conflictDetected = false;
+          cloudSync.conflictMessage = "";
+          clearSyncRetry();
+          setLocalSyncStatus("synced");
+        } else {
+          setLocalSyncStatus("failed");
+          scheduleSyncRetry();
+        }
+        return saved;
+      }
+
+      async function savePendingCloudChanges() {
+        if (!hasUnsyncedChanges) return true;
+        if (!isCloudSyncAllowed()) return true;
+        const saved = await saveCloudState();
+        return handleCloudSaveResult(saved);
       }
 
       async function flushCloudSave() {
@@ -378,13 +431,7 @@
           cloudUserKey,
           saveCloudState,
         });
-        if (saved) {
-          hasUnsyncedChanges = false;
-          setLocalSyncStatus("synced");
-        } else {
-          setLocalSyncStatus("failed");
-        }
-        return saved;
+        return handleCloudSaveResult(saved);
       }
 
       async function persistChanges(failedMessage = "Perubahan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.") {
@@ -431,6 +478,8 @@
           state,
           saveCloudState,
           saveAfterLoad: options.saveAfterLoad,
+          hasPendingLocalChanges: () => hasUnsyncedChanges,
+          markConflict: markCloudConflict,
         });
       }
 
@@ -448,18 +497,30 @@
       }
 
       function syncStatusText() {
+        if (cloudSync.conflictDetected) return cloudSync.conflictMessage || "Potensi konflik sync terdeteksi. Data sudah digabung, cek kembali perubahan terbaru.";
         if (state.settings.cloudSyncEnabled === false) {
           return hasUnsyncedChanges
             ? "Sinkronisasi cloud nonaktif. Perubahan tersimpan lokal dan menunggu sync."
             : "Sinkronisasi cloud nonaktif. Data hanya disimpan di perangkat ini.";
+        }
+        if (cloudSync.nextRetryAt && hasUnsyncedChanges) {
+          const retryLabel = new Intl.DateTimeFormat("id-ID", { timeStyle: "short" }).format(new Date(cloudSync.nextRetryAt));
+          return `Perubahan lokal belum tersinkron. Retry otomatis pukul ${retryLabel}.`;
         }
         if (state.syncStatus === "failed") return "Perubahan lokal belum berhasil tersinkron. Coba tekan Sync.";
         if (state.syncStatus === "pending") return "Ada perubahan lokal yang menunggu sinkronisasi.";
         return window.AppCloud.syncStatusText(cloudSync);
       }
 
+      function markCloudConflict(remoteAt) {
+        cloudSync.conflictDetected = true;
+        const label = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(new Date(remoteAt));
+        cloudSync.conflictMessage = `Potensi konflik sync: data juga berubah di perangkat lain pada ${label}. Data digabung otomatis, cek kembali sebelum lanjut.`;
+      }
+
       function applyCloudPayload(payload, updatedAt) {
         if (isGuest() || !payload || !isCloudSyncAllowed()) return;
+        if (hasUnsyncedChanges) markCloudConflict(updatedAt || new Date().toISOString());
         replaceState(mergeStateData(payload, state));
         cloudSync.lastSyncedAt = updatedAt || new Date().toISOString();
         cloudSync.lastError = "";

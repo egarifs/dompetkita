@@ -66,6 +66,8 @@ window.AppCloud = {
       state,
       saveCloudState,
       saveAfterLoad = true,
+      hasPendingLocalChanges,
+      markConflict,
     } = ctx;
 
     const userKey = cloudUserKey();
@@ -85,8 +87,12 @@ window.AppCloud = {
       if (error) throw error;
       cloudSync.loadedUsers.add(userKey);
       if (data?.payload) {
+        const remoteAt = data.updated_at || new Date().toISOString();
+        if (hasPendingLocalChanges?.() && (!cloudSync.lastSyncedAt || new Date(remoteAt) > new Date(cloudSync.lastSyncedAt))) {
+          markConflict?.(remoteAt);
+        }
         replaceState(mergeStateData(data.payload, state));
-        cloudSync.lastSyncedAt = data.updated_at || new Date().toISOString();
+        cloudSync.lastSyncedAt = remoteAt;
         if (saveAfterLoad) await saveCloudState();
       } else {
         if (!window.AppCloud.hasStateData(state) && typeof emptyState === "function") replaceState(emptyState());
@@ -136,6 +142,8 @@ window.AppCloud = {
         cloudSync.loadedUsers.add(userKey);
         cloudSync.lastSyncedAt = data?.updated_at || new Date().toISOString();
         cloudSync.lastError = "";
+        cloudSync.retryCount = 0;
+        cloudSync.nextRetryAt = null;
         return true;
       } catch (error) {
         cloudSync.lastError = error.message || "Data belum tersinkron.";
@@ -155,7 +163,10 @@ window.AppCloud = {
 
   stopRealtimeSync(cloudSync) {
     clearInterval(cloudSync.pollTimer);
+    clearTimeout(cloudSync.retryTimer);
     cloudSync.pollTimer = null;
+    cloudSync.retryTimer = null;
+    cloudSync.nextRetryAt = null;
     if (cloudSync.channel && cloudSync.client) {
       cloudSync.client.removeChannel(cloudSync.channel);
     }
@@ -206,6 +217,7 @@ window.AppCloud = {
 
   syncStatusText(cloudSync) {
     if (!cloudSync.enabled) return "Mode lokal aktif. Isi config.js untuk menghubungkan Supabase.";
+    if (cloudSync.conflictDetected) return cloudSync.conflictMessage || "Potensi konflik sync terdeteksi.";
     if (cloudSync.lastError) return `Cloud bermasalah: ${cloudSync.lastError}`;
     if (cloudSync.isSaving) return "Sedang menyimpan ke cloud...";
     if (!cloudSync.lastSyncedAt) return "Cloud siap, menunggu sinkronisasi pertama.";
