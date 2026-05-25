@@ -997,7 +997,7 @@
         renderDashboardGreeting();
         document.querySelector("#monthExpense").textContent = money(currentExpense);
         document.querySelector("#monthIncome").textContent = money(currentIncome);
-        document.querySelector("#totalBalance").textContent = money(state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0));
+        updateTotalBalanceVisibility(state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0));
         document.querySelector("#remainingBudget").textContent = money(remaining);
         document.querySelector("#debtSummary").textContent = money(unpaidReceivable - unpaidPayable);
 
@@ -1035,7 +1035,7 @@
         renderDashboardGreeting();
         document.querySelector("#monthExpense").textContent = money(currentExpense);
         document.querySelector("#monthIncome").textContent = money(currentIncome);
-        document.querySelector("#totalBalance").textContent = money(state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0));
+        updateTotalBalanceVisibility(state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0));
         document.querySelector("#remainingBudget").textContent = money(remaining);
         document.querySelector("#debtSummary").textContent = money(unpaidReceivable - unpaidPayable);
 
@@ -1137,6 +1137,20 @@
         if (greetingTarget) greetingTarget.textContent = greeting;
         if (nameTarget) nameTarget.textContent = displayName;
         if (avatarTarget) avatarTarget.textContent = initials;
+      }
+
+      function maskedMoney() {
+        return "Rp •••••••";
+      }
+
+      function updateTotalBalanceVisibility(total) {
+        const target = document.querySelector("#totalBalance");
+        const button = document.querySelector("#toggleTotalBalanceVisibilityButton");
+        if (!target || !button) return;
+        const visible = Boolean(state.settings.totalBalanceVisible);
+        target.textContent = visible ? money(total) : maskedMoney();
+        button.textContent = visible ? "👁" : "🙈";
+        button.setAttribute("aria-label", visible ? "Sembunyikan total saldo" : "Tampilkan total saldo");
       }
 
       function transactionRows(items, limit = null) {
@@ -4304,6 +4318,11 @@
       document.querySelector("#viewAllSavingsButton").addEventListener("click", () => openView("savings"));
       document.querySelector("#homeSavingsHistoryButton").addEventListener("click", openSavingsHistory);
       document.querySelector("#savingsHistoryButton").addEventListener("click", openSavingsHistory);
+      document.querySelector("#toggleTotalBalanceVisibilityButton").addEventListener("click", () => {
+        state.settings.totalBalanceVisible = !state.settings.totalBalanceVisible;
+        renderStats();
+        saveState();
+      });
 
       document.querySelector("#budgetForm").addEventListener("submit", (event) => {
         event.preventDefault();
