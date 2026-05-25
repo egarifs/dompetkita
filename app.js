@@ -145,6 +145,7 @@
       let hasUnsyncedChanges = state.syncStatus === "pending" || state.syncStatus === "failed";
       let quickTransactionRange = "month";
       let selectedCategoryFilter = "all";
+      let viewHistory = [];
       const idleTimeoutMs = IDLE_TIMEOUT_MINUTES * 60 * 1000;
       const idleWarningMs = WARNING_BEFORE_LOGOUT_MINUTES * 60 * 1000;
       const idleWarningDelayMs = Math.max(0, idleTimeoutMs - idleWarningMs);
@@ -2205,14 +2206,32 @@
         renderAccount();
       }
 
-      function openView(view) {
+      function updateBackButton(view) {
+        const backButton = document.querySelector("#backButton");
+        if (!backButton) return;
+        backButton.classList.toggle("hidden", view === "home");
+      }
+
+      function openView(view, options = {}) {
+        const targetView = document.querySelector(`#${view}View`);
+        if (!targetView) return;
+        const previousView = activeView();
+        if (!options.fromBack && !options.replace && previousView !== view) {
+          viewHistory.push(previousView);
+        }
         document.querySelectorAll(".view").forEach((section) => section.classList.remove("active"));
-        document.querySelector(`#${view}View`).classList.add("active");
+        targetView.classList.add("active");
         document.querySelectorAll(".nav-button[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === view));
         const copy = currentPageCopy(view);
         document.querySelector("#pageHeading").textContent = copy[0];
         document.querySelector("#pageSubtitle").textContent = copy[1];
+        updateBackButton(view);
         document.querySelector("#addBlock").classList.remove("open");
+      }
+
+      function goBackView() {
+        const previousView = viewHistory.pop() || "home";
+        openView(previousView, { fromBack: true });
       }
 
       function openTransactionForm(transactionId = "") {
@@ -4063,7 +4082,8 @@
         }
         currentUser = null;
         applyState(emptyState());
-        openView("home");
+        viewHistory = [];
+        openView("home", { replace: true });
         showLogin();
         if (logoutMessage) alert(logoutMessage);
       }
@@ -4104,6 +4124,8 @@
       document.querySelectorAll("[data-view]").forEach((button) => {
         button.addEventListener("click", () => openView(button.dataset.view));
       });
+
+      document.querySelector("#backButton").addEventListener("click", goBackView);
 
       document.querySelector("#addMenuButton").addEventListener("click", () => {
         document.querySelector("#addBlock").classList.toggle("open");

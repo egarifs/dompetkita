@@ -370,6 +370,12 @@
         margin-bottom: 22px;
       }
 
+      .back-button {
+        flex-shrink: 0;
+        gap: 6px;
+        padding-inline: 12px;
+      }
+
       .page-title h2 {
         color: var(--on-surface);
         font-size: clamp(1.55rem, 2.4vw, 2.25rem);
@@ -1764,6 +1770,10 @@
         .topbar {
           flex-direction: column;
           gap: 12px;
+        }
+
+        .back-button {
+          align-self: flex-start;
         }
 
         .top-actions,
