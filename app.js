@@ -1157,6 +1157,18 @@
         button.setAttribute("aria-label", visible ? "Sembunyikan total saldo" : "Tampilkan total saldo");
       }
 
+      function transactionDateLabel(dateValue) {
+        if (!dateValue) return "-";
+        const date = new Date(`${dateValue}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return dateValue;
+        return new Intl.DateTimeFormat("id-ID", {
+          weekday: "short",
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        }).format(date);
+      }
+
       function transactionRows(items, limit = null) {
         const visible = [...items].sort((a, b) => b.date.localeCompare(a.date)).slice(0, limit ?? items.length);
         if (!visible.length) {
@@ -1164,7 +1176,7 @@
         }
 
         return `
-          <table>
+          <table class="transaction-table">
             <thead>
               <tr>
                 <th>Tanggal</th>
@@ -1178,8 +1190,8 @@
             </thead>
             <tbody>
               ${visible.map((item) => `
-                <tr>
-                  <td>${escapeHtml(item.date)}</td>
+                <tr class="transaction-row ${item.type}">
+                  <td>${escapeHtml(transactionDateLabel(item.date))}</td>
                   <td><span class="pill">${escapeHtml(item.category)}</span></td>
                   <td>${escapeHtml(walletName(item.walletId))}</td>
                   <td>${escapeHtml(item.description)}</td>

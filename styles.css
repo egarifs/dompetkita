@@ -1986,6 +1986,178 @@
           text-align: right;
         }
 
+        #allTransactions .transaction-table tr,
+        #latestTransactions .transaction-table tr {
+          position: relative;
+          display: grid;
+          grid-template-columns: 58px minmax(0, 1fr) auto;
+          gap: 6px 14px;
+          min-height: 0;
+          border-radius: 18px;
+          padding: 20px;
+          box-shadow: var(--shadow);
+        }
+
+        #allTransactions .transaction-table tr::before,
+        #latestTransactions .transaction-table tr::before {
+          content: "↓";
+          display: grid;
+          grid-row: 1 / span 2;
+          grid-column: 1;
+          width: 58px;
+          height: 58px;
+          place-items: center;
+          border-radius: 18px;
+          background: var(--error-container);
+          color: var(--expense);
+          font-size: 1.7rem;
+          font-weight: 950;
+        }
+
+        #allTransactions .transaction-table tr.income::before,
+        #latestTransactions .transaction-table tr.income::before {
+          content: "↑";
+          background: var(--primary-container);
+          color: var(--income);
+        }
+
+        #allTransactions .transaction-table td,
+        #latestTransactions .transaction-table td {
+          display: flex;
+          justify-content: flex-start;
+          gap: 8px;
+          border: 0;
+          padding: 0;
+          min-width: 0;
+        }
+
+        #allTransactions .transaction-table td::before,
+        #latestTransactions .transaction-table td::before {
+          flex: 0 0 auto;
+          color: var(--muted);
+          font-size: 1rem;
+          font-weight: 700;
+          text-transform: none;
+        }
+
+        #allTransactions .transaction-table td:nth-child(6),
+        #latestTransactions .transaction-table td:nth-child(6) {
+          grid-column: 2;
+          grid-row: 1;
+          align-items: center;
+          color: var(--expense);
+          font-size: clamp(1.28rem, 6vw, 1.65rem);
+          font-weight: 950;
+          line-height: 1.15;
+          white-space: nowrap;
+        }
+
+        #allTransactions .transaction-table tr.income td:nth-child(6),
+        #latestTransactions .transaction-table tr.income td:nth-child(6) {
+          color: var(--income);
+        }
+
+        #allTransactions .transaction-table td:nth-child(6)::before,
+        #latestTransactions .transaction-table td:nth-child(6)::before {
+          content: "";
+          display: none;
+        }
+
+        #allTransactions .transaction-table td:nth-child(5),
+        #latestTransactions .transaction-table td:nth-child(5) {
+          grid-column: 2;
+          grid-row: 2;
+        }
+
+        #allTransactions .transaction-table td:nth-child(5)::before,
+        #latestTransactions .transaction-table td:nth-child(5)::before {
+          content: "";
+          display: none;
+        }
+
+        #allTransactions .transaction-table td:nth-child(5) .pill,
+        #latestTransactions .transaction-table td:nth-child(5) .pill {
+          min-height: 26px;
+          border: 1px solid currentColor;
+          background: color-mix(in srgb, currentColor 10%, transparent);
+          font-size: 0.72rem;
+        }
+
+        #allTransactions .transaction-table td:nth-child(7),
+        #latestTransactions .transaction-table td:nth-child(7) {
+          grid-column: 3;
+          grid-row: 1 / span 2;
+          align-self: start;
+          justify-content: flex-end;
+          gap: 6px;
+        }
+
+        #allTransactions .transaction-table td:nth-child(7) .icon-button,
+        #latestTransactions .transaction-table td:nth-child(7) .icon-button {
+          width: 34px;
+          height: 34px;
+          border: 0;
+          background: transparent;
+        }
+
+        #allTransactions .transaction-table td:nth-child(1),
+        #latestTransactions .transaction-table td:nth-child(1) {
+          grid-column: 1 / -1;
+          grid-row: 3;
+          margin-top: 14px;
+          padding-top: 14px;
+          border-top: 1px solid var(--line);
+        }
+
+        #allTransactions .transaction-table td:nth-child(1)::before,
+        #latestTransactions .transaction-table td:nth-child(1)::before {
+          content: "▣";
+        }
+
+        #allTransactions .transaction-table td:nth-child(3),
+        #latestTransactions .transaction-table td:nth-child(3) {
+          grid-column: 1 / -1;
+          grid-row: 4;
+          justify-content: flex-start;
+          font-weight: 850;
+        }
+
+        #allTransactions .transaction-table td:nth-child(3)::before,
+        #latestTransactions .transaction-table td:nth-child(3)::before {
+          content: "▣";
+        }
+
+        #allTransactions .transaction-table td:nth-child(2),
+        #latestTransactions .transaction-table td:nth-child(2) {
+          grid-row: 5;
+        }
+
+        #allTransactions .transaction-table td:nth-child(4),
+        #latestTransactions .transaction-table td:nth-child(4) {
+          grid-column: 1 / -1;
+          color: var(--muted);
+        }
+
+        #allTransactions .transaction-table td:nth-child(4),
+        #latestTransactions .transaction-table td:nth-child(4) {
+          grid-row: 6;
+        }
+
+        #allTransactions .transaction-table td:nth-child(2)::before,
+        #latestTransactions .transaction-table td:nth-child(2)::before {
+          content: "▣";
+        }
+
+        #allTransactions .transaction-table td:nth-child(4)::before,
+        #latestTransactions .transaction-table td:nth-child(4)::before {
+          content: "▤";
+        }
+
+        #allTransactions .transaction-table .pill,
+        #latestTransactions .transaction-table .pill {
+          white-space: nowrap;
+        }
+
         .modal {
           align-items: flex-end;
           padding: 0;
