@@ -66,7 +66,8 @@
       const translations = {
         id: {
           "nav.home": "Beranda",
-          "nav.reports": "Laporan",
+          "nav.reports": "Transaksi",
+          "nav.analytics": "Analitik",
           "nav.add": "Tambah",
           "nav.addTransaction": "Tambah Transaksi",
           "nav.addDebt": "Tambah Hutang Piutang",
@@ -86,7 +87,8 @@
         },
         en: {
           "nav.home": "Home",
-          "nav.reports": "Reports",
+          "nav.reports": "Transactions",
+          "nav.analytics": "Analytics",
           "nav.add": "Add",
           "nav.addTransaction": "Add Transaction",
           "nav.addDebt": "Add Debt",
@@ -109,7 +111,8 @@
       const pageCopy = {
         id: {
           home: ["Beranda Keuangan", "Pantau pengeluaran bulan berjalan, saldo, dan sisa anggaran."],
-          reports: ["Laporan", "Lihat semua transaksi dan pola pengeluaran per kategori."],
+          reports: ["Transaksi", "Lihat dan filter seluruh catatan pemasukan maupun pengeluaran."],
+          analytics: ["Analitik", "Pantau pola pengeluaran per kategori dan per hari."],
           budgets: ["Anggaran", "Atur batas pengeluaran dan pantau hutang piutang."],
           wallets: ["Dompet", "Kelola saldo Cash, Bank, E-Wallet, dan sumber uang lainnya."],
           vehicles: ["Kendaraan", "Pantau service, oli, part, pajak, dan biaya kendaraan."],
@@ -119,7 +122,8 @@
         },
         en: {
           home: ["Finance Dashboard", "Track this month's spending, balance, and remaining budget."],
-          reports: ["Reports", "View all transactions and category spending patterns."],
+          reports: ["Transactions", "View and filter all income and expense records."],
+          analytics: ["Analytics", "Monitor spending patterns by category and by day."],
           budgets: ["Budget", "Set spending limits and monitor debts."],
           wallets: ["Wallets", "Manage Cash, Bank, E-Wallet, and other money sources."],
           vehicles: ["Vehicles", "Track service, oil, parts, taxes, and vehicle costs."],

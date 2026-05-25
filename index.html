@@ -127,9 +127,10 @@
           </button>
           <button class="nav-button" type="button" data-view="reports">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M5 19V5M5 19h15M9 16v-5M13 16V8M17 16v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              <path d="M5 7h14M5 12h14M5 17h9" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              <path d="M17 15.5 19.5 18 22 15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            <span data-i18n="nav.reports">Laporan</span>
+            <span data-i18n="nav.reports">Transaksi</span>
           </button>
           <div class="add-block" id="addBlock">
             <button class="nav-button" id="addMenuButton" type="button">
@@ -143,12 +144,11 @@
               <button class="add-choice" type="button" data-open-form="debt" data-i18n="nav.addDebt">Tambah Hutang Piutang</button>
             </div>
           </div>
-          <button class="nav-button" type="button" data-view="budgets">
+          <button class="nav-button" type="button" data-view="analytics">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18a2 2 0 0 1 2 2v12H6.5A2.5 2.5 0 0 1 4 16.5v-9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
-              <path d="M16 12h4v4h-4a2 2 0 0 1 0-4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+              <path d="M5 19V5M5 19h15M9 16v-5M13 16V8M17 16v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
             </svg>
-            <span data-i18n="nav.budgets">Anggaran</span>
+            <span data-i18n="nav.analytics">Analitik</span>
           </button>
           <button class="nav-button" type="button" data-view="account">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -488,27 +488,29 @@
         </section>
 
         <section class="view" id="reportsView">
-          <div class="report-grid">
-            <section class="panel">
-              <div class="panel-header">
-                <div class="panel-title">
-                  <h3>Semua Transaksi</h3>
-                  <p>Filter dan cek seluruh catatan pemasukan maupun pengeluaran.</p>
-                </div>
-                <button class="button" id="exportCsvButton" type="button">Ekspor CSV</button>
+          <section class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h3>Semua Transaksi</h3>
+                <p>Filter dan cek seluruh catatan pemasukan maupun pengeluaran.</p>
               </div>
-              <div class="table-tools">
-                <input id="searchInput" type="search" placeholder="Cari deskripsi atau kategori" />
-                <select id="monthFilter" aria-label="Filter bulan"></select>
-                <select id="typeFilter" aria-label="Filter tipe">
-                  <option value="all">Semua tipe</option>
-                  <option value="expense">Pengeluaran</option>
-                  <option value="income">Pemasukan</option>
-                </select>
-              </div>
-              <div class="table-wrap" id="allTransactions"></div>
-            </section>
+              <button class="button" id="exportCsvButton" type="button">Ekspor CSV</button>
+            </div>
+            <div class="table-tools">
+              <input id="searchInput" type="search" placeholder="Cari deskripsi atau kategori" />
+              <select id="monthFilter" aria-label="Filter bulan"></select>
+              <select id="typeFilter" aria-label="Filter tipe">
+                <option value="all">Semua tipe</option>
+                <option value="expense">Pengeluaran</option>
+                <option value="income">Pemasukan</option>
+              </select>
+            </div>
+            <div class="table-wrap" id="allTransactions"></div>
+          </section>
+        </section>
 
+        <section class="view" id="analyticsView">
+          <div class="report-grid">
             <section class="panel">
               <div class="panel-header">
                 <div class="panel-title">
@@ -518,17 +520,17 @@
               </div>
               <div class="report-bars" id="categoryBreakdown"></div>
             </section>
-          </div>
 
-          <section class="panel" style="margin-top: 14px">
-            <div class="panel-header">
-              <div class="panel-title">
-                <h3>Pengeluaran per Hari</h3>
-                <p>Jumlah transaksi dan total pengeluaran untuk setiap tanggal.</p>
+            <section class="panel">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <h3>Pengeluaran per Hari</h3>
+                  <p>Jumlah transaksi dan total pengeluaran untuk setiap tanggal.</p>
+                </div>
               </div>
-            </div>
-            <div class="table-wrap" id="dailyExpenseList"></div>
-          </section>
+              <div class="table-wrap" id="dailyExpenseList"></div>
+            </section>
+          </div>
         </section>
 
         <section class="view" id="budgetsView">
@@ -693,6 +695,13 @@
                       <span id="billReminderSummary">Belum ada tagihan.</span>
                     </div>
                     <button class="button" type="button" data-open-form="billReminder">Tambah</button>
+                  </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong>Anggaran</strong>
+                      <span>Atur batas pengeluaran, hutang, dan piutang.</span>
+                    </div>
+                    <button class="button primary" type="button" data-view="budgets">Buka</button>
                   </div>
                   <div class="settings-item">
                     <div>
