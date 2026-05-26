@@ -198,6 +198,22 @@
               <span class="stat-sub">Akumulasi semua dompet</span>
             </article>
 
+            <article class="panel net-worth-card">
+              <div class="net-worth-main">
+                <div>
+                  <span class="stat-label">Kekayaan Bersih</span>
+                  <strong class="stat-value" id="netWorthValue">Rp0</strong>
+                  <span class="stat-sub" id="netWorthMessage">Mulai catat aset dan kewajiban keluarga.</span>
+                </div>
+                <span class="pill" id="netWorthStatus">Waspada</span>
+              </div>
+              <div class="net-worth-breakdown">
+                <span>Total Aset <strong id="netWorthAssets">Rp0</strong></span>
+                <span>Total Kewajiban <strong id="netWorthLiabilities">Rp0</strong></span>
+              </div>
+              <button class="button primary" type="button" data-view="balanceSheet">Lihat Neraca</button>
+            </article>
+
             <section class="panel">
               <div class="panel-header">
                 <div class="panel-title">
@@ -366,6 +382,57 @@
             </div>
             <div class="wallet-mutation-list" id="walletMutationList"></div>
           </section>
+        </section>
+
+        <section class="view" id="balanceSheetView">
+          <section class="panel balance-sheet-summary">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h3>Neraca Keuangan</h3>
+                <p>Ringkasan aset, kewajiban, dan kekayaan bersih keluarga.</p>
+              </div>
+              <span class="pill" id="balanceSheetStatus">Waspada</span>
+            </div>
+            <div class="compact-stats">
+              <article class="stat-card">
+                <span class="stat-label">Total Aset</span>
+                <strong class="stat-value" id="balanceSheetAssets">Rp0</strong>
+                <span class="stat-sub">Wallet + piutang aktif</span>
+              </article>
+              <article class="stat-card">
+                <span class="stat-label">Total Kewajiban</span>
+                <strong class="stat-value expense-text" id="balanceSheetLiabilities">Rp0</strong>
+                <span class="stat-sub">Hutang aktif</span>
+              </article>
+              <article class="stat-card">
+                <span class="stat-label">Kekayaan Bersih</span>
+                <strong class="stat-value" id="balanceSheetNetWorth">Rp0</strong>
+                <span class="stat-sub" id="balanceSheetMessage">Belum ada data.</span>
+              </article>
+            </div>
+          </section>
+
+          <div class="balance-sheet-grid">
+            <section class="panel">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <h3>Aset</h3>
+                  <p>Saldo dompet, piutang aktif, dan rincian tabungan.</p>
+                </div>
+              </div>
+              <div class="debt-list" id="assetBreakdownList"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <h3>Kewajiban</h3>
+                  <p>Hutang aktif yang belum selesai.</p>
+                </div>
+              </div>
+              <div class="debt-list" id="liabilityBreakdownList"></div>
+            </section>
+          </div>
         </section>
 
         <section class="view" id="vehiclesView">

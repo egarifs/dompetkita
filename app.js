@@ -117,6 +117,7 @@
           budgets: ["Anggaran", "Atur batas pengeluaran dan pantau hutang piutang."],
           wallets: ["Dompet", "Kelola saldo Cash, Bank, E-Wallet, dan sumber uang lainnya."],
           walletDetail: ["Detail Dompet", "Lihat saldo dan mutasi transaksi pada dompet yang dipilih."],
+          balanceSheet: ["Neraca Keuangan", "Lihat total aset, kewajiban, dan kekayaan bersih keluarga."],
           vehicles: ["Kendaraan", "Pantau service, oli, part, pajak, dan biaya kendaraan."],
           account: ["Akun", "Kelola profil, akses, ekspor data, dan pengaturan aplikasi."],
           thanks: ["Thanks", "Dukung pengembangan aplikasi melalui rekening yang tersedia."],
@@ -129,6 +130,7 @@
           budgets: ["Budget", "Set spending limits and monitor debts."],
           wallets: ["Wallets", "Manage Cash, Bank, E-Wallet, and other money sources."],
           walletDetail: ["Wallet Detail", "Review balance and transaction mutations for the selected wallet."],
+          balanceSheet: ["Balance Sheet", "Review total assets, liabilities, and family net worth."],
           vehicles: ["Vehicles", "Track service, oil, parts, taxes, and vehicle costs."],
           account: ["Account", "Manage profile, access, exports, and app settings."],
           thanks: ["Thanks", "Support app development through the available bank account."],
@@ -1045,6 +1047,107 @@
 
       function isSavingsAchieved(goal) {
         return Number(goal?.target || 0) > 0 && savingsBalance(goal) >= Number(goal.target || 0);
+      }
+
+      function activeDebts(kind) {
+        return state.debts.filter((item) => item.kind === kind && item.status !== "paid");
+      }
+
+      function netWorthStatus(netWorth, totalAssets) {
+        if (netWorth < 0) {
+          return {
+            label: "Perlu Perhatian",
+            className: "expense",
+            message: "Kewajiban lebih besar dari aset. Prioritaskan pelunasan hutang aktif.",
+          };
+        }
+        if (!totalAssets || netWorth < totalAssets * 0.1) {
+          return {
+            label: "Waspada",
+            className: "debt",
+            message: "Kekayaan bersih masih tipis dibanding aset. Perkuat saldo dan kurangi kewajiban.",
+          };
+        }
+        return {
+          label: "Sehat",
+          className: "income",
+          message: "Aset lebih kuat dari kewajiban. Pertahankan arus kas positif keluarga.",
+        };
+      }
+
+      function netWorthSummary() {
+        const walletAssets = state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0);
+        const receivables = activeDebts("receivable");
+        const liabilities = activeDebts("payable");
+        const receivableAssets = receivables.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        const totalLiabilities = liabilities.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        const totalAssets = walletAssets + receivableAssets;
+        const netWorth = totalAssets - totalLiabilities;
+        const savingsTotal = state.savings.reduce((sum, goal) => sum + savingsBalance(goal), 0);
+        return {
+          walletAssets,
+          receivableAssets,
+          totalAssets,
+          totalLiabilities,
+          netWorth,
+          savingsTotal,
+          receivables,
+          liabilities,
+          status: netWorthStatus(netWorth, totalAssets),
+        };
+      }
+
+      function balanceSheetRow(title, subtitle, amount, tone = "") {
+        return `
+          <article class="debt-row">
+            <div class="debt-row-top">
+              <div>
+                <strong>${escapeHtml(title)}</strong>
+                <span>${escapeHtml(subtitle || "-")}</span>
+              </div>
+              <strong class="${tone}">${money(amount)}</strong>
+            </div>
+          </article>
+        `;
+      }
+
+      function renderNetWorth() {
+        const summary = netWorthSummary();
+        const statusClass = `pill ${summary.status.className}`;
+        const dashboardStatus = document.querySelector("#netWorthStatus");
+        const sheetStatus = document.querySelector("#balanceSheetStatus");
+
+        document.querySelector("#netWorthValue").textContent = money(summary.netWorth);
+        document.querySelector("#netWorthAssets").textContent = money(summary.totalAssets);
+        document.querySelector("#netWorthLiabilities").textContent = money(summary.totalLiabilities);
+        document.querySelector("#netWorthMessage").textContent = summary.status.message;
+        if (dashboardStatus) {
+          dashboardStatus.textContent = summary.status.label;
+          dashboardStatus.className = statusClass;
+        }
+
+        document.querySelector("#balanceSheetAssets").textContent = money(summary.totalAssets);
+        document.querySelector("#balanceSheetLiabilities").textContent = money(summary.totalLiabilities);
+        document.querySelector("#balanceSheetNetWorth").textContent = money(summary.netWorth);
+        document.querySelector("#balanceSheetMessage").textContent = summary.status.message;
+        if (sheetStatus) {
+          sheetStatus.textContent = summary.status.label;
+          sheetStatus.className = statusClass;
+        }
+
+        const assetRows = [
+          ...state.wallets.map((wallet) => balanceSheetRow(wallet.name, wallet.type || "Dompet", Number(wallet.currentBalance || 0), Number(wallet.currentBalance || 0) < 0 ? "expense-text" : "income-text")),
+          ...summary.receivables.map((item) => balanceSheetRow(`Piutang - ${item.person || "Tanpa nama"}`, item.description || "Piutang aktif", Number(item.amount || 0), "income-text")),
+          ...state.savings.map((goal) => balanceSheetRow(`Tabungan - ${goal.title || goal.category}`, "Rincian, tidak dihitung ganda sebagai aset", savingsBalance(goal), "income-text")),
+        ];
+        const liabilityRows = summary.liabilities.map((item) => balanceSheetRow(`Hutang - ${item.person || "Tanpa nama"}`, item.description || "Hutang aktif", Number(item.amount || 0), "expense-text"));
+
+        document.querySelector("#assetBreakdownList").innerHTML = assetRows.length
+          ? assetRows.join("")
+          : `<div class="empty"><p>Belum ada aset. Tambahkan dompet, saldo, atau piutang aktif.</p></div>`;
+        document.querySelector("#liabilityBreakdownList").innerHTML = liabilityRows.length
+          ? liabilityRows.join("")
+          : `<div class="empty"><p>Belum ada hutang aktif.</p></div>`;
       }
 
       function trashIcon() {
@@ -2410,6 +2513,7 @@
         renderCategoryOptions();
         renderWallets();
         renderStats();
+        renderNetWorth();
         renderChart();
         renderMonthOptions();
         renderTransactions();

@@ -1047,6 +1047,59 @@
         font-size: 0.95rem;
       }
 
+      .net-worth-card {
+        display: grid;
+        gap: 14px;
+        padding: 18px;
+      }
+
+      .net-worth-main,
+      .net-worth-breakdown {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+      }
+
+      .net-worth-main > div {
+        min-width: 0;
+      }
+
+      .net-worth-card .stat-value {
+        display: block;
+        margin: 7px 0;
+      }
+
+      .net-worth-breakdown {
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+      }
+
+      .net-worth-breakdown span {
+        display: grid;
+        gap: 4px;
+        color: var(--muted);
+        font-size: 0.83rem;
+        font-weight: 800;
+      }
+
+      .net-worth-breakdown strong {
+        color: var(--on-surface);
+        font-size: 0.95rem;
+      }
+
+      .balance-sheet-summary {
+        overflow: hidden;
+      }
+
+      .balance-sheet-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 0.75fr);
+        gap: 14px;
+        margin-top: 14px;
+        align-items: start;
+      }
+
       .budget-row,
       .debt-row,
       .action-summary-card,
@@ -1403,8 +1456,10 @@
       }
 
       .compact-stats {
+        display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
         padding: 0 16px 14px;
+        gap: 14px;
       }
 
       .compact-stats .stat-card {
@@ -1897,6 +1952,7 @@
         .content-grid,
         .report-grid,
         .budget-page-grid,
+        .balance-sheet-grid,
         .compact-stats,
         .account-grid {
           grid-template-columns: 1fr;
@@ -2101,6 +2157,12 @@
 
         .summary-card {
           min-height: 152px;
+        }
+
+        .net-worth-main,
+        .net-worth-breakdown {
+          align-items: flex-start;
+          flex-direction: column;
         }
 
         .stat-label {
