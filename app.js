@@ -2679,7 +2679,7 @@
               <label for="walletInitialBalance">Saldo awal</label>
               <div class="currency-input">
                 <span>Rp</span>
-                <input id="walletInitialBalance" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.initialBalance) : ""}" placeholder="0" required />
+                <input id="walletInitialBalance" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.initialBalance) : ""}" placeholder="Opsional" />
               </div>
             </div>
             <div class="row-actions">
@@ -2693,10 +2693,11 @@
         document.querySelector("#walletForm").addEventListener("submit", async (event) => {
           event.preventDefault();
           const name = document.querySelector("#walletName").value.trim();
-          const initialBalance = parseFormattedNumber(document.querySelector("#walletInitialBalance").value);
+          const initialBalanceValue = document.querySelector("#walletInitialBalance").value.trim();
+          const initialBalance = initialBalanceValue ? parseFormattedNumber(initialBalanceValue) : 0;
           const type = document.querySelector("#walletType").value;
           if (!name) return alert("Nama dompet wajib diisi.");
-          if (Number.isNaN(initialBalance) || initialBalance < 0) return alert("Saldo awal harus angka valid dan tidak boleh negatif.");
+          if (Number.isNaN(initialBalance) || initialBalance < 0) return alert("Saldo awal harus angka valid dan tidak boleh negatif jika diisi.");
           const duplicate = state.wallets.some((wallet) => wallet.id !== editing?.id && wallet.name.toLowerCase() === name.toLowerCase());
           if (duplicate) return alert("Nama dompet sudah digunakan.");
           if (editing) {

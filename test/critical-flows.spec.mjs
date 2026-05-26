@@ -112,6 +112,8 @@ const state = normalizeState({});
 const cashWallet = state.wallets[0];
 const bankWallet = state.wallets[1];
 assert(cashWallet?.id && bankWallet?.id, "Dompet default tidak tersedia.");
+const optionalBalanceWallet = window.AppState.normalizeWallet({ id: "wallet-optional", name: "Dompet Opsional", initialBalance: "" });
+assert(optionalBalanceWallet.initialBalance === 0 && optionalBalanceWallet.currentBalance === 0, "Saldo awal kosong harus dianggap 0.");
 
 const transaction = window.AppState.tx("transaction-1", "expense", "2026-05-25", "Makanan", "Sarapan", 25000, { walletId: cashWallet.id });
 state.transactions.push(transaction);
