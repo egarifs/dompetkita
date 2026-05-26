@@ -1059,6 +1059,23 @@
         `;
       }
 
+      function randomizeTotalBalanceGradient() {
+        const card = document.querySelector(".total-balance-card");
+        if (!card || card.dataset.gradientSeeded === "true") return;
+        const percent = (min, max) => `${Math.round(min + Math.random() * (max - min))}%`;
+        card.dataset.gradientSeeded = "true";
+        card.style.setProperty("--balance-a-x", percent(10, 34));
+        card.style.setProperty("--balance-a-y", percent(12, 42));
+        card.style.setProperty("--balance-b-x", percent(66, 92));
+        card.style.setProperty("--balance-b-y", percent(10, 40));
+        card.style.setProperty("--balance-c-x", percent(38, 72));
+        card.style.setProperty("--balance-c-y", percent(58, 88));
+        card.style.setProperty("--balance-glow-x", percent(62, 90));
+        card.style.setProperty("--balance-glow-y", percent(12, 72));
+        card.style.setProperty("--balance-flow-duration", `${Math.round(11 + Math.random() * 6)}s`);
+        card.style.setProperty("--balance-glow-duration", `${Math.round(7 + Math.random() * 5)}s`);
+      }
+
       function renderStats() {
         const month = currentMonthKey();
         const currentItems = transactionsByMonth(month);
@@ -1072,6 +1089,7 @@
         const unpaidPayable = state.debts.filter((item) => item.kind === "payable" && item.status === "unpaid").reduce((sum, item) => sum + Number(item.amount), 0);
 
         renderDashboardGreeting();
+        randomizeTotalBalanceGradient();
         document.querySelector("#monthExpense").textContent = money(currentExpense);
         document.querySelector("#monthIncome").textContent = money(currentIncome);
         updateTotalBalanceVisibility(state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0));
@@ -1110,6 +1128,7 @@
         const unpaidPayable = state.debts.filter((item) => item.kind === "payable" && item.status === "unpaid").reduce((sum, item) => sum + Number(item.amount), 0);
 
         renderDashboardGreeting();
+        randomizeTotalBalanceGradient();
         document.querySelector("#monthExpense").textContent = money(currentExpense);
         document.querySelector("#monthIncome").textContent = money(currentIncome);
         updateTotalBalanceVisibility(state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0));

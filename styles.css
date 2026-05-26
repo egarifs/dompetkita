@@ -584,6 +584,7 @@
       }
 
       .total-balance-card {
+        position: relative;
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         align-content: center;
@@ -591,15 +592,81 @@
         gap: 8px 16px;
         min-height: 184px;
         padding: 18px;
+        overflow: hidden;
+        isolation: isolate;
+        background: var(--surface-container);
+      }
+
+      .total-balance-card::before {
+        content: "";
+        position: absolute;
+        inset: -45%;
+        z-index: -2;
         background:
-          radial-gradient(circle at top right, color-mix(in srgb, var(--primary) 12%, transparent), transparent 34%),
-          var(--surface-container);
+          radial-gradient(circle at var(--balance-a-x, 18%) var(--balance-a-y, 24%), color-mix(in srgb, var(--primary) 34%, transparent), transparent 28%),
+          radial-gradient(circle at var(--balance-b-x, 78%) var(--balance-b-y, 18%), color-mix(in srgb, var(--income) 28%, transparent), transparent 26%),
+          radial-gradient(circle at var(--balance-c-x, 58%) var(--balance-c-y, 78%), color-mix(in srgb, var(--violet) 24%, transparent), transparent 30%),
+          linear-gradient(135deg, var(--surface-container), color-mix(in srgb, var(--primary-container) 42%, var(--surface-container)));
+        background-size: 130% 130%, 120% 120%, 150% 150%, 100% 100%;
+        filter: saturate(1.12);
+        opacity: 0.88;
+        animation: totalBalanceGradientFlow var(--balance-flow-duration, 13s) ease-in-out infinite alternate;
+      }
+
+      .total-balance-card::after {
+        content: "";
+        position: absolute;
+        inset: 1px;
+        z-index: -1;
+        border-radius: inherit;
+        background:
+          linear-gradient(180deg, color-mix(in srgb, var(--surface-container-low) 78%, transparent), color-mix(in srgb, var(--surface-container) 86%, transparent)),
+          radial-gradient(circle at var(--balance-glow-x, 82%) var(--balance-glow-y, 18%), color-mix(in srgb, white 30%, transparent), transparent 30%);
+        opacity: 0.82;
+        animation: totalBalanceGlowDrift var(--balance-glow-duration, 8s) ease-in-out infinite alternate;
+      }
+
+      @keyframes totalBalanceGradientFlow {
+        0% {
+          transform: translate3d(-3%, -2%, 0) rotate(0deg) scale(1);
+          background-position: 0% 18%, 92% 8%, 42% 88%, center;
+        }
+
+        38% {
+          transform: translate3d(3%, 1%, 0) rotate(8deg) scale(1.04);
+          background-position: 24% 4%, 78% 34%, 66% 72%, center;
+        }
+
+        71% {
+          transform: translate3d(-1%, 4%, 0) rotate(-6deg) scale(1.08);
+          background-position: 12% 46%, 96% 20%, 28% 58%, center;
+        }
+
+        100% {
+          transform: translate3d(4%, -3%, 0) rotate(5deg) scale(1.03);
+          background-position: 36% 12%, 70% 48%, 58% 92%, center;
+        }
+      }
+
+      @keyframes totalBalanceGlowDrift {
+        0% {
+          background-position: center, 82% 18%;
+        }
+
+        45% {
+          background-position: center, 58% 32%;
+        }
+
+        100% {
+          background-position: center, 88% 68%;
+        }
       }
 
       .total-balance-card .stat-label {
         grid-column: 1;
         grid-row: 1;
         position: relative;
+        z-index: 1;
         padding-right: 0;
       }
 
@@ -607,6 +674,9 @@
         position: absolute;
         top: 18px;
         right: 18px;
+        z-index: 2;
+        backdrop-filter: blur(10px);
+        background: color-mix(in srgb, var(--surface-container-low) 72%, transparent);
       }
 
       .total-balance-card .stat-value {
@@ -618,11 +688,20 @@
         padding-right: 42px;
         text-align: right;
         white-space: nowrap;
+        z-index: 1;
       }
 
       .total-balance-card .stat-sub {
         grid-column: 1;
         grid-row: 2;
+        z-index: 1;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .total-balance-card::before,
+        .total-balance-card::after {
+          animation: none;
+        }
       }
 
       .stats-carousel {
