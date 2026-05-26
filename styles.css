@@ -2262,14 +2262,14 @@
 
         .transaction-detail {
           display: grid;
-          gap: 14px;
-          padding: 16px;
+          gap: 16px;
+          padding: 18px;
         }
 
         .receipt-preview {
-          min-height: 180px;
+          min-height: 154px;
           overflow: hidden;
-          border: 1px dashed var(--outline-variant);
+          border: 1px dashed var(--outline);
           border-radius: var(--radius);
           background: var(--surface-container);
         }
@@ -2284,17 +2284,27 @@
 
         .receipt-empty {
           display: grid;
-          min-height: 180px;
+          min-height: 154px;
           place-items: center;
           align-content: center;
-          gap: 6px;
+          gap: 8px;
           color: var(--muted);
           text-align: center;
           padding: 20px;
+          line-height: 1.45;
         }
 
         .receipt-empty strong {
           color: var(--on-surface);
+          font-size: 1rem;
+        }
+
+        .receipt-empty span {
+          max-width: 360px;
+        }
+
+        .receipt-upload {
+          justify-self: flex-start;
         }
 
         .transaction-detail-summary {
@@ -2302,17 +2312,47 @@
           align-items: center;
           justify-content: space-between;
           gap: 12px;
+          border: 1px solid var(--line);
+          border-radius: var(--radius);
+          background: var(--surface-container-low);
+          padding: 14px;
         }
 
         .transaction-detail-summary .amount {
           display: block;
           margin-top: 6px;
-          font-size: 1.4rem;
+          font-size: clamp(1.35rem, 5vw, 1.75rem);
           font-weight: 950;
+          line-height: 1.1;
         }
 
         .transaction-detail-meta {
+          margin-top: 0;
           padding: 0;
+        }
+
+        .transaction-detail-meta .pill {
+          min-height: 30px;
+          padding: 6px 11px;
+          white-space: normal;
+        }
+
+        .transaction-detail .debt-row {
+          border-radius: var(--radius);
+          background: var(--surface-container-low);
+          padding: 14px;
+        }
+
+        .transaction-detail .debt-row-top strong {
+          display: block;
+          margin-bottom: 4px;
+        }
+
+        .transaction-detail .row-actions {
+          justify-content: flex-end;
+          border-top: 1px solid var(--line);
+          padding-top: 14px;
+          margin-top: 2px;
         }
 
         .modal {
