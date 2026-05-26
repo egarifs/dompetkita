@@ -585,8 +585,10 @@
 
       .total-balance-card {
         display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
         align-content: center;
-        gap: 8px;
+        align-items: center;
+        gap: 8px 16px;
         min-height: 184px;
         padding: 18px;
         background:
@@ -595,20 +597,32 @@
       }
 
       .total-balance-card .stat-label {
+        grid-column: 1;
+        grid-row: 1;
         position: relative;
-        padding-right: 48px;
+        padding-right: 0;
       }
 
       .total-balance-card .icon-button {
         position: absolute;
-        top: -8px;
-        right: -4px;
+        top: 18px;
+        right: 18px;
       }
 
       .total-balance-card .stat-value {
+        grid-column: 2;
+        grid-row: 1 / span 2;
         font-size: clamp(1.45rem, 3vw, 2rem);
         font-weight: 950;
         margin-top: 2px;
+        padding-right: 42px;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .total-balance-card .stat-sub {
+        grid-column: 1;
+        grid-row: 2;
       }
 
       .stats-carousel {
@@ -1975,8 +1989,25 @@
         }
 
         .total-balance-card {
+          grid-template-columns: minmax(0, 1fr);
           min-height: 164px;
           padding: 18px;
+        }
+
+        .total-balance-card .stat-label,
+        .total-balance-card .stat-value,
+        .total-balance-card .stat-sub {
+          grid-column: 1;
+        }
+
+        .total-balance-card .stat-value {
+          grid-row: 2;
+          padding-right: 0;
+          text-align: left;
+        }
+
+        .total-balance-card .stat-sub {
+          grid-row: 3;
         }
 
         .stats-carousel {
