@@ -1913,7 +1913,9 @@
           });
         }
 
-        document.querySelector("#actionSummaryList").innerHTML = actions.slice(0, 5).map((item) => `
+        const target = document.querySelector("#actionSummaryList");
+        if (!target) return;
+        target.innerHTML = actions.slice(0, 5).map((item) => `
           <article class="action-summary-card">
             <div class="debt-row-top">
               <strong>${escapeHtml(item.title)}</strong>
