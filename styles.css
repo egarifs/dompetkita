@@ -584,7 +584,31 @@
       }
 
       .total-balance-card {
+        display: grid;
+        align-content: center;
+        gap: 8px;
         min-height: 184px;
+        padding: 18px;
+        background:
+          radial-gradient(circle at top right, color-mix(in srgb, var(--primary) 12%, transparent), transparent 34%),
+          var(--surface-container);
+      }
+
+      .total-balance-card .stat-label {
+        position: relative;
+        padding-right: 48px;
+      }
+
+      .total-balance-card .icon-button {
+        position: absolute;
+        top: -8px;
+        right: -4px;
+      }
+
+      .total-balance-card .stat-value {
+        font-size: clamp(1.45rem, 3vw, 2rem);
+        font-weight: 950;
+        margin-top: 2px;
       }
 
       .stats-carousel {
