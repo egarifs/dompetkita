@@ -115,6 +115,7 @@
           analytics: ["Analitik", "Pantau pola pengeluaran per kategori dan per hari."],
           budgets: ["Anggaran", "Atur batas pengeluaran dan pantau hutang piutang."],
           wallets: ["Dompet", "Kelola saldo Cash, Bank, E-Wallet, dan sumber uang lainnya."],
+          walletDetail: ["Detail Dompet", "Lihat saldo dan mutasi transaksi pada dompet yang dipilih."],
           vehicles: ["Kendaraan", "Pantau service, oli, part, pajak, dan biaya kendaraan."],
           account: ["Akun", "Kelola profil, akses, ekspor data, dan pengaturan aplikasi."],
           thanks: ["Thanks", "Dukung pengembangan aplikasi melalui rekening yang tersedia."],
@@ -126,6 +127,7 @@
           analytics: ["Analytics", "Monitor spending patterns by category and by day."],
           budgets: ["Budget", "Set spending limits and monitor debts."],
           wallets: ["Wallets", "Manage Cash, Bank, E-Wallet, and other money sources."],
+          walletDetail: ["Wallet Detail", "Review balance and transaction mutations for the selected wallet."],
           vehicles: ["Vehicles", "Track service, oil, parts, taxes, and vehicle costs."],
           account: ["Account", "Manage profile, access, exports, and app settings."],
           thanks: ["Thanks", "Support app development through the available bank account."],
@@ -146,6 +148,7 @@
       let quickTransactionRange = "month";
       let selectedCategoryFilter = "all";
       let viewHistory = [];
+      let selectedWalletDetailId = "";
       const idleTimeoutMs = IDLE_TIMEOUT_MINUTES * 60 * 1000;
       const idleWarningMs = WARNING_BEFORE_LOGOUT_MINUTES * 60 * 1000;
       const idleWarningDelayMs = Math.max(0, idleTimeoutMs - idleWarningMs);
@@ -1272,6 +1275,95 @@
         `;
       }
 
+      function walletMutationRows(items) {
+        if (!items.length) {
+          return `<div class="empty"><p>Belum ada mutasi yang cocok dengan filter ini.</p></div>`;
+        }
+        const groups = [...items]
+          .sort((a, b) => b.date.localeCompare(a.date))
+          .reduce((result, item) => {
+            const month = monthOf(item) || "Tanpa bulan";
+            if (!result[month]) result[month] = [];
+            result[month].push(item);
+            return result;
+          }, {});
+
+        return Object.entries(groups).map(([month, rows]) => `
+          <section class="wallet-mutation-month">
+            <h4>${escapeHtml(month === "Tanpa bulan" ? month : monthLabel(month))}</h4>
+            <table class="transaction-table wallet-mutation-table">
+              <thead>
+                <tr>
+                  <th>Tanggal</th>
+                  <th>Kategori</th>
+                  <th>Tipe</th>
+                  <th>Nominal</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map((item) => `
+                  <tr class="transaction-row ${item.type}" data-open-transaction-detail="${item.id}">
+                    <td>${escapeHtml(transactionDateLabel(item.date))}</td>
+                    <td><span class="pill">${escapeHtml(item.category || "Lainnya")}</span></td>
+                    <td><span class="pill ${item.type}">${item.type === "income" ? "Credit" : "Debit"}</span></td>
+                    <td class="amount ${item.type}">${item.type === "income" ? "+" : "-"} ${money(item.amount)}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </section>
+        `).join("");
+      }
+
+      function renderWalletMutationMonthOptions(walletId) {
+        const input = document.querySelector("#walletMutationMonth");
+        if (!input) return;
+        const months = [...new Set(state.transactions.filter((item) => item.walletId === walletId).map(monthOf).filter(Boolean))].sort().reverse();
+        if (!input.value && months.length) input.value = months[0];
+      }
+
+      function renderWalletDetail() {
+        const view = document.querySelector("#walletDetailView");
+        if (!view || !selectedWalletDetailId) return;
+        recalculateWalletBalances();
+        const wallet = state.wallets.find((item) => item.id === selectedWalletDetailId);
+        if (!wallet) {
+          selectedWalletDetailId = "";
+          openView("wallets", { replace: true });
+          return;
+        }
+        document.querySelector("#walletDetailType").textContent = wallet.type || "Dompet";
+        document.querySelector("#walletDetailName").textContent = wallet.name;
+        document.querySelector("#walletDetailInitial").textContent = `Saldo awal ${money(wallet.initialBalance || 0)}`;
+        document.querySelector("#walletDetailBalance").textContent = money(wallet.currentBalance || 0);
+        renderWalletMutationMonthOptions(wallet.id);
+
+        const query = document.querySelector("#walletMutationSearch")?.value.toLowerCase().trim() || "";
+        const month = document.querySelector("#walletMutationMonth")?.value || "";
+        const start = document.querySelector("#walletMutationStartDate")?.value || "";
+        const end = document.querySelector("#walletMutationEndDate")?.value || "";
+        const rows = state.transactions
+          .filter((item) => item.walletId === wallet.id)
+          .filter((item) => !month || monthOf(item) === month)
+          .filter((item) => !start || item.date >= start)
+          .filter((item) => !end || item.date <= end)
+          .filter((item) => `${item.category} ${item.type === "income" ? "credit pemasukan" : "debit pengeluaran"}`.toLowerCase().includes(query));
+
+        document.querySelector("#walletMutationList").innerHTML = walletMutationRows(rows);
+      }
+
+      function openWalletDetail(walletId) {
+        if (!requireSignedIn()) return;
+        if (!state.wallets.some((wallet) => wallet.id === walletId)) return;
+        selectedWalletDetailId = walletId;
+        ["#walletMutationSearch", "#walletMutationMonth", "#walletMutationStartDate", "#walletMutationEndDate"].forEach((selector) => {
+          const input = document.querySelector(selector);
+          if (input) input.value = "";
+        });
+        openView("walletDetail");
+        renderWalletDetail();
+      }
+
       function openTransactionDetail(transactionId) {
         if (!requireSignedIn()) return;
         const item = state.transactions.find((transaction) => transaction.id === transactionId);
@@ -1495,7 +1587,7 @@
       function walletCard(wallet, compact = false) {
         const isMinus = Number(wallet.currentBalance || 0) < 0;
         return `
-          <article class="wallet-card ${isMinus ? "negative" : ""}">
+          <article class="wallet-card ${isMinus ? "negative" : ""}" data-open-wallet-detail="${wallet.id}" tabindex="0" role="button" aria-label="Buka detail dompet ${escapeHtml(wallet.name)}">
             <div>
               <span class="stat-label">${escapeHtml(wallet.type || "Dompet")}</span>
               <strong>${escapeHtml(wallet.name)}</strong>
@@ -2197,6 +2289,7 @@
         renderTransactions();
         renderBudgets();
         renderSavings();
+        renderWalletDetail();
         renderVehicles();
         renderInsights();
         renderActionSummary();
@@ -4245,6 +4338,12 @@
           return;
         }
 
+        const walletDetailCard = event.target.closest("[data-open-wallet-detail]");
+        if (walletDetailCard && !event.target.closest("button")) {
+          openWalletDetail(walletDetailCard.dataset.openWalletDetail);
+          return;
+        }
+
         const editButton = event.target.closest("[data-edit-transaction]");
         if (editButton) {
           if (!requireSignedIn()) return;
@@ -4608,6 +4707,10 @@
         renderTransactions();
       });
       document.querySelector("#walletFilter").addEventListener("change", renderTransactions);
+      ["#walletMutationSearch", "#walletMutationMonth", "#walletMutationStartDate", "#walletMutationEndDate"].forEach((selector) => {
+        document.querySelector(selector)?.addEventListener("input", renderWalletDetail);
+        document.querySelector(selector)?.addEventListener("change", renderWalletDetail);
+      });
       document.querySelector("#vehicleExpenseVehicleFilter").addEventListener("change", renderVehicleExpenses);
       document.querySelector("#vehicleExpenseMonthFilter").addEventListener("change", renderVehicleExpenses);
       document.querySelector("#vehicleExpenseTypeFilter").addEventListener("change", renderVehicleExpenses);

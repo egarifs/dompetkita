@@ -353,6 +353,33 @@
           </section>
         </section>
 
+        <section class="view" id="walletDetailView">
+          <section class="wallet-detail-hero panel">
+            <div>
+              <span class="stat-label" id="walletDetailType">Dompet</span>
+              <h3 id="walletDetailName">Detail Dompet</h3>
+              <p id="walletDetailInitial">Saldo awal Rp0</p>
+            </div>
+            <div class="wallet-detail-balance">
+              <span class="stat-label">Saldo Saat Ini</span>
+              <strong id="walletDetailBalance">Rp0</strong>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="segmented-tabs wallet-detail-tabs" aria-label="Tab detail dompet">
+              <button class="segment active" type="button">Mutasi</button>
+            </div>
+            <div class="wallet-mutation-filters">
+              <input id="walletMutationSearch" type="search" placeholder="Cari kategori atau tipe" />
+              <input id="walletMutationMonth" type="month" aria-label="Filter bulan mutasi" />
+              <input id="walletMutationStartDate" type="date" aria-label="Tanggal mulai" />
+              <input id="walletMutationEndDate" type="date" aria-label="Tanggal akhir" />
+            </div>
+            <div class="wallet-mutation-list" id="walletMutationList"></div>
+          </section>
+        </section>
+
         <section class="view" id="vehiclesView">
           <div class="vehicle-layout">
             <section class="panel">
