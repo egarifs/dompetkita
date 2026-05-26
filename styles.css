@@ -1146,6 +1146,29 @@
         font-weight: 800;
       }
 
+      .debt-payment-summary,
+      .debt-payment-history {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 10px;
+      }
+
+      .debt-payment-summary span,
+      .debt-payment-history span {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--surface-container-low);
+        color: var(--on-surface-variant);
+        padding: 6px 10px;
+        font-size: 0.78rem;
+      }
+
+      .debt-payment-history strong {
+        width: 100%;
+        font-size: 0.82rem;
+      }
+
       .progress {
         height: 8px;
         border-radius: 999px;
@@ -1727,6 +1750,13 @@
 
       .form-status.error {
         color: var(--expense);
+        font-weight: 800;
+      }
+
+      .field-helper {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.82rem;
         font-weight: 800;
       }
 

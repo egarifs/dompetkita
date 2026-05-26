@@ -31,6 +31,8 @@ window.AppState = {
 
   transactionSourceId(item = {}) {
     if (item.sourceId) return item.sourceId;
+    if (item.debtId) return item.debtId;
+    if (item.receivableId) return item.receivableId;
     if (item.vehicleRecordId) return item.vehicleRecordId;
     if (item.recurringId) return item.recurringId;
     return "";
@@ -100,10 +102,13 @@ window.AppState = {
     const sourceModule = window.AppState.transactionSourceModule(item);
     const sourceId = window.AppState.transactionSourceId(item);
     const timestamp = item.createdAt || (item.date ? `${item.date}T00:00:00.000Z` : new Date().toISOString());
+    const transactionType = item.transactionType || item.debtPaymentType || item.type || "expense";
+    const type = transactionType === "debt_payment" ? "expense" : transactionType === "receivable_payment" ? "income" : item.type || "expense";
     return {
       ...item,
       id: item.id,
-      type: item.type || "expense",
+      type,
+      transactionType,
       date: item.date || "",
       category: item.category || "Lainnya",
       description: item.description || "",
@@ -112,8 +117,34 @@ window.AppState = {
       sourceModule,
       sourceId,
       walletId: item.walletId || item.dompetId || "",
+      debtId: item.debtId || "",
+      receivableId: item.receivableId || "",
+      debtPaymentType: item.debtPaymentType || (transactionType === "debt_payment" || transactionType === "receivable_payment" ? transactionType : ""),
       createdAt: timestamp,
       updatedAt: item.updatedAt || timestamp,
+    };
+  },
+
+  normalizeDebt(item = {}) {
+    const totalAmount = Number(item.totalAmount ?? item.amount ?? 0);
+    const paidAmount = Number(item.paidAmount || 0);
+    const remainingAmount = Math.max(0, Number(item.remainingAmount ?? (totalAmount - paidAmount)));
+    const normalizedStatus = item.status === "paid" ? "paid" : paidAmount > 0 ? "partial" : item.status === "partial" ? "partial" : "unpaid";
+    return {
+      ...item,
+      id: item.id,
+      kind: item.kind || "payable",
+      status: remainingAmount <= 0 ? "paid" : normalizedStatus === "paid" ? "unpaid" : normalizedStatus,
+      person: item.person || "",
+      date: item.date || "",
+      dueDate: item.dueDate || "",
+      amount: totalAmount,
+      totalAmount,
+      paidAmount,
+      remainingAmount,
+      paymentHistory: Array.isArray(item.paymentHistory) ? item.paymentHistory : [],
+      relatedTransactionIds: Array.isArray(item.relatedTransactionIds) ? item.relatedTransactionIds : [],
+      description: item.description || "",
     };
   },
 
@@ -226,7 +257,7 @@ window.AppState = {
       localChangedAt: data.localChangedAt || "",
       transactions: window.AppState.withoutDeleted(Array.isArray(data.transactions) ? data.transactions : [], deleted.transactions).map(window.AppState.normalizeTransaction),
       budgets: Array.isArray(data.budgets) ? data.budgets : [],
-      debts: window.AppState.withoutDeleted(Array.isArray(data.debts) ? data.debts : [], deleted.debts),
+      debts: window.AppState.withoutDeleted(Array.isArray(data.debts) ? data.debts : [], deleted.debts).map(window.AppState.normalizeDebt),
       savings: window.AppState.withoutDeleted(Array.isArray(data.savings) ? data.savings : [], deleted.savings).map(window.AppState.normalizeSavingsGoal),
       billReminders: window.AppState.withoutDeleted(Array.isArray(data.billReminders) ? data.billReminders : [], deleted.billReminders),
       recurring: window.AppState.withoutDeleted(Array.isArray(data.recurring) ? data.recurring : [], deleted.recurring),

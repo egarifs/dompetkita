@@ -930,6 +930,58 @@
         });
       }
 
+      function debtPaymentTransactionTypeForDebt(debt) {
+        return debt?.kind === "receivable" ? "receivable_payment" : "debt_payment";
+      }
+
+      function transactionPaymentDebtId(transaction) {
+        return transaction.debtId || transaction.receivableId || "";
+      }
+
+      function isDebtPaymentTransaction(transaction) {
+        return transaction?.transactionType === "debt_payment" || transaction?.transactionType === "receivable_payment" || transaction?.debtPaymentType === "debt_payment" || transaction?.debtPaymentType === "receivable_payment";
+      }
+
+      function debtPaymentTransactions(debtId, options = {}) {
+        return state.transactions.filter((transaction) => {
+          if (!isDebtPaymentTransaction(transaction)) return false;
+          if (transactionPaymentDebtId(transaction) !== debtId) return false;
+          if (options.excludeTransactionId && transaction.id === options.excludeTransactionId) return false;
+          return true;
+        });
+      }
+
+      function debtPaidAmount(debt, options = {}) {
+        return debtPaymentTransactions(debt.id, options).reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+      }
+
+      function debtRemainingAmount(debt, options = {}) {
+        return Math.max(0, Number(debt?.totalAmount ?? debt?.amount ?? 0) - debtPaidAmount(debt, options));
+      }
+
+      function syncDebtPaymentState() {
+        state.debts.forEach((debt) => {
+          const totalAmount = Number(debt.totalAmount ?? debt.amount ?? 0);
+          const payments = debtPaymentTransactions(debt.id);
+          const keepManualPaid = !payments.length && debt.status === "paid" && Number(debt.paidAmount || 0) >= totalAmount && !(debt.relatedTransactionIds || []).length;
+          const paidAmount = payments.reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+          const effectivePaidAmount = keepManualPaid ? totalAmount : paidAmount;
+          const remainingAmount = Math.max(0, totalAmount - effectivePaidAmount);
+          debt.amount = totalAmount;
+          debt.totalAmount = totalAmount;
+          debt.paidAmount = effectivePaidAmount;
+          debt.remainingAmount = remainingAmount;
+          debt.relatedTransactionIds = payments.map((transaction) => transaction.id);
+          debt.paymentHistory = payments.map((transaction) => ({
+            transactionId: transaction.id,
+            date: transaction.date,
+            amount: Number(transaction.amount || 0),
+            walletId: transaction.walletId || "",
+          }));
+          debt.status = remainingAmount <= 0 && totalAmount > 0 ? "paid" : effectivePaidAmount > 0 ? "partial" : "unpaid";
+        });
+      }
+
       function vehicleName(vehicleId) {
         const vehicle = state.vehicles.find((item) => item.id === vehicleId);
         return vehicle ? vehicle.name : "Kendaraan";
@@ -938,6 +990,13 @@
       function ensureVehicleCategory() {
         if (!state.categories.includes("Kendaraan")) {
           state.categories.push("Kendaraan");
+          categories = state.categories;
+        }
+      }
+
+      function ensureDebtCategory() {
+        if (!state.categories.includes("Hutang Piutang")) {
+          state.categories.push("Hutang Piutang");
           categories = state.categories;
         }
       }
@@ -1079,8 +1138,8 @@
         const walletAssets = state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0);
         const receivables = activeDebts("receivable");
         const liabilities = activeDebts("payable");
-        const receivableAssets = receivables.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-        const totalLiabilities = liabilities.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        const receivableAssets = receivables.reduce((sum, item) => sum + Number(item.remainingAmount ?? item.amount ?? 0), 0);
+        const totalLiabilities = liabilities.reduce((sum, item) => sum + Number(item.remainingAmount ?? item.amount ?? 0), 0);
         const totalAssets = walletAssets + receivableAssets;
         const netWorth = totalAssets - totalLiabilities;
         const savingsTotal = state.savings.reduce((sum, goal) => sum + savingsBalance(goal), 0);
@@ -1137,10 +1196,10 @@
 
         const assetRows = [
           ...state.wallets.map((wallet) => balanceSheetRow(wallet.name, wallet.type || "Dompet", Number(wallet.currentBalance || 0), Number(wallet.currentBalance || 0) < 0 ? "expense-text" : "income-text")),
-          ...summary.receivables.map((item) => balanceSheetRow(`Piutang - ${item.person || "Tanpa nama"}`, item.description || "Piutang aktif", Number(item.amount || 0), "income-text")),
+          ...summary.receivables.map((item) => balanceSheetRow(`Piutang - ${item.person || "Tanpa nama"}`, `${item.description || "Piutang aktif"} - sisa ${money(item.remainingAmount ?? item.amount ?? 0)}`, Number(item.remainingAmount ?? item.amount ?? 0), "income-text")),
           ...state.savings.map((goal) => balanceSheetRow(`Tabungan - ${goal.title || goal.category}`, "Rincian, tidak dihitung ganda sebagai aset", savingsBalance(goal), "income-text")),
         ];
-        const liabilityRows = summary.liabilities.map((item) => balanceSheetRow(`Hutang - ${item.person || "Tanpa nama"}`, item.description || "Hutang aktif", Number(item.amount || 0), "expense-text"));
+        const liabilityRows = summary.liabilities.map((item) => balanceSheetRow(`Hutang - ${item.person || "Tanpa nama"}`, `${item.description || "Hutang aktif"} - sisa ${money(item.remainingAmount ?? item.amount ?? 0)}`, Number(item.remainingAmount ?? item.amount ?? 0), "expense-text"));
 
         document.querySelector("#assetBreakdownList").innerHTML = assetRows.length
           ? assetRows.join("")
@@ -1188,8 +1247,8 @@
         const currentIncome = sumTransactions(currentItems, "income");
         const budgetTotal = currentBudgetTotal();
         const remaining = budgetTotal - currentExpense;
-        const unpaidReceivable = state.debts.filter((item) => item.kind === "receivable" && item.status === "unpaid").reduce((sum, item) => sum + Number(item.amount), 0);
-        const unpaidPayable = state.debts.filter((item) => item.kind === "payable" && item.status === "unpaid").reduce((sum, item) => sum + Number(item.amount), 0);
+        const unpaidReceivable = activeDebts("receivable").reduce((sum, item) => sum + Number(item.remainingAmount ?? item.amount ?? 0), 0);
+        const unpaidPayable = activeDebts("payable").reduce((sum, item) => sum + Number(item.remainingAmount ?? item.amount ?? 0), 0);
 
         renderDashboardGreeting();
         randomizeTotalBalanceGradient();
@@ -1227,8 +1286,8 @@
         const currentIncome = sumTransactions(currentItems, "income");
         const budgetTotal = currentBudgetTotal();
         const remaining = budgetTotal - currentExpense;
-        const unpaidReceivable = state.debts.filter((item) => item.kind === "receivable" && item.status === "unpaid").reduce((sum, item) => sum + Number(item.amount), 0);
-        const unpaidPayable = state.debts.filter((item) => item.kind === "payable" && item.status === "unpaid").reduce((sum, item) => sum + Number(item.amount), 0);
+        const unpaidReceivable = activeDebts("receivable").reduce((sum, item) => sum + Number(item.remainingAmount ?? item.amount ?? 0), 0);
+        const unpaidPayable = activeDebts("payable").reduce((sum, item) => sum + Number(item.remainingAmount ?? item.amount ?? 0), 0);
 
         renderDashboardGreeting();
         randomizeTotalBalanceGradient();
@@ -1377,6 +1436,12 @@
         }).format(date);
       }
 
+      function transactionTypeLabel(item) {
+        if (item.transactionType === "debt_payment" || item.debtPaymentType === "debt_payment") return "Bayar Hutang";
+        if (item.transactionType === "receivable_payment" || item.debtPaymentType === "receivable_payment") return "Terima Piutang";
+        return item.type === "income" ? "Pemasukan" : "Pengeluaran";
+      }
+
       function quickRangeMatch(item, range) {
         if (range === "all") return true;
         const itemDate = new Date(`${item.date}T00:00:00`);
@@ -1445,7 +1510,7 @@
                   <td><span class="pill">${escapeHtml(item.category)}</span></td>
                   <td>${escapeHtml(walletName(item.walletId))}</td>
                   <td>${escapeHtml(item.description)}</td>
-                  <td><span class="pill ${item.type}">${item.type === "income" ? "Pemasukan" : "Pengeluaran"}</span></td>
+                  <td><span class="pill ${item.type}">${escapeHtml(transactionTypeLabel(item))}</span></td>
                   <td class="amount ${item.type}">${item.type === "income" ? "+" : "-"} ${money(item.amount)}</td>
                   <td>
                     <button class="icon-button" type="button" title="Edit transaksi" data-edit-transaction="${item.id}">
@@ -1494,7 +1559,7 @@
                   <tr class="transaction-row ${item.type}" data-open-transaction-detail="${item.id}">
                     <td>${escapeHtml(transactionDateLabel(item.date))}</td>
                     <td><span class="pill">${escapeHtml(item.category || "Lainnya")}</span></td>
-                    <td><span class="pill ${item.type}">${item.type === "income" ? "Credit" : "Debit"}</span></td>
+                    <td><span class="pill ${item.type}">${escapeHtml(transactionTypeLabel(item))}</span></td>
                     <td class="amount ${item.type}">${item.type === "income" ? "+" : "-"} ${money(item.amount)}</td>
                   </tr>
                 `).join("")}
@@ -1575,7 +1640,7 @@
                 <span class="stat-label">Nominal</span>
                 <strong class="amount ${item.type}">${item.type === "income" ? "+" : "-"} ${money(item.amount)}</strong>
               </div>
-              <span class="pill ${item.type}">${item.type === "income" ? "Pemasukan" : "Pengeluaran"}</span>
+              <span class="pill ${item.type}">${escapeHtml(transactionTypeLabel(item))}</span>
             </section>
             <div class="compact-list transaction-detail-meta">
               <span class="pill">${escapeHtml(transactionDateLabel(item.date))}</span>
@@ -2287,13 +2352,19 @@
             <article class="debt-row">
               <div class="debt-row-top">
                 <strong>${escapeHtml(item.person)} - ${item.kind === "receivable" ? "Piutang" : "Hutang"}</strong>
-                <span>${money(item.amount)}</span>
+                <span>${money(item.remainingAmount ?? item.amount)}</span>
               </div>
               <p style="margin-top: 7px; color: var(--muted); font-size: .9rem">${escapeHtml(item.description)}</p>
+              <div class="debt-payment-summary">
+                <span>Total ${money(item.totalAmount ?? item.amount)}</span>
+                <span>${item.kind === "receivable" ? "Sudah diterima" : "Sudah dibayar"} ${money(item.paidAmount || 0)}</span>
+                <span>Sisa ${money(item.remainingAmount ?? item.amount)}</span>
+              </div>
+              ${debtPaymentHistoryHtml(item)}
               <div class="tags" style="display:flex; flex-wrap:wrap; gap:7px; margin-top:10px">
                 <span class="pill debt">Tanggal ${escapeHtml(item.date)}</span>
                 <span class="pill debt">Jatuh tempo ${escapeHtml(item.dueDate || "-")}</span>
-                <span class="pill ${item.status === "paid" ? "income" : "expense"}">${item.status === "paid" ? "Lunas" : "Belum lunas"}</span>
+                <span class="pill ${item.status === "partial" ? "debt" : item.status === "paid" ? "income" : "expense"}">${item.status === "partial" ? "Sebagian" : item.status === "paid" ? "Lunas" : "Belum lunas"}</span>
                 <button class="icon-button" type="button" title="Ubah status" data-toggle-debt="${item.id}">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -2307,6 +2378,20 @@
               </div>
             </article>
           `).join("");
+      }
+
+      function debtPaymentHistoryHtml(debt) {
+        const payments = debtPaymentTransactions(debt.id).sort((a, b) => b.date.localeCompare(a.date));
+        if (!payments.length) return "";
+        const title = debt.kind === "receivable" ? "Riwayat Penerimaan" : "Riwayat Pembayaran";
+        return `
+          <div class="debt-payment-history">
+            <strong>${title}</strong>
+            ${payments.map((payment) => `
+              <span>${escapeHtml(transactionDateLabel(payment.date))} - ${money(payment.amount)} - ${escapeHtml(walletName(payment.walletId))}</span>
+            `).join("")}
+          </div>
+        `;
       }
 
       function renderMonthOptions() {
@@ -2504,8 +2589,10 @@
         categories = state.categories?.length ? state.categories : [...defaultCategories];
         state.categories = categories;
         ensureVehicleCategory();
+        ensureDebtCategory();
         ensureTransactionWallets();
         recalculateWalletBalances();
+        syncDebtPaymentState();
         renderDashboardMenuOrder();
         applyDarkMode();
         saveState();
@@ -2584,10 +2671,19 @@
           showModal();
           return;
         }
+        ensureDebtCategory();
         document.querySelector("#modalTitle").textContent = editingTransaction ? "Edit Transaksi" : "Tambah Transaksi";
-        const selectedType = editingTransaction?.type || "expense";
+        const selectedType = editingTransaction?.transactionType || editingTransaction?.debtPaymentType || editingTransaction?.type || "expense";
         const selectedCategory = editingTransaction?.category || categories[0] || "Lainnya";
         const selectedWallet = editingTransaction?.walletId || defaultWalletId();
+        const payableOptions = state.debts
+          .filter((debt) => debt.kind === "payable" && (debt.status !== "paid" || debt.id === editingTransaction?.debtId))
+          .map((debt) => `<option value="${debt.id}" ${debt.id === editingTransaction?.debtId ? "selected" : ""}>${escapeHtml(debt.person || "Hutang")} - sisa ${money(debtRemainingAmount(debt, { excludeTransactionId: editingTransaction?.id }) + (debt.id === editingTransaction?.debtId ? Number(editingTransaction?.amount || 0) : 0))}</option>`)
+          .join("");
+        const receivableOptions = state.debts
+          .filter((debt) => debt.kind === "receivable" && (debt.status !== "paid" || debt.id === editingTransaction?.receivableId))
+          .map((debt) => `<option value="${debt.id}" ${debt.id === editingTransaction?.receivableId ? "selected" : ""}>${escapeHtml(debt.person || "Piutang")} - sisa ${money(debtRemainingAmount(debt, { excludeTransactionId: editingTransaction?.id }) + (debt.id === editingTransaction?.receivableId ? Number(editingTransaction?.amount || 0) : 0))}</option>`)
+          .join("");
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="transactionForm">
             <div class="form-grid">
@@ -2596,6 +2692,8 @@
                 <select id="transactionType" required>
                   <option value="expense" ${selectedType === "expense" ? "selected" : ""}>Pengeluaran</option>
                   <option value="income" ${selectedType === "income" ? "selected" : ""}>Pemasukan</option>
+                  <option value="debt_payment" ${selectedType === "debt_payment" ? "selected" : ""}>Bayar Hutang</option>
+                  <option value="receivable_payment" ${selectedType === "receivable_payment" ? "selected" : ""}>Terima Piutang</option>
                 </select>
               </div>
               <div class="field">
@@ -2623,6 +2721,22 @@
                 ${walletOptions(selectedWallet)}
               </select>
             </div>
+            <div class="field hidden" id="debtPaymentField">
+              <label for="transactionDebt">Hutang yang dibayar</label>
+              <select id="transactionDebt">
+                <option value="">Pilih hutang aktif</option>
+                ${payableOptions}
+              </select>
+              <p class="field-helper" id="debtPaymentHelper">Pilih hutang untuk melihat sisa.</p>
+            </div>
+            <div class="field hidden" id="receivablePaymentField">
+              <label for="transactionReceivable">Piutang yang diterima</label>
+              <select id="transactionReceivable">
+                <option value="">Pilih piutang aktif</option>
+                ${receivableOptions}
+              </select>
+              <p class="field-helper" id="receivablePaymentHelper">Pilih piutang untuk melihat sisa.</p>
+            </div>
             <div class="field">
               <label for="transactionDescription">Deskripsi (opsional)</label>
               <textarea id="transactionDescription" placeholder="Contoh: belanja mingguan">${escapeHtml(editingTransaction?.description || "")}</textarea>
@@ -2640,6 +2754,39 @@
         `;
         showModal();
         attachRupiahInput("#transactionAmount");
+        const typeInput = document.querySelector("#transactionType");
+        const categoryInput = document.querySelector("#transactionCategory");
+        const descriptionInput = document.querySelector("#transactionDescription");
+        const debtInput = document.querySelector("#transactionDebt");
+        const receivableInput = document.querySelector("#transactionReceivable");
+        const paymentRemainingFor = (debtId, excludeCurrent = true) => {
+          const debt = state.debts.find((item) => item.id === debtId);
+          if (!debt) return 0;
+          return debtRemainingAmount(debt, { excludeTransactionId: excludeCurrent ? editingTransaction?.id : "" });
+        };
+        const updatePaymentFields = () => {
+          const selected = typeInput.value;
+          const isDebtPayment = selected === "debt_payment";
+          const isReceivablePayment = selected === "receivable_payment";
+          document.querySelector("#debtPaymentField").classList.toggle("hidden", !isDebtPayment);
+          document.querySelector("#receivablePaymentField").classList.toggle("hidden", !isReceivablePayment);
+          categoryInput.disabled = isDebtPayment || isReceivablePayment;
+          if (isDebtPayment) {
+            categoryInput.value = categories.includes("Hutang Piutang") ? "Hutang Piutang" : categoryInput.value;
+            const debt = state.debts.find((item) => item.id === debtInput.value);
+            document.querySelector("#debtPaymentHelper").textContent = debt ? `Sisa hutang: ${money(paymentRemainingFor(debt.id))}` : "Pilih hutang untuk melihat sisa.";
+            if (!descriptionInput.value.trim() && debt) descriptionInput.value = `Bayar hutang ${debt.person || ""}`.trim();
+          } else if (isReceivablePayment) {
+            categoryInput.value = categories.includes("Hutang Piutang") ? "Hutang Piutang" : categoryInput.value;
+            const debt = state.debts.find((item) => item.id === receivableInput.value);
+            document.querySelector("#receivablePaymentHelper").textContent = debt ? `Sisa piutang: ${money(paymentRemainingFor(debt.id))}` : "Pilih piutang untuk melihat sisa.";
+            if (!descriptionInput.value.trim() && debt) descriptionInput.value = `Terima piutang ${debt.person || ""}`.trim();
+          }
+        };
+        typeInput.addEventListener("change", updatePaymentFields);
+        debtInput.addEventListener("change", updatePaymentFields);
+        receivableInput.addEventListener("change", updatePaymentFields);
+        updatePaymentFields();
         document.querySelector("#transactionForm").addEventListener("submit", async (event) => {
           event.preventDefault();
           if (!editingTransaction && isGuest() && guestTransactionAdds >= 3) {
@@ -2656,16 +2803,25 @@
           submitButton.textContent = "Menyimpan...";
           status.className = "form-status hidden";
           status.textContent = "";
+          const selectedTransactionType = document.querySelector("#transactionType").value;
+          const isDebtPayment = selectedTransactionType === "debt_payment";
+          const isReceivablePayment = selectedTransactionType === "receivable_payment";
+          const relatedDebtId = isDebtPayment ? document.querySelector("#transactionDebt").value : isReceivablePayment ? document.querySelector("#transactionReceivable").value : "";
+          const relatedDebt = relatedDebtId ? state.debts.find((debt) => debt.id === relatedDebtId) : null;
           const values = {
-            type: document.querySelector("#transactionType").value,
+            type: isDebtPayment ? "expense" : isReceivablePayment ? "income" : selectedTransactionType,
+            transactionType: selectedTransactionType,
             date: document.querySelector("#transactionDate").value,
-            category: document.querySelector("#transactionCategory").value,
+            category: isDebtPayment || isReceivablePayment ? "Hutang Piutang" : document.querySelector("#transactionCategory").value,
             amount: parseFormattedNumber(document.querySelector("#transactionAmount").value),
             description: document.querySelector("#transactionDescription").value.trim(),
             walletId: document.querySelector("#transactionWallet").value,
-            sourceModule: editingTransaction?.sourceModule || "manual",
-            sourceId: editingTransaction?.sourceId || "",
-            subcategory: editingTransaction?.subcategory || "",
+            sourceModule: isDebtPayment || isReceivablePayment ? "debts" : editingTransaction?.sourceModule || "manual",
+            sourceId: relatedDebtId || editingTransaction?.sourceId || "",
+            subcategory: isDebtPayment ? "Bayar Hutang" : isReceivablePayment ? "Terima Piutang" : editingTransaction?.subcategory || "",
+            debtId: isDebtPayment ? relatedDebtId : "",
+            receivableId: isReceivablePayment ? relatedDebtId : "",
+            debtPaymentType: isDebtPayment ? "debt_payment" : isReceivablePayment ? "receivable_payment" : "",
           };
           if (!values.walletId) {
             alert("Dompet wajib dipilih.");
@@ -2673,11 +2829,33 @@
             submitButton.textContent = editingTransaction ? "Simpan Perubahan" : "Simpan Transaksi";
             return;
           }
+          if (values.amount <= 0) {
+            alert("Nominal pembayaran wajib lebih dari 0.");
+            submitButton.disabled = false;
+            submitButton.textContent = editingTransaction ? "Simpan Perubahan" : "Simpan Transaksi";
+            return;
+          }
+          if ((isDebtPayment || isReceivablePayment) && !relatedDebt) {
+            alert(isDebtPayment ? "Hutang aktif wajib dipilih." : "Piutang aktif wajib dipilih.");
+            submitButton.disabled = false;
+            submitButton.textContent = editingTransaction ? "Simpan Perubahan" : "Simpan Transaksi";
+            return;
+          }
+          if (relatedDebt) {
+            const remaining = debtRemainingAmount(relatedDebt, { excludeTransactionId: editingTransaction?.id });
+            if (values.amount > remaining) {
+              alert(isDebtPayment ? "Nominal pembayaran tidak boleh melebihi sisa hutang." : "Nominal penerimaan tidak boleh melebihi sisa piutang.");
+              submitButton.disabled = false;
+              submitButton.textContent = editingTransaction ? "Simpan Perubahan" : "Simpan Transaksi";
+              return;
+            }
+          }
           if (editingTransaction) {
             updateTransactionRecord(editingTransaction, values);
           } else {
             state.transactions.push(transactionRecord(values.type, values.date, values.category, values.description, values.amount, values));
           }
+          syncDebtPaymentState();
           if (!editingTransaction && isGuest()) guestTransactionAdds += 1;
           markDataChanged();
           saveState();
@@ -2691,6 +2869,7 @@
             document.querySelector("#transactionDate").value = todayDate();
             document.querySelector("#transactionAmount").value = "";
             document.querySelector("#transactionDescription").value = "";
+            updatePaymentFields();
             status.className = saved || !isCloudSyncAllowed() ? "form-status success" : "form-status error";
             status.textContent = saved || !isCloudSyncAllowed()
               ? "Transaksi berhasil disimpan. Silakan tambah transaksi berikutnya."
@@ -2778,8 +2957,14 @@
             date: document.querySelector("#debtDate").value,
             dueDate: document.querySelector("#debtDueDate").value,
             amount: Number(document.querySelector("#debtAmount").value),
+            totalAmount: Number(document.querySelector("#debtAmount").value),
+            paidAmount: document.querySelector("#debtStatus").value === "paid" ? Number(document.querySelector("#debtAmount").value) : 0,
+            remainingAmount: document.querySelector("#debtStatus").value === "paid" ? 0 : Number(document.querySelector("#debtAmount").value),
+            paymentHistory: [],
+            relatedTransactionIds: [],
             description: document.querySelector("#debtDescription").value.trim(),
           });
+          syncDebtPaymentState();
           closeModal();
           await persistChanges("Hutang/piutang tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
           openView("budgets");
@@ -2799,9 +2984,15 @@
                 <article class="debt-row">
                   <div class="debt-row-top">
                     <strong>${escapeHtml(item.person)} - ${item.kind === "receivable" ? "Piutang" : "Hutang"}</strong>
-                    <span>${money(item.amount)}</span>
+                    <span>${money(item.totalAmount ?? item.amount)}</span>
                   </div>
                   <p style="margin-top: 7px; color: var(--muted); font-size: .9rem">${escapeHtml(item.description)}</p>
+                  <div class="debt-payment-summary">
+                    <span>Total ${money(item.totalAmount ?? item.amount)}</span>
+                    <span>${item.kind === "receivable" ? "Sudah diterima" : "Sudah dibayar"} ${money(item.paidAmount || 0)}</span>
+                    <span>Sisa ${money(item.remainingAmount || 0)}</span>
+                  </div>
+                  ${debtPaymentHistoryHtml(item)}
                   <div class="tags" style="display:flex; flex-wrap:wrap; gap:7px; margin-top:10px">
                     <span class="pill debt">Tanggal ${escapeHtml(item.date)}</span>
                     <span class="pill debt">Jatuh tempo ${escapeHtml(item.dueDate || "-")}</span>
@@ -4897,7 +5088,17 @@
           if (!requirePrimaryAccount()) return;
           const target = state.debts.find((item) => item.id === debtButton.dataset.toggleDebt);
           if (target) {
-            target.status = target.status === "paid" ? "unpaid" : "paid";
+            if (debtPaymentTransactions(target.id).length) {
+              alert("Status hutang/piutang ini mengikuti riwayat pembayaran transaksi.");
+              return;
+            }
+            const totalAmount = Number(target.totalAmount ?? target.amount ?? 0);
+            const nextPaid = target.status !== "paid";
+            target.status = nextPaid ? "paid" : "unpaid";
+            target.paidAmount = nextPaid ? totalAmount : 0;
+            target.remainingAmount = nextPaid ? 0 : totalAmount;
+            target.relatedTransactionIds = nextPaid ? [] : target.relatedTransactionIds || [];
+            target.paymentHistory = nextPaid ? [] : target.paymentHistory || [];
             closeModal();
             await persistChanges();
           }
@@ -4909,15 +5110,21 @@
           const target = state.debts.find((item) => item.id === debtDeleteButton.dataset.deleteDebt);
           if (!target) return;
           const snapshot = cloneData(target);
+          const relatedTransactions = cloneData(debtPaymentTransactions(target.id));
           await deleteWithUndo({
-            confirmMessage: `Hapus catatan "${target.person}"?`,
+            confirmMessage: `Hapus catatan "${target.person}"${relatedTransactions.length ? " beserta transaksi pembayarannya" : ""}?`,
             deleteMessage: "Hutang/piutang dihapus.",
             failedMessage: "Hutang/piutang sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.",
             deleteFn: () => {
               markDeleted("debts", target.id);
+              relatedTransactions.forEach((transaction) => markDeleted("transactions", transaction.id));
               state.debts = state.debts.filter((item) => item.id !== target.id);
+              state.transactions = state.transactions.filter((transaction) => transactionPaymentDebtId(transaction) !== target.id);
             },
-            undoFn: () => restoreItems("debts", snapshot),
+            undoFn: () => {
+              restoreItems("debts", snapshot);
+              restoreItems("transactions", relatedTransactions);
+            },
             afterDelete: closeModal,
           });
         }

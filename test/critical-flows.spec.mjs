@@ -95,6 +95,17 @@ function recalculateWalletBalances(state) {
   });
 }
 
+function syncDebtPaymentState(state) {
+  state.debts.forEach((debt) => {
+    const payments = state.transactions.filter((transaction) => (transaction.debtId || transaction.receivableId) === debt.id);
+    const paidAmount = payments.reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+    debt.totalAmount = Number(debt.totalAmount ?? debt.amount ?? 0);
+    debt.paidAmount = paidAmount;
+    debt.remainingAmount = Math.max(0, debt.totalAmount - paidAmount);
+    debt.status = debt.remainingAmount <= 0 ? "paid" : paidAmount > 0 ? "partial" : "unpaid";
+  });
+}
+
 const out = [];
 
 const registration = registerLocal({
@@ -150,6 +161,46 @@ assert(!normalizedAfterDelete.transactions.some((item) => item.id === "transacti
 assert(normalizedAfterDelete.deleted.transactions.includes("transaction-1"), "Hapus transaksi tidak menyimpan deletion marker.");
 assert(bankWallet.currentBalance === Number(bankWallet.initialBalance || 0) + 200000, "Saldo dompet tidak kembali benar setelah transaksi dihapus.");
 out.push("hapus transaksi:ok");
+
+const payableDebt = window.AppState.normalizeDebt({ id: "debt-1", kind: "payable", person: "Koperasi", amount: 1000000, status: "unpaid" });
+state.debts.push(payableDebt);
+const debtPayment = window.AppState.tx("debt-payment-1", "expense", "2026-05-25", "Hutang Piutang", "Bayar hutang koperasi", 300000, {
+  walletId: cashWallet.id,
+  transactionType: "debt_payment",
+  debtPaymentType: "debt_payment",
+  debtId: payableDebt.id,
+  sourceModule: "debts",
+  sourceId: payableDebt.id,
+});
+state.transactions.push(debtPayment);
+syncDebtPaymentState(state);
+recalculateWalletBalances(state);
+assert(payableDebt.paidAmount === 300000 && payableDebt.remainingAmount === 700000 && payableDebt.status === "partial", "Pembayaran hutang sebagian tidak menghitung sisa dengan benar.");
+state.transactions.push(window.AppState.tx("debt-payment-2", "expense", "2026-05-25", "Hutang Piutang", "Lunasi hutang koperasi", 700000, {
+  walletId: cashWallet.id,
+  transactionType: "debt_payment",
+  debtPaymentType: "debt_payment",
+  debtId: payableDebt.id,
+  sourceModule: "debts",
+  sourceId: payableDebt.id,
+}));
+syncDebtPaymentState(state);
+assert(payableDebt.remainingAmount === 0 && payableDebt.status === "paid", "Pelunasan hutang tidak mengubah status menjadi lunas.");
+
+const receivableDebt = window.AppState.normalizeDebt({ id: "receivable-1", kind: "receivable", person: "Teman", amount: 500000, status: "unpaid" });
+state.debts.push(receivableDebt);
+state.transactions.push(window.AppState.tx("receivable-payment-1", "income", "2026-05-25", "Hutang Piutang", "Terima piutang", 200000, {
+  walletId: bankWallet.id,
+  transactionType: "receivable_payment",
+  debtPaymentType: "receivable_payment",
+  receivableId: receivableDebt.id,
+  sourceModule: "debts",
+  sourceId: receivableDebt.id,
+}));
+syncDebtPaymentState(state);
+recalculateWalletBalances(state);
+assert(receivableDebt.paidAmount === 200000 && receivableDebt.remainingAmount === 300000 && receivableDebt.status === "partial", "Penerimaan piutang sebagian tidak menghitung sisa dengan benar.");
+out.push("pembayaran hutang piutang:ok");
 
 const savingsGoal = window.AppState.savingsGoal("savings-1", "2026-05-25", "Dana Darurat", 10000000, "2027-05-25", [
   window.AppState.savingsEntry("saving-entry-1", "deposit", "2026-05-25", 500000, "Setoran awal"),
