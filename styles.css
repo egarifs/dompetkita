@@ -534,6 +534,11 @@
         display: block;
       }
 
+      #walletDetailView.active {
+        display: grid;
+        gap: 18px;
+      }
+
       .stats-grid {
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
