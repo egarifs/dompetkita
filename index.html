@@ -198,28 +198,16 @@
               <span class="stat-sub">Akumulasi semua dompet</span>
             </article>
 
-            <div class="stats-carousel" aria-label="Ringkasan keuangan lainnya">
-              <article class="stat-card summary-card">
-                <div class="stat-label">Pendapatan Bulan Ini</div>
-                <strong class="stat-value income-text" id="monthIncome">Rp0</strong>
-                <span class="stat-sub">Bulan ini</span>
-              </article>
-              <article class="stat-card summary-card">
-                <div class="stat-label">Pengeluaran Bulan Ini</div>
-                <strong class="stat-value expense-text" id="monthExpense">Rp0</strong>
-                <span class="stat-sub" id="expenseTrend">Belum ada pembanding</span>
-              </article>
-              <article class="stat-card summary-card">
-                <div class="stat-label">Sisa Anggaran</div>
-                <strong class="stat-value" id="remainingBudget">Rp0</strong>
-                <span class="stat-sub" id="budgetStatus">Belum ada anggaran</span>
-              </article>
-              <article class="stat-card summary-card">
-                <div class="stat-label">Hutang Piutang</div>
-                <strong class="stat-value" id="debtSummary">Rp0</strong>
-                <span class="stat-sub">Bersih belum lunas</span>
-              </article>
-            </div>
+            <section class="panel">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <h3>Pengeluaran per Hari</h3>
+                  <p>Jumlah transaksi dan total pengeluaran untuk setiap tanggal.</p>
+                </div>
+              </div>
+              <div class="table-wrap" id="dailyExpenseList"></div>
+            </section>
+
             <div class="shortcut-grid" aria-label="Menu shortcut">
               <button class="shortcut-item" type="button" data-open-form="transaction"><span>+</span><strong>Tambah</strong></button>
               <button class="shortcut-item" type="button" data-view="reports"><span>↕</span><strong>Transaksi</strong></button>
@@ -531,6 +519,29 @@
         </section>
 
         <section class="view" id="analyticsView">
+          <div class="stats-carousel" aria-label="Ringkasan keuangan lainnya">
+            <article class="stat-card summary-card">
+              <div class="stat-label">Pendapatan Bulan Ini</div>
+              <strong class="stat-value income-text" id="monthIncome">Rp0</strong>
+              <span class="stat-sub">Bulan ini</span>
+            </article>
+            <article class="stat-card summary-card">
+              <div class="stat-label">Pengeluaran Bulan Ini</div>
+              <strong class="stat-value expense-text" id="monthExpense">Rp0</strong>
+              <span class="stat-sub" id="expenseTrend">Belum ada pembanding</span>
+            </article>
+            <article class="stat-card summary-card">
+              <div class="stat-label">Sisa Anggaran</div>
+              <strong class="stat-value" id="remainingBudget">Rp0</strong>
+              <span class="stat-sub" id="budgetStatus">Belum ada anggaran</span>
+            </article>
+            <article class="stat-card summary-card">
+              <div class="stat-label">Hutang Piutang</div>
+              <strong class="stat-value" id="debtSummary">Rp0</strong>
+              <span class="stat-sub">Bersih belum lunas</span>
+            </article>
+          </div>
+
           <section class="panel">
             <div class="panel-header">
               <div class="panel-title">
@@ -568,15 +579,6 @@
               <div class="report-bars" id="categoryBreakdown"></div>
             </section>
 
-            <section class="panel">
-              <div class="panel-header">
-                <div class="panel-title">
-                  <h3>Pengeluaran per Hari</h3>
-                  <p>Jumlah transaksi dan total pengeluaran untuk setiap tanggal.</p>
-                </div>
-              </div>
-              <div class="table-wrap" id="dailyExpenseList"></div>
-            </section>
           </div>
         </section>
 

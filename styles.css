@@ -628,6 +628,10 @@
         min-width: 0;
       }
 
+      #analyticsView .stats-carousel {
+        margin-bottom: 14px;
+      }
+
       .quick-actions,
       .shortcut-grid,
       .filter-strip,
