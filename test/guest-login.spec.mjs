@@ -1,6 +1,6 @@
-import { chromium } from 'playwright';
-const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage();
+import { createBrowserTest } from './helpers/browser-test.mjs';
+
+const { page, close, baseUrl } = await createBrowserTest({ disableCloud: true });
 const out = [];
 const errors = [];
 const dialogs = [];
@@ -8,7 +8,7 @@ page.on('pageerror', e => errors.push(String(e)));
 page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
 page.on('dialog', async d => { dialogs.push(d.message()); await d.accept(); });
 
-await page.goto('http://127.0.0.1:4173/index.html', { waitUntil: 'networkidle' });
+await page.goto(baseUrl, { waitUntil: 'networkidle' });
 out.push('loaded:index');
 
 await page.click('#skipSplashButton');
@@ -27,6 +27,6 @@ const role = (await page.textContent('#profileRole'))?.trim() || '';
 out.push(`profileRole:${role}`);
 
 await page.screenshot({ path: 'test/artifacts/guest-login.spec.png', fullPage: true });
-await browser.close();
+await close();
 
 console.log(JSON.stringify({ out, dialogs, errors, screenshot: 'test/artifacts/guest-login.spec.png' }, null, 2));

@@ -1,7 +1,6 @@
-import { chromium } from 'playwright';
+import { createBrowserTest } from './helpers/browser-test.mjs';
 
-const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage();
+const { page, close, baseUrl } = await createBrowserTest({ disableCloud: true });
 const out = [];
 const errors = [];
 const dialogs = [];
@@ -15,7 +14,7 @@ page.on('dialog', async (d) => {
   await d.accept();
 });
 
-await page.goto('http://127.0.0.1:4173/index.html', { waitUntil: 'networkidle' });
+await page.goto(baseUrl, { waitUntil: 'networkidle' });
 out.push('loaded:index');
 
 await page.click('#skipSplashButton');
@@ -30,9 +29,9 @@ await page.click('[data-view="account"]');
 await page.waitForSelector('#accountView.active', { timeout: 10000 });
 out.push('view:account:success');
 
-await page.click('#syncNowButton');
-await page.waitForTimeout(800);
-const syncStatus = (await page.textContent('#syncStatusText'))?.trim() || '';
+const syncDisabled = await page.locator('#syncNowButton').isDisabled();
+const syncStatus = (await page.textContent('#syncStatus'))?.trim() || '';
+out.push(`syncNowDisabled:${syncDisabled}`);
 out.push(`syncStatus:${syncStatus}`);
 
 await page.click('#logoutButton');
@@ -43,6 +42,6 @@ const appShellHidden = await page.locator('#appShell').evaluate((el) => el.class
 out.push(`appShellHidden:${appShellHidden}`);
 
 await page.screenshot({ path: 'test/artifacts/logout-sync.spec.png', fullPage: true });
-await browser.close();
+await close();
 
 console.log(JSON.stringify({ out, dialogs, errors, screenshot: 'test/artifacts/logout-sync.spec.png' }, null, 2));

@@ -1,11 +1,8 @@
-import { chromium } from 'playwright';
+import { createBrowserTest } from './helpers/browser-test.mjs';
 
-const base = 'http://127.0.0.1:4173/index.html';
 const out = [];
 const errors = [];
-
-const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage();
+const { browser, page, baseUrl, close } = await createBrowserTest({ disableCloud: true });
 
 page.on('pageerror', e => errors.push(`pageerror:${String(e)}`));
 page.on('console', msg => {
@@ -18,8 +15,9 @@ page.on('dialog', async d => {
   await d.accept();
 });
 
+let failed = null;
 try {
-  await page.goto(base, { waitUntil: 'networkidle' });
+  await page.goto(baseUrl, { waitUntil: 'networkidle' });
   out.push('loaded:index');
 
   await page.click('#continueToLoginButton');
@@ -32,16 +30,22 @@ try {
   await page.waitForSelector('#appShell:not(.hidden)', { timeout: 10000 });
   out.push('login:admin:success');
 
-  await page.click('[data-view="account"]');
+  if (await page.locator('#modal.open').isVisible()) {
+    await page.click('#closeModalButton');
+    await page.waitForFunction(() => !document.querySelector('#modal')?.classList.contains('open'), null, { timeout: 10000 });
+    out.push('wallet-onboarding:closed');
+  }
+
+  await page.locator('.sidebar [data-view="account"]').click();
   await page.waitForSelector('#accountView.active', { timeout: 10000 });
   out.push('view:account:success');
 
   const syncBefore = (await page.textContent('#syncStatus'))?.trim() || '';
   out.push(`syncStatusBefore:${syncBefore}`);
 
-  await page.click('#syncNowButton');
-  await page.waitForTimeout(1000);
-  out.push('click:syncNow');
+  const localSyncDisabled = await page.locator('#syncNowButton').isDisabled();
+  if (!localSyncDisabled) throw new Error('Sync button should be disabled when cloud config is disabled.');
+  out.push(`syncNowDisabledLocal:${localSyncDisabled}`);
 
   await page.click('#logoutButton');
   await page.waitForSelector('#authScreen:not(.hidden)', { timeout: 10000 });
@@ -55,17 +59,19 @@ try {
   await page.waitForSelector('#accountView.active', { timeout: 10000 });
   out.push('view:account:guest');
 
-  await page.click('#syncNowButton');
-  await page.waitForTimeout(1000);
-  out.push('click:syncNow:guest');
+  const guestSyncDisabled = await page.locator('#syncNowButton').isDisabled();
+  out.push(`syncNowDisabledGuest:${guestSyncDisabled}`);
 
   const syncAfterGuest = (await page.textContent('#syncStatus'))?.trim() || '';
   out.push(`syncStatusGuest:${syncAfterGuest}`);
 } catch (e) {
+  failed = e;
   out.push(`exception:${String(e)}`);
 }
 
 await page.screenshot({ path: 'test/artifacts/auth-flow.spec.png', fullPage: true });
-await browser.close();
+await close();
 
 console.log(JSON.stringify({ out, dialogs, errors, screenshot: 'test/artifacts/auth-flow.spec.png' }, null, 2));
+if (failed) throw failed;
+if (errors.length) throw new Error(errors.join('\n'));
