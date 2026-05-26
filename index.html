@@ -781,8 +781,26 @@
                     </div>
                     <button class="button" type="button" data-open-form="pin">Atur</button>
                   </div>
+                  <div class="settings-item">
+                    <div>
+                      <strong>Anggota Keluarga</strong>
+                      <span id="familySummary">Belum ada anggota keluarga.</span>
+                    </div>
+                    <button class="button" type="button" data-open-form="familyMember">Tambah Anggota</button>
+                  </div>
                 </div>
               </details>
+
+              <section class="panel">
+                <div class="panel-header">
+                  <div class="panel-title">
+                    <h3>Anggota Keluarga</h3>
+                    <p>Berikan akses baca transaksi keluarga untuk akun child.</p>
+                  </div>
+                  <button class="button primary" type="button" data-open-form="familyMember">Tambah Anggota</button>
+                </div>
+                <div class="debt-list" id="familyMemberList"></div>
+              </section>
 
               <details class="panel account-accordion" open>
                 <summary class="panel-header accordion-summary">

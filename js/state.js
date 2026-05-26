@@ -168,6 +168,39 @@ window.AppState = {
     };
   },
 
+  familyMember(id, parentUserId, childEmail, childName, phone = "", status = "active", meta = {}) {
+    const timestamp = meta.createdAt || new Date().toISOString();
+    return {
+      id,
+      parentUserId,
+      childUserId: meta.childUserId || "",
+      childEmail: String(childEmail || "").trim().toLowerCase(),
+      childName,
+      phone,
+      role: "child",
+      status,
+      createdAt: timestamp,
+      updatedAt: meta.updatedAt || timestamp,
+    };
+  },
+
+  normalizeFamilyMember(item = {}) {
+    const timestamp = item.createdAt || new Date().toISOString();
+    return {
+      ...item,
+      id: item.id || item.childUserId || item.childEmail || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      parentUserId: item.parentUserId || "",
+      childUserId: item.childUserId || "",
+      childEmail: String(item.childEmail || item.email || "").trim().toLowerCase(),
+      childName: item.childName || item.name || "",
+      phone: item.phone || "",
+      role: "child",
+      status: item.status === "inactive" ? "inactive" : "active",
+      createdAt: timestamp,
+      updatedAt: item.updatedAt || timestamp,
+    };
+  },
+
   billReminder(id, title, category, amount, dueDate, note = "", status = "unpaid") {
     return { id, title, category, amount: Number(amount), dueDate, note, status };
   },
@@ -186,6 +219,7 @@ window.AppState = {
       vehicleOilChanges: window.AppState.deletionList(data, "vehicleOilChanges"),
       vehicleParts: window.AppState.deletionList(data, "vehicleParts"),
       vehicleTaxes: window.AppState.deletionList(data, "vehicleTaxes"),
+      familyMembers: window.AppState.deletionList(data, "familyMembers"),
     };
     return {
       syncStatus: ["synced", "pending", "failed"].includes(data.syncStatus) ? data.syncStatus : "synced",
@@ -202,6 +236,7 @@ window.AppState = {
       vehicleOilChanges: window.AppState.withoutDeleted(Array.isArray(data.vehicleOilChanges) ? data.vehicleOilChanges : [], deleted.vehicleOilChanges),
       vehicleParts: window.AppState.withoutDeleted(Array.isArray(data.vehicleParts) ? data.vehicleParts : [], deleted.vehicleParts),
       vehicleTaxes: window.AppState.withoutDeleted(Array.isArray(data.vehicleTaxes) ? data.vehicleTaxes : [], deleted.vehicleTaxes),
+      familyMembers: window.AppState.withoutDeleted(Array.isArray(data.familyMembers) ? data.familyMembers : [], deleted.familyMembers).map(window.AppState.normalizeFamilyMember),
       categories: Array.isArray(data.categories) && data.categories.length ? data.categories : [...defaultCategories],
       deleted,
       settings: {

@@ -40,6 +40,7 @@
         nextRetryAt: null,
         conflictDetected: false,
         conflictMessage: "",
+        readOnly: false,
       };
       let deferredInstallPrompt = null;
 
@@ -338,6 +339,17 @@
         return currentUser?.role === "guest";
       }
 
+      function isChildUser() {
+        return currentUser?.role === "child";
+      }
+
+      function requirePrimaryAccount() {
+        if (!requireSignedIn()) return false;
+        if (!isChildUser()) return true;
+        alert("Akses ini hanya tersedia untuk akun utama.");
+        return false;
+      }
+
       function requireAdmin() {
         if (isGuest()) return requireSignedIn();
         if (isAdmin()) return true;
@@ -398,6 +410,7 @@
 
       function saveState() {
         if (isGuest()) return;
+        if (isChildUser()) return;
         window.AppStorage.saveState(storageKey, state);
         if (hasUnsyncedChanges) queueCloudSave();
       }
@@ -410,6 +423,7 @@
 
       function setLocalSyncStatus(status) {
         state.syncStatus = status;
+        if (isChildUser()) return;
         if (!isGuest()) window.AppStorage.saveState(storageKey, state);
       }
 
@@ -429,6 +443,7 @@
         state.vehicleOilChanges = normalized.vehicleOilChanges;
         state.vehicleParts = normalized.vehicleParts;
         state.vehicleTaxes = normalized.vehicleTaxes;
+        state.familyMembers = normalized.familyMembers;
         state.categories = normalized.categories;
         state.wallets = normalized.wallets;
         state.deleted = normalized.deleted;
@@ -441,6 +456,7 @@
         const normalized = normalizeState(nextState);
         applyState(normalized);
         if (isGuest()) return;
+        if (isChildUser()) return;
         window.AppStorage.saveState(storageKey, state);
       }
 
@@ -514,6 +530,7 @@
           vehicleOilChanges: mergeDeletedIds(cloud, local, "vehicleOilChanges"),
           vehicleParts: mergeDeletedIds(cloud, local, "vehicleParts"),
           vehicleTaxes: mergeDeletedIds(cloud, local, "vehicleTaxes"),
+          familyMembers: mergeDeletedIds(cloud, local, "familyMembers"),
         };
         const budgetMap = new Map();
         cloud.budgets.forEach((item) => budgetMap.set(item.category, item));
@@ -531,6 +548,7 @@
           vehicleOilChanges: withoutDeleted(mergeById(cloud.vehicleOilChanges, local.vehicleOilChanges), deleted.vehicleOilChanges),
           vehicleParts: withoutDeleted(mergeById(cloud.vehicleParts, local.vehicleParts), deleted.vehicleParts),
           vehicleTaxes: withoutDeleted(mergeById(cloud.vehicleTaxes, local.vehicleTaxes), deleted.vehicleTaxes),
+          familyMembers: withoutDeleted(mergeById(cloud.familyMembers, local.familyMembers), deleted.familyMembers),
           categories: [...new Set([...cloud.categories, ...local.categories])],
           settings: { ...cloud.settings, ...local.settings },
           syncStatus: local.syncStatus === "pending" || local.syncStatus === "failed" ? local.syncStatus : cloud.syncStatus,
@@ -548,6 +566,7 @@
       }
 
       function queueCloudSave() {
+        if (isChildUser()) return;
         if (!isCloudSyncAllowed()) return;
         return window.AppCloud.queueCloudSave({
           cloudSync,
@@ -565,7 +584,7 @@
       }
 
       function scheduleSyncRetry() {
-        if (!hasUnsyncedChanges || !isCloudSyncAllowed() || isGuest()) return;
+        if (!hasUnsyncedChanges || !isCloudSyncAllowed() || isGuest() || isChildUser()) return;
         clearTimeout(cloudSync.retryTimer);
         const delay = Math.min(60000, 5000 * (2 ** cloudSync.retryCount));
         cloudSync.retryCount += 1;
@@ -573,7 +592,7 @@
         renderAccount();
         cloudSync.retryTimer = setTimeout(async () => {
           cloudSync.retryTimer = null;
-          if (!hasUnsyncedChanges || !isCloudSyncAllowed() || isGuest()) return;
+          if (!hasUnsyncedChanges || !isCloudSyncAllowed() || isGuest() || isChildUser()) return;
           const saved = await savePendingCloudChanges();
           if (!saved) showSnackbar("Sinkronisasi cloud masih gagal. Data tetap aman di lokal.", "error");
           renderAccount();
@@ -595,6 +614,7 @@
       }
 
       async function savePendingCloudChanges() {
+        if (isChildUser()) return true;
         if (!hasUnsyncedChanges) return true;
         if (!isCloudSyncAllowed()) return true;
         const saved = await saveCloudState();
@@ -602,6 +622,7 @@
       }
 
       async function flushCloudSave() {
+        if (isChildUser()) return true;
         if (!hasUnsyncedChanges) return true;
         if (!isCloudSyncAllowed()) return true;
         const saved = await window.AppCloud.flushCloudSave({
@@ -614,6 +635,10 @@
       }
 
       async function persistChanges(failedMessage = "Perubahan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.") {
+        if (isChildUser()) {
+          alert("Akses ini hanya tersedia untuk akun utama.");
+          return false;
+        }
         markDataChanged();
         renderAll();
         const saved = await flushCloudSave();
@@ -676,6 +701,7 @@
       }
 
       function syncStatusText() {
+        if (isChildUser()) return "Akses keluarga aktif. Data dibaca dari akun utama.";
         if (cloudSync.conflictDetected) return cloudSync.conflictMessage || "Potensi konflik sync terdeteksi. Data sudah digabung, cek kembali perubahan terbaru.";
         if (state.settings.cloudSyncEnabled === false) {
           return hasUnsyncedChanges
@@ -808,6 +834,47 @@
 
       function currentUserId() {
         return currentUser?.cloudId || currentUser?.id || currentUser?.username || "";
+      }
+
+      function dataOwnerId() {
+        return currentUser?.dataOwnerId || currentUserId();
+      }
+
+      function familyMemberRecord({ childName, childEmail, phone = "", childUserId = "", status = "active" }) {
+        return window.AppState.familyMember(id(), dataOwnerId(), childEmail.trim().toLowerCase(), childName.trim(), phone.trim(), status, { childUserId });
+      }
+
+      function familyMemberCloudPayload(member) {
+        return {
+          parent_user_id: dataOwnerId(),
+          child_user_id: member.childUserId || null,
+          child_email: member.childEmail.trim().toLowerCase(),
+          child_name: member.childName.trim(),
+          phone: member.phone || "",
+          role: "child",
+          status: member.status === "inactive" ? "inactive" : "active",
+        };
+      }
+
+      async function upsertFamilyMemberAccess(member) {
+        const client = setupCloudClient();
+        if (!client || isGuest()) return { ok: true };
+        if (!dataOwnerId()) return { ok: false, message: "Akun utama belum terhubung ke Supabase." };
+        const { error } = await client
+          .from("family_members")
+          .upsert(familyMemberCloudPayload(member), { onConflict: "parent_user_id,child_email" });
+        return error ? { ok: false, message: error.message || "Akses anggota keluarga belum tersimpan ke Supabase." } : { ok: true };
+      }
+
+      async function deleteFamilyMemberAccess(member) {
+        const client = setupCloudClient();
+        if (!client || isGuest()) return { ok: true };
+        const { error } = await client
+          .from("family_members")
+          .delete()
+          .eq("parent_user_id", dataOwnerId())
+          .eq("child_email", member.childEmail.trim().toLowerCase());
+        return error ? { ok: false, message: error.message || "Akses anggota keluarga belum terhapus dari Supabase." } : { ok: true };
       }
 
       function walletRecord(name, initialBalance = 0, type = "Cash") {
@@ -1377,8 +1444,10 @@
                 ? `<img src="${escapeHtml(receiptUrl)}" alt="Foto struk transaksi" />`
                 : `<div class="receipt-empty"><strong>Belum ada foto struk</strong><span>Unggah foto struk agar transaksi lebih mudah diaudit.</span></div>`}
             </section>
-            <label class="button receipt-upload" for="receiptUploadInput">Unggah Foto Struk</label>
-            <input class="hidden" id="receiptUploadInput" type="file" accept="image/*" data-receipt-transaction="${item.id}" />
+            ${isChildUser() ? "" : `
+              <label class="button receipt-upload" for="receiptUploadInput">Unggah Foto Struk</label>
+              <input class="hidden" id="receiptUploadInput" type="file" accept="image/*" data-receipt-transaction="${item.id}" />
+            `}
             <section class="transaction-detail-summary">
               <div>
                 <span class="stat-label">Nominal</span>
@@ -1406,8 +1475,10 @@
             </div>
             <div class="row-actions">
               <button class="button" type="button" data-close-modal>Tutup</button>
-              <button class="button" type="button" data-edit-transaction="${item.id}">Edit</button>
-              <button class="button danger" type="button" data-delete-transaction="${item.id}">Hapus</button>
+              ${isChildUser() ? "" : `
+                <button class="button" type="button" data-edit-transaction="${item.id}">Edit</button>
+                <button class="button danger" type="button" data-delete-transaction="${item.id}">Hapus</button>
+              `}
             </div>
           </div>
         `;
@@ -1626,6 +1697,34 @@
         if (totalLabel) totalLabel.textContent = money(total);
         const countLabel = document.querySelector("#walletCount");
         if (countLabel) countLabel.textContent = String(state.wallets.length);
+      }
+
+      function renderFamilyMembers() {
+        const target = document.querySelector("#familyMemberList");
+        if (!target) return;
+        if (isChildUser()) {
+          target.innerHTML = `<div class="empty"><p>Akun child memiliki akses baca ke data keluarga dan tidak bisa mengelola anggota.</p></div>`;
+          return;
+        }
+        const members = state.familyMembers || [];
+        target.innerHTML = members.length
+          ? members.map((member) => `
+            <article class="debt-item">
+              <div>
+                <div class="debt-row-top">
+                  <strong>${escapeHtml(member.childName || member.childEmail)}</strong>
+                  <span class="pill ${member.status === "active" ? "income" : "debt"}">${member.status === "active" ? "Aktif" : "Nonaktif"}</span>
+                </div>
+                <span>${escapeHtml(member.childEmail)}</span>
+                ${member.phone ? `<span>${escapeHtml(member.phone)}</span>` : ""}
+              </div>
+              <div class="row-actions">
+                <button class="button" type="button" data-toggle-family-member="${member.id}">${member.status === "active" ? "Nonaktifkan" : "Aktifkan"}</button>
+                <button class="button danger" type="button" data-delete-family-member="${member.id}">Hapus Akses</button>
+              </div>
+            </article>
+          `).join("")
+          : `<div class="empty"><p>Belum ada anggota keluarga.</p><button class="button primary" type="button" data-open-form="familyMember">Tambah Anggota</button></div>`;
       }
 
       function renderVehicleDashboard() {
@@ -2238,7 +2337,7 @@
         document.querySelector("#profilePhoto").textContent = currentUser.name.slice(0, 1).toUpperCase();
         document.querySelector("#profileName").textContent = currentUser.name;
         document.querySelector("#profileEmail").textContent = currentUser.email;
-        document.querySelector("#profileRole").textContent = isGuest() ? "Tamu" : currentUser.role === "admin" ? "Admin" : "User";
+        document.querySelector("#profileRole").textContent = isGuest() ? "Tamu" : isChildUser() ? "Anggota Keluarga" : currentUser.role === "admin" ? "Admin" : "User";
         document.querySelector("#profilePinStatus").textContent = state.settings.pin ? "PIN aktif" : "PIN belum aktif";
         document.querySelector("#profileSyncStatus").textContent = isGuest() ? "Demo" : cloudSync.enabled ? "Cloud" : "Lokal";
         const topSyncBadge = document.querySelector("#topSyncBadge");
@@ -2259,12 +2358,20 @@
         document.querySelector("#categorySummary").textContent = `${categories.length} kategori aktif`;
         document.querySelector("#dashboardMenuSummary").textContent = state.settings.homeSectionOrder.map(dashboardSectionLabel).join(", ");
         document.querySelector("#pinSummary").textContent = state.settings.pin ? "PIN sudah disimpan di perangkat ini." : "PIN belum aktif.";
+        document.querySelector("#familySummary").textContent = isChildUser()
+          ? "Akun child hanya bisa melihat data keluarga."
+          : `${state.familyMembers.filter((member) => member.status === "active").length} anggota aktif`;
+        renderFamilyMembers();
         document.querySelectorAll("[data-admin-only]").forEach((element) => {
           element.disabled = !isAdmin();
           element.title = isAdmin() ? "" : "Hanya admin";
         });
         document.querySelector("#loadDemoButton").classList.toggle("hidden", !isGuest());
-        document.querySelector("#deleteAccountButton").disabled = isGuest();
+        document.querySelector("#deleteAccountButton").disabled = isGuest() || isChildUser();
+        document.querySelectorAll('[data-open-form="familyMember"]').forEach((button) => {
+          button.disabled = isChildUser();
+          button.title = isChildUser() ? "Hanya akun utama yang bisa mengelola anggota keluarga." : "";
+        });
       }
 
       function applyDarkMode() {
@@ -2330,6 +2437,7 @@
       }
 
       function openTransactionForm(transactionId = "") {
+        if (isChildUser()) return requirePrimaryAccount();
         if (!currentUser) {
           requireSignedIn();
           return;
@@ -2485,7 +2593,7 @@
       }
 
       function openDebtForm() {
-        if (!requireSignedIn()) return;
+        if (!requirePrimaryAccount()) return;
         document.querySelector("#modalTitle").textContent = "Tambah Hutang Piutang";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="debtForm">
@@ -2595,7 +2703,7 @@
       }
 
       function openRecurringForm() {
-        if (!requireSignedIn()) return;
+        if (!requirePrimaryAccount()) return;
         if (!state.wallets.length) return openTransactionForm();
         document.querySelector("#modalTitle").textContent = "Tambah Transaksi Berulang";
         document.querySelector("#modalBody").innerHTML = `
@@ -2664,7 +2772,7 @@
       }
 
       function openReminderForm() {
-        if (!requireSignedIn()) return;
+        if (!requirePrimaryAccount()) return;
         document.querySelector("#modalTitle").textContent = "Pengingat Harian";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="reminderForm">
@@ -2696,7 +2804,7 @@
       }
 
       function openBillReminderForm(reminderId = "") {
-        if (!requireSignedIn()) return;
+        if (!requirePrimaryAccount()) return;
         const editing = reminderId ? state.billReminders.find((item) => item.id === reminderId) : null;
         document.querySelector("#modalTitle").textContent = editing ? "Edit Reminder Tagihan" : "Tambah Reminder Tagihan";
         document.querySelector("#modalBody").innerHTML = `
@@ -2751,7 +2859,7 @@
       }
 
       function openWalletForm(walletId = "") {
-        if (!requireSignedIn()) return;
+        if (!requirePrimaryAccount()) return;
         const editing = walletId ? state.wallets.find((wallet) => wallet.id === walletId) : null;
         document.querySelector("#modalTitle").textContent = editing ? "Edit Dompet" : "Tambah Dompet";
         document.querySelector("#modalBody").innerHTML = `
@@ -2804,6 +2912,62 @@
         });
       }
 
+      function openFamilyMemberForm() {
+        if (!requirePrimaryAccount()) return;
+        document.querySelector("#modalTitle").textContent = "Tambah Anggota Keluarga";
+        document.querySelector("#modalBody").innerHTML = `
+          <form class="form" id="familyMemberForm">
+            <div class="form-grid">
+              <div class="field">
+                <label for="familyName">Nama anggota</label>
+                <input id="familyName" type="text" autocomplete="name" required />
+              </div>
+              <div class="field">
+                <label for="familyEmail">Email</label>
+                <input id="familyEmail" type="email" autocomplete="email" required />
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="familyPhone">Nomor HP</label>
+                <input id="familyPhone" type="tel" autocomplete="tel" />
+              </div>
+              <div class="field">
+                <label for="familyStatus">Status</label>
+                <select id="familyStatus">
+                  <option value="active">Aktif</option>
+                  <option value="inactive">Nonaktif</option>
+                </select>
+              </div>
+            </div>
+            <p class="form-status">Anggota keluarga memiliki role child dan hanya bisa melihat data akun utama.</p>
+            <div class="row-actions">
+              <button class="button" type="button" data-close-modal>Batal</button>
+              <button class="button primary" type="submit">Tambah Anggota</button>
+            </div>
+          </form>
+        `;
+        showModal();
+        document.querySelector("#familyMemberForm").addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const childName = document.querySelector("#familyName").value.trim();
+          const childEmail = document.querySelector("#familyEmail").value.trim().toLowerCase();
+          const phone = document.querySelector("#familyPhone").value.trim();
+          const status = document.querySelector("#familyStatus").value;
+          if (!childName || !childEmail) return alert("Nama dan email anggota wajib diisi.");
+          if (childEmail === (currentUser.email || currentUser.username || "").toLowerCase()) return alert("Email anggota tidak boleh sama dengan akun utama.");
+          const duplicate = state.familyMembers.some((member) => member.childEmail.toLowerCase() === childEmail);
+          if (duplicate) return alert("Anggota keluarga dengan email ini sudah ada.");
+          const member = familyMemberRecord({ childName, childEmail, phone, status });
+          const cloudResult = await upsertFamilyMemberAccess(member);
+          if (!cloudResult.ok) return alert(`${cloudResult.message}\n\nPastikan SQL family_members sudah dijalankan di Supabase.`);
+          state.familyMembers.push(member);
+          closeModal();
+          await persistChanges("Anggota keluarga tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+          showSnackbar("Anggota keluarga berhasil ditambahkan.");
+        });
+      }
+
       function categoryInUse(category) {
         return state.transactions.some((item) => item.category === category)
           || state.debts.some((item) => item.category === category)
@@ -2813,7 +2977,7 @@
       }
 
       function openDashboardMenuForm() {
-        if (!requireSignedIn()) return;
+        if (!requirePrimaryAccount()) return;
         const order = normalizeHomeSectionOrder(state.settings.homeSectionOrder);
         document.querySelector("#modalTitle").textContent = "Urutan Menu Dashboard";
         document.querySelector("#modalBody").innerHTML = `
@@ -2868,7 +3032,7 @@
       }
 
       function openCategoryForm() {
-        if (!requireSignedIn()) return;
+        if (!requirePrimaryAccount()) return;
         document.querySelector("#modalTitle").textContent = "Kelola Kategori";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="categoryForm">
@@ -2919,7 +3083,7 @@
       }
 
       function openSavingsGoalForm(goalId = "") {
-        if (!requireSignedIn()) return;
+        if (!requirePrimaryAccount()) return;
         const editing = goalId ? state.savings.find((item) => item.id === goalId) : null;
         document.querySelector("#modalTitle").textContent = editing ? "Edit Tujuan Tabungan" : "Tambah Tujuan Tabungan";
         document.querySelector("#modalBody").innerHTML = `
@@ -3038,7 +3202,7 @@
       }
 
       function openSavingsEntryForm(goalId, type) {
-        if (!requireSignedIn()) return;
+        if (!requirePrimaryAccount()) return;
         const goal = state.savings.find((item) => item.id === goalId);
         if (!goal) return;
         document.querySelector("#modalTitle").textContent = type === "withdraw" ? "Tarik Tabungan" : "Tambah Tabungan";
@@ -3084,7 +3248,7 @@
       }
 
       function openVehicleForm(vehicleId = "") {
-        if (!requireSignedIn()) return;
+        if (!requirePrimaryAccount()) return;
         const editing = vehicleId ? state.vehicles.find((item) => item.id === vehicleId) : null;
         document.querySelector("#modalTitle").textContent = editing ? "Edit Kendaraan" : "Tambah Kendaraan";
         document.querySelector("#modalBody").innerHTML = `
@@ -3152,7 +3316,7 @@
       }
 
       function openVehicleServiceForm(recordId = "") {
-        if (!requireSignedIn() || !requireVehicleData()) return;
+        if (!requirePrimaryAccount() || !requireVehicleData()) return;
         const editing = recordId ? state.vehicleServices.find((item) => item.id === recordId) : null;
         document.querySelector("#modalTitle").textContent = editing ? "Edit Riwayat Service" : "Tambah Riwayat Service";
         document.querySelector("#modalBody").innerHTML = `
@@ -3189,7 +3353,7 @@
       }
 
       function openVehicleOilForm(recordId = "") {
-        if (!requireSignedIn() || !requireVehicleData()) return;
+        if (!requirePrimaryAccount() || !requireVehicleData()) return;
         const editing = recordId ? state.vehicleOilChanges.find((item) => item.id === recordId) : null;
         document.querySelector("#modalTitle").textContent = editing ? "Edit Jadwal Ganti Oli" : "Tambah Jadwal Ganti Oli";
         document.querySelector("#modalBody").innerHTML = `
@@ -3228,7 +3392,7 @@
       }
 
       function openVehiclePartForm(recordId = "") {
-        if (!requireSignedIn() || !requireVehicleData()) return;
+        if (!requirePrimaryAccount() || !requireVehicleData()) return;
         const editing = recordId ? state.vehicleParts.find((item) => item.id === recordId) : null;
         document.querySelector("#modalTitle").textContent = editing ? "Edit Penggantian Part" : "Tambah Penggantian Part";
         document.querySelector("#modalBody").innerHTML = `
@@ -3268,7 +3432,7 @@
       }
 
       function openVehicleTaxForm(recordId = "") {
-        if (!requireSignedIn() || !requireVehicleData()) return;
+        if (!requirePrimaryAccount() || !requireVehicleData()) return;
         const editing = recordId ? state.vehicleTaxes.find((item) => item.id === recordId) : null;
         document.querySelector("#modalTitle").textContent = editing ? "Edit Pajak Kendaraan" : "Tambah Pajak Kendaraan";
         document.querySelector("#modalBody").innerHTML = `
@@ -3309,7 +3473,7 @@
       }
 
       function openVehicleExpenseForm() {
-        if (!requireSignedIn() || !requireVehicleData()) return;
+        if (!requirePrimaryAccount() || !requireVehicleData()) return;
         document.querySelector("#modalTitle").textContent = "Tambah Biaya Kendaraan";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="vehicleExpenseForm">
@@ -3334,7 +3498,7 @@
       }
 
       function openPinForm() {
-        if (!requireSignedIn()) return;
+        if (!requirePrimaryAccount()) return;
         document.querySelector("#modalTitle").textContent = "Atur PIN";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="pinForm">
@@ -3391,7 +3555,7 @@
       }
 
       function openMonthlyResetForm() {
-        if (!requireSignedIn()) return;
+        if (!requirePrimaryAccount()) return;
         document.querySelector("#modalTitle").textContent = "Reset Data Bulanan";
         document.querySelector("#modalBody").innerHTML = `
           <form class="form" id="monthlyResetForm">
@@ -3689,6 +3853,10 @@
       }
 
       function importJson(event) {
+        if (!requirePrimaryAccount()) {
+          event.target.value = "";
+          return;
+        }
         const file = event.target.files[0];
         if (!file) return;
 
@@ -3726,10 +3894,13 @@
         document.querySelector("#authScreen").classList.add("hidden");
         document.querySelector("#appShell").classList.remove("hidden");
         if (!isGuest() && isCloudSyncAllowed()) {
-          const shouldUploadLocal = hasUnsyncedChanges;
+          const shouldUploadLocal = !isChildUser() && hasUnsyncedChanges;
           if (!shouldUploadLocal) applyState(emptyState());
           await loadCloudState({ saveAfterLoad: shouldUploadLocal });
-          if (shouldUploadLocal && !cloudSync.lastError) {
+          if (isChildUser()) {
+            hasUnsyncedChanges = false;
+            setLocalSyncStatus("synced");
+          } else if (shouldUploadLocal && !cloudSync.lastError) {
             hasUnsyncedChanges = false;
             setLocalSyncStatus("synced");
           } else if (shouldUploadLocal) {
@@ -3743,7 +3914,7 @@
       }
 
       function maybeShowWalletOnboarding() {
-        if (!currentUser || isGuest()) return;
+        if (!currentUser || isGuest() || isChildUser()) return;
         const key = `dompify_onboarding_wallet_${currentUser.username || currentUser.id}`;
         if (sessionStorage.getItem(key)) return;
         if (state.transactions.length || state.wallets.length > 2) return;
@@ -3850,12 +4021,43 @@
         };
       }
 
+      async function resolveFamilyAccess(user) {
+        const client = setupCloudClient();
+        if (!client || !user?.email) return null;
+        const { data, error } = await client
+          .from("family_members")
+          .select("parent_user_id, child_user_id, child_email, child_name, phone, status")
+          .eq("child_email", user.email.trim().toLowerCase())
+          .eq("status", "active")
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (error || !data?.parent_user_id) return null;
+        return data;
+      }
+
+      async function applyFamilyAccess(user) {
+        cloudSync.readOnly = false;
+        const access = await resolveFamilyAccess(user);
+        cloudSync.readOnly = Boolean(access);
+        if (!access) return;
+        currentUser = {
+          ...currentUser,
+          role: "child",
+          familyParentId: access.parent_user_id,
+          dataOwnerId: access.parent_user_id,
+          name: currentUser.name || access.child_name || currentUser.email?.split("@")[0] || "Anggota Keluarga",
+          phone: currentUser.phone || access.phone || "",
+        };
+      }
+
       async function loginCloud(email, password) {
         const client = setupCloudClient();
         if (!client) return { ok: false, message: "Koneksi login cloud belum aktif. Tutup lalu buka ulang aplikasi, atau perbarui aplikasi dari browser." };
         const { data, error } = await client.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
         if (error || !data?.user) return { ok: false, message: error?.message || "Email atau password salah." };
         currentUser = buildUserFromCloud(data.user);
+        await applyFamilyAccess(data.user);
         return { ok: true };
       }
 
@@ -4161,7 +4363,9 @@
         const { data } = await client.auth.getSession();
         const user = data?.session?.user;
         if (!user) return null;
-        return buildUserFromCloud(user);
+        currentUser = buildUserFromCloud(user);
+        await applyFamilyAccess(user);
+        return currentUser;
       }
 
       async function logout(message = "") {
@@ -4169,6 +4373,7 @@
         stopIdleLogoutTimer();
         localStorage.removeItem(sessionStorageKey);
         stopCloudRealtimeSync();
+        cloudSync.readOnly = false;
         if (cloudSync.enabled) {
           try {
             await setupCloudClient()?.auth.signOut();
@@ -4198,7 +4403,7 @@
       }
 
       function deleteCurrentAccount() {
-        if (!requireSignedIn()) return;
+        if (!requirePrimaryAccount()) return;
         const users = loadUsers();
         const remainingAdmins = users.filter((user) => user.role === "admin" && user.username !== currentUser.username);
         if (currentUser.role === "admin" && !remainingAdmins.length) {
@@ -4235,6 +4440,7 @@
         if (opener?.dataset.openForm === "reminder") openReminderForm();
         if (opener?.dataset.openForm === "billReminder") openBillReminderForm();
         if (opener?.dataset.openForm === "wallet") openWalletForm();
+        if (opener?.dataset.openForm === "familyMember") openFamilyMemberForm();
         if (opener?.dataset.openForm === "category") openCategoryForm();
         if (opener?.dataset.openForm === "dashboardMenu") openDashboardMenuForm();
         if (opener?.dataset.openForm === "savingsGoal") openSavingsGoalForm();
@@ -4308,16 +4514,49 @@
           return;
         }
 
+        const familyToggleButton = event.target.closest("[data-toggle-family-member]");
+        if (familyToggleButton) {
+          if (!requirePrimaryAccount()) return;
+          const target = state.familyMembers.find((member) => member.id === familyToggleButton.dataset.toggleFamilyMember);
+          if (!target) return;
+          const previousStatus = target.status;
+          target.status = target.status === "active" ? "inactive" : "active";
+          target.updatedAt = new Date().toISOString();
+          const cloudResult = await upsertFamilyMemberAccess(target);
+          if (!cloudResult.ok) {
+            target.status = previousStatus;
+            return alert(cloudResult.message);
+          }
+          await persistChanges("Status anggota keluarga tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+          showSnackbar(target.status === "active" ? "Akses anggota keluarga diaktifkan." : "Akses anggota keluarga dinonaktifkan.");
+          return;
+        }
+
+        const familyDeleteButton = event.target.closest("[data-delete-family-member]");
+        if (familyDeleteButton) {
+          if (!requirePrimaryAccount()) return;
+          const target = state.familyMembers.find((member) => member.id === familyDeleteButton.dataset.deleteFamilyMember);
+          if (!target) return;
+          if (!confirm(`Hapus akses "${target.childEmail}"?`)) return;
+          const cloudResult = await deleteFamilyMemberAccess(target);
+          if (!cloudResult.ok) return alert(cloudResult.message);
+          markDeleted("familyMembers", target.id);
+          state.familyMembers = state.familyMembers.filter((member) => member.id !== target.id);
+          await persistChanges("Akses anggota keluarga sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+          showSnackbar("Akses anggota keluarga dihapus.");
+          return;
+        }
+
         const walletEditButton = event.target.closest("[data-edit-wallet]");
         if (walletEditButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           openWalletForm(walletEditButton.dataset.editWallet);
           return;
         }
 
         const walletDeleteButton = event.target.closest("[data-delete-wallet]");
         if (walletDeleteButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           const target = state.wallets.find((wallet) => wallet.id === walletDeleteButton.dataset.deleteWallet);
           if (!target) return;
           if (walletInUse(target.id)) {
@@ -4346,14 +4585,14 @@
 
         const editButton = event.target.closest("[data-edit-transaction]");
         if (editButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           openTransactionForm(editButton.dataset.editTransaction);
           return;
         }
 
         const deleteButton = event.target.closest("[data-delete-transaction]");
         if (deleteButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           const target = state.transactions.find((item) => item.id === deleteButton.dataset.deleteTransaction);
           if (!target) return;
           const snapshot = cloneData(target);
@@ -4381,7 +4620,7 @@
 
         const savingsDeleteButton = event.target.closest("[data-delete-savings]");
         if (savingsDeleteButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           const target = state.savings.find((item) => item.id === savingsDeleteButton.dataset.deleteSavings);
           if (!target) return;
           const snapshot = cloneData(target);
@@ -4406,7 +4645,7 @@
 
         const savingsEditButton = event.target.closest("[data-edit-savings]");
         if (savingsEditButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           openSavingsGoalForm(savingsEditButton.dataset.editSavings);
           return;
         }
@@ -4418,14 +4657,14 @@
 
         const vehicleEditButton = event.target.closest("[data-edit-vehicle]");
         if (vehicleEditButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           openVehicleForm(vehicleEditButton.dataset.editVehicle);
           return;
         }
 
         const vehicleDeleteButton = event.target.closest("[data-delete-vehicle]");
         if (vehicleDeleteButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           const target = state.vehicles.find((item) => item.id === vehicleDeleteButton.dataset.deleteVehicle);
           if (!target) return;
           const relatedCount = state.vehicleServices.filter((item) => item.vehicleId === target.id).length
@@ -4472,7 +4711,7 @@
 
         const vehicleRecordDeleteButton = event.target.closest("[data-delete-vehicle-record]");
         if (vehicleRecordDeleteButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           const collection = vehicleRecordDeleteButton.dataset.deleteVehicleRecord;
           const target = state[collection]?.find((item) => item.id === vehicleRecordDeleteButton.dataset.recordId);
           if (!target) return;
@@ -4499,7 +4738,7 @@
 
         const vehicleRecordEditButton = event.target.closest("[data-edit-vehicle-record]");
         if (vehicleRecordEditButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           const collection = vehicleRecordEditButton.dataset.editVehicleRecord;
           const recordId = vehicleRecordEditButton.dataset.recordId;
           if (collection === "vehicleServices") openVehicleServiceForm(recordId);
@@ -4511,7 +4750,7 @@
 
         const categoryDeleteButton = event.target.closest("[data-delete-category]");
         if (categoryDeleteButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           const category = categoryDeleteButton.dataset.deleteCategory;
           if (!category) return;
           if (state.categories.length <= 1) {
@@ -4532,7 +4771,7 @@
 
         const debtButton = event.target.closest("[data-toggle-debt]");
         if (debtButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           const target = state.debts.find((item) => item.id === debtButton.dataset.toggleDebt);
           if (target) {
             target.status = target.status === "paid" ? "unpaid" : "paid";
@@ -4543,7 +4782,7 @@
 
         const debtDeleteButton = event.target.closest("[data-delete-debt]");
         if (debtDeleteButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           const target = state.debts.find((item) => item.id === debtDeleteButton.dataset.deleteDebt);
           if (!target) return;
           const snapshot = cloneData(target);
@@ -4562,7 +4801,7 @@
 
         const billToggleButton = event.target.closest("[data-toggle-bill]");
         if (billToggleButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           const target = state.billReminders.find((item) => item.id === billToggleButton.dataset.toggleBill);
           if (target) {
             target.status = target.status === "paid" ? "unpaid" : "paid";
@@ -4572,14 +4811,14 @@
 
         const billEditButton = event.target.closest("[data-edit-bill]");
         if (billEditButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           openBillReminderForm(billEditButton.dataset.editBill);
           return;
         }
 
         const billDeleteButton = event.target.closest("[data-delete-bill]");
         if (billDeleteButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           const target = state.billReminders.find((item) => item.id === billDeleteButton.dataset.deleteBill);
           if (!target) return;
           const snapshot = cloneData(target);
@@ -4596,7 +4835,7 @@
 
         const recurringDeleteButton = event.target.closest("[data-delete-recurring]");
         if (recurringDeleteButton) {
-          if (!requireSignedIn()) return;
+          if (!requirePrimaryAccount()) return;
           const target = state.recurring.find((item) => item.id === recurringDeleteButton.dataset.deleteRecurring);
           if (!target) return;
           const snapshot = cloneData(target);
@@ -4616,6 +4855,7 @@
       document.body.addEventListener("change", (event) => {
         const input = event.target.closest("[data-receipt-transaction]");
         if (!input || !input.files?.[0]) return;
+        if (!requirePrimaryAccount()) return;
         const target = state.transactions.find((item) => item.id === input.dataset.receiptTransaction);
         if (!target) return;
         const file = input.files[0];
@@ -4675,6 +4915,7 @@
       document.querySelector("#homeSavingsHistoryButton").addEventListener("click", openSavingsHistory);
       document.querySelector("#savingsHistoryButton").addEventListener("click", openSavingsHistory);
       document.querySelector("#toggleTotalBalanceVisibilityButton").addEventListener("click", () => {
+        if (!requirePrimaryAccount()) return;
         state.settings.totalBalanceVisible = !state.settings.totalBalanceVisible;
         renderStats();
         saveState();
@@ -4682,7 +4923,7 @@
 
       document.querySelector("#budgetForm").addEventListener("submit", (event) => {
         event.preventDefault();
-        if (!requireSignedIn()) return;
+        if (!requirePrimaryAccount()) return;
         const category = document.querySelector("#budgetCategory").value;
         const limit = Number(document.querySelector("#budgetLimit").value);
         const existing = state.budgets.find((item) => item.category === category);
@@ -4729,14 +4970,22 @@
         alert(synced ? "Data berhasil disinkronkan dari cloud." : `Cloud belum bisa disinkronkan.${cloudSync.lastError ? `\n\nDetail: ${cloudSync.lastError}` : ""}`);
       });
       document.querySelector("#applyRecurringButton").addEventListener("click", async () => {
-        if (!requireSignedIn()) return;
+        if (!requirePrimaryAccount()) return;
         await applyRecurringThisMonth();
       });
       document.querySelector("#darkModeToggle").addEventListener("change", (event) => {
+        if (!requirePrimaryAccount()) {
+          event.target.checked = Boolean(state.settings.darkMode);
+          return;
+        }
         state.settings.darkMode = event.target.checked;
         persistChanges("Pengaturan tampilan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
       });
       document.querySelector("#cloudSyncToggle").addEventListener("change", async (event) => {
+        if (!requirePrimaryAccount()) {
+          event.target.checked = state.settings.cloudSyncEnabled !== false;
+          return;
+        }
         state.settings.cloudSyncEnabled = event.target.checked;
         cloudSync.lastError = "";
         if (state.settings.cloudSyncEnabled) {
@@ -4760,6 +5009,10 @@
         }
       });
       document.querySelector("#languageSelect").addEventListener("change", (event) => {
+        if (!requirePrimaryAccount()) {
+          event.target.value = state.settings.language || "id";
+          return;
+        }
         state.settings.language = event.target.value;
         persistChanges("Pengaturan bahasa tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
       });
@@ -4778,7 +5031,7 @@
           const normalized = normalizeState(fresh);
           applyState({
             ...normalized,
-            deleted: { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], wallets: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [] },
+            deleted: { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], wallets: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [], familyMembers: [] },
           });
           renderAll();
         }
@@ -4797,7 +5050,7 @@
           state.vehicleOilChanges = [];
           state.vehicleParts = [];
           state.vehicleTaxes = [];
-          state.deleted = { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], wallets: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [] };
+          state.deleted = { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], wallets: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [], familyMembers: [] };
           persistChanges("Data sudah dikosongkan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
         }
       });

@@ -115,6 +115,13 @@ assert(cashWallet?.id && bankWallet?.id, "Dompet default tidak tersedia.");
 const optionalBalanceWallet = window.AppState.normalizeWallet({ id: "wallet-optional", name: "Dompet Opsional", initialBalance: "" });
 assert(optionalBalanceWallet.initialBalance === 0 && optionalBalanceWallet.currentBalance === 0, "Saldo awal kosong harus dianggap 0.");
 
+const familyMember = window.AppState.familyMember("family-1", "parent-user-1", "child@dompify.local", "Anak Test", "0812", "active");
+state.familyMembers.push(familyMember);
+const normalizedFamily = normalizeState(state).familyMembers[0];
+assert(normalizedFamily.childEmail === "child@dompify.local" && normalizedFamily.role === "child", "Data anggota keluarga tidak ternormalisasi.");
+assert(window.AppCloud.cloudUserKey({ cloudId: "child-user-1", dataOwnerId: "parent-user-1" }) === "parent-user-1", "Child harus membaca data owner parent.");
+out.push("anggota keluarga:ok");
+
 const transaction = window.AppState.tx("transaction-1", "expense", "2026-05-25", "Makanan", "Sarapan", 25000, { walletId: cashWallet.id });
 state.transactions.push(transaction);
 window.AppStorage.saveState(storageKey, state);
@@ -205,5 +212,19 @@ assert(upsertPayload?.user_id === "cloud-user-1", "Sync cloud tidak mengirim use
 assert(upsertPayload?.payload?.syncStatus === "synced", "Sync cloud tidak menandai payload synced.");
 assert(upsertPayload?.payload?.transactions.some((item) => item.category === "Kendaraan"), "Sync cloud tidak membawa data transaksi.");
 out.push("sync cloud:ok");
+
+upsertPayload = null;
+const readOnlySaved = await window.AppCloud.saveCloudState({
+  cloudSync: { ...cloudSync, readOnly: true },
+  setupCloudClient: () => cloudClient,
+  cloudConfig: { table: "finance_snapshots" },
+  cloudUserKey: () => "parent-user-1",
+  normalizeState,
+  state,
+  renderAccount() {},
+});
+assert(readOnlySaved, "Mode child read-only tidak boleh dianggap gagal sync.");
+assert(upsertPayload === null, "Mode child read-only tidak boleh menulis snapshot cloud.");
+out.push("child read-only sync:ok");
 
 console.log(JSON.stringify({ out }, null, 2));

@@ -6,6 +6,7 @@ window.AppCloud = {
   },
 
   cloudUserKey(currentUser) {
+    if (currentUser?.dataOwnerId) return currentUser.dataOwnerId;
     if (currentUser?.cloudId) return currentUser.cloudId;
     return "";
   },
@@ -39,7 +40,7 @@ window.AppCloud = {
 
   queueCloudSave(ctx) {
     const { cloudSync, currentUser, cloudUserKey, saveCloudState } = ctx;
-    if (!currentUser || !cloudSync.enabled || !cloudSync.loadedUsers.has(cloudUserKey())) return;
+    if (!currentUser || cloudSync.readOnly || !cloudSync.enabled || !cloudSync.loadedUsers.has(cloudUserKey())) return;
     clearTimeout(cloudSync.saveTimer);
     cloudSync.saveTimer = setTimeout(() => {
       saveCloudState();
@@ -49,7 +50,7 @@ window.AppCloud = {
   async flushCloudSave(ctx) {
     const { cloudSync, isGuest, cloudUserKey, saveCloudState } = ctx;
     clearTimeout(cloudSync.saveTimer);
-    if (isGuest() || !cloudSync.enabled || !cloudUserKey()) return true;
+    if (isGuest() || cloudSync.readOnly || !cloudSync.enabled || !cloudUserKey()) return true;
     await saveCloudState();
     return !cloudSync.lastError;
   },
@@ -118,6 +119,7 @@ window.AppCloud = {
     const userKey = cloudUserKey();
     const client = setupCloudClient(cloudSync, cloudConfig);
     if (!client || !userKey) return false;
+    if (cloudSync.readOnly) return true;
     if (cloudSync.isSaving) {
       cloudSync.pendingSave = true;
       await cloudSync.savePromise;
