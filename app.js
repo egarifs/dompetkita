@@ -399,10 +399,88 @@
       }
 
       function attachRupiahInput(selector) {
-        const input = document.querySelector(selector);
+        const input = typeof selector === "string" ? document.querySelector(selector) : selector;
+        if (!input || input.dataset.moneyInputAttached === "true") return;
+        input.dataset.moneyInputAttached = "true";
+        input.inputMode = "numeric";
+        input.autocomplete = "off";
         input.addEventListener("input", () => {
           input.value = formatNumber(input.value);
         });
+        input.addEventListener("focus", () => openMoneyCalculator(input));
+      }
+
+      function attachRupiahInputs(selectors = []) {
+        selectors.forEach((selector) => attachRupiahInput(selector));
+      }
+
+      function rupiahInputHtml(id, value = "", attributes = "") {
+        const formattedValue = value === "" || value === null || value === undefined ? "" : formatNumber(value);
+        return `
+          <div class="currency-input">
+            <span>Rp</span>
+            <input id="${id}" type="text" inputmode="numeric" autocomplete="off" value="${formattedValue}" placeholder="0" ${attributes} />
+          </div>
+        `;
+      }
+
+      function calculateMoneyExpression(expression) {
+        const normalized = String(expression || "")
+          .replace(/[xX×]/g, "*")
+          .replace(/[÷:]/g, "/")
+          .replace(/\./g, "")
+          .replace(/,/g, "");
+        if (!/^[\d+\-*/()\s]+$/.test(normalized)) throw new Error("Ekspresi hanya boleh berisi angka dan operator.");
+        if (!/\d/.test(normalized)) return 0;
+        const result = Function(`"use strict"; return (${normalized});`)();
+        if (!Number.isFinite(result)) throw new Error("Ekspresi tidak valid.");
+        return Math.max(0, Math.round(result));
+      }
+
+      function ensureMoneyCalculator() {
+        let calculator = document.querySelector("#moneyCalculator");
+        if (calculator) return calculator;
+        calculator = document.createElement("div");
+        calculator.className = "money-calculator hidden";
+        calculator.id = "moneyCalculator";
+        calculator.innerHTML = `
+          <div class="money-calculator-card" role="dialog" aria-modal="true" aria-labelledby="moneyCalculatorTitle">
+            <div class="modal-header">
+              <h3 id="moneyCalculatorTitle">Kalkulator Nominal</h3>
+              <button class="icon-button" type="button" data-money-cancel title="Tutup">×</button>
+            </div>
+            <div class="money-calculator-body">
+              <input id="moneyCalculatorExpression" class="money-calculator-expression" type="text" inputmode="numeric" aria-label="Ekspresi nominal" />
+              <p class="form-status hidden" id="moneyCalculatorStatus"></p>
+              <div class="money-keypad">
+                ${["7", "8", "9", "÷", "4", "5", "6", "×", "1", "2", "3", "-", "0", "000", "⌫", "+", "C", "=", "Batal", "Gunakan"].map((key) => `<button class="button ${key === "Gunakan" ? "primary" : key === "Batal" ? "danger" : ""}" type="button" data-money-key="${key}">${key}</button>`).join("")}
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(calculator);
+        return calculator;
+      }
+
+      function openMoneyCalculator(input) {
+        if (!input || input.dataset.calculatorOpening === "true") return;
+        input.dataset.calculatorOpening = "true";
+        setTimeout(() => {
+          input.dataset.calculatorOpening = "false";
+        }, 250);
+        const calculator = ensureMoneyCalculator();
+        const expressionInput = calculator.querySelector("#moneyCalculatorExpression");
+        const status = calculator.querySelector("#moneyCalculatorStatus");
+        calculator.dataset.targetInput = input.id;
+        expressionInput.value = parseFormattedNumber(input.value) || "";
+        status.className = "form-status hidden";
+        status.textContent = "";
+        calculator.classList.remove("hidden");
+        expressionInput.focus();
+      }
+
+      function closeMoneyCalculator() {
+        document.querySelector("#moneyCalculator")?.classList.add("hidden");
       }
 
       function loadState() {
@@ -2561,6 +2639,7 @@
         form.reset();
         document.querySelector("#budgetId").value = "";
         document.querySelector("#budgetPeriod").value = "monthly";
+        document.querySelector("#budgetLimit").value = "";
         if (parentId) {
           const parent = budgetById(parentId);
           if (parent) {
@@ -2583,7 +2662,7 @@
         document.querySelector("#budgetPeriod").value = budget.period || "monthly";
         renderCategoryOptions();
         document.querySelector("#budgetParent").value = budget.parentId || "";
-        document.querySelector("#budgetLimit").value = Number(budget.budgetLimit ?? budget.limit ?? 0);
+        document.querySelector("#budgetLimit").value = formatNumber(budget.budgetLimit ?? budget.limit ?? 0);
         openView("budgets");
         document.querySelector("#budgetName").focus();
       }
@@ -3154,7 +3233,7 @@
             </div>
             <div class="field">
               <label for="debtAmount">Nominal</label>
-              <input id="debtAmount" type="number" min="0" step="1000" required />
+              ${rupiahInputHtml("debtAmount", "", "required")}
             </div>
             <div class="field">
               <label for="debtDescription">Deskripsi</label>
@@ -3167,6 +3246,7 @@
           </form>
         `;
         showModal();
+        attachRupiahInput("#debtAmount");
         document.querySelector("#debtForm").addEventListener("submit", async (event) => {
           event.preventDefault();
           const submitButton = event.submitter || document.querySelector("#debtForm .button.primary");
@@ -3179,10 +3259,10 @@
             person: document.querySelector("#debtPerson").value.trim(),
             date: document.querySelector("#debtDate").value,
             dueDate: document.querySelector("#debtDueDate").value,
-            amount: Number(document.querySelector("#debtAmount").value),
-            totalAmount: Number(document.querySelector("#debtAmount").value),
-            paidAmount: document.querySelector("#debtStatus").value === "paid" ? Number(document.querySelector("#debtAmount").value) : 0,
-            remainingAmount: document.querySelector("#debtStatus").value === "paid" ? 0 : Number(document.querySelector("#debtAmount").value),
+            amount: parseFormattedNumber(document.querySelector("#debtAmount").value),
+            totalAmount: parseFormattedNumber(document.querySelector("#debtAmount").value),
+            paidAmount: document.querySelector("#debtStatus").value === "paid" ? parseFormattedNumber(document.querySelector("#debtAmount").value) : 0,
+            remainingAmount: document.querySelector("#debtStatus").value === "paid" ? 0 : parseFormattedNumber(document.querySelector("#debtAmount").value),
             paymentHistory: [],
             relatedTransactionIds: [],
             description: document.querySelector("#debtDescription").value.trim(),
@@ -3261,7 +3341,7 @@
             <div class="form-grid">
               <div class="field">
                 <label for="recurringAmount">Nominal</label>
-                <input id="recurringAmount" type="number" min="0" step="1000" required />
+                ${rupiahInputHtml("recurringAmount", "", "required")}
               </div>
               <div class="field">
                 <label for="recurringDay">Tanggal setiap bulan</label>
@@ -3286,6 +3366,7 @@
           </form>
         `;
         showModal();
+        attachRupiahInput("#recurringAmount");
         document.querySelector("#recurringForm").addEventListener("submit", async (event) => {
           event.preventDefault();
           const submitButton = event.submitter || document.querySelector("#recurringForm .button.primary");
@@ -3295,7 +3376,7 @@
             id: id(),
             type: document.querySelector("#recurringType").value,
             category: document.querySelector("#recurringCategory").value,
-            amount: Number(document.querySelector("#recurringAmount").value),
+            amount: parseFormattedNumber(document.querySelector("#recurringAmount").value),
             walletId: document.querySelector("#recurringWallet").value,
             day: Number(document.querySelector("#recurringDay").value),
             description: document.querySelector("#recurringDescription").value.trim(),
@@ -4987,6 +5068,55 @@
       });
 
       document.body.addEventListener("click", async (event) => {
+        const moneyKey = event.target.closest("[data-money-key]");
+        if (moneyKey) {
+          const calculator = document.querySelector("#moneyCalculator");
+          const expressionInput = calculator?.querySelector("#moneyCalculatorExpression");
+          const status = calculator?.querySelector("#moneyCalculatorStatus");
+          const key = moneyKey.dataset.moneyKey;
+          if (!calculator || !expressionInput || !status) return;
+          status.className = "form-status hidden";
+          status.textContent = "";
+          if (key === "Batal") {
+            closeMoneyCalculator();
+            return;
+          }
+          if (key === "C") {
+            expressionInput.value = "";
+            expressionInput.focus();
+            return;
+          }
+          if (key === "⌫") {
+            expressionInput.value = expressionInput.value.slice(0, -1);
+            expressionInput.focus();
+            return;
+          }
+          if (key === "=" || key === "Gunakan") {
+            try {
+              const result = calculateMoneyExpression(expressionInput.value);
+              expressionInput.value = String(result);
+              if (key === "Gunakan") {
+                const target = document.querySelector(`#${calculator.dataset.targetInput}`);
+                if (target) target.value = formatNumber(result);
+                closeMoneyCalculator();
+              }
+            } catch (error) {
+              status.className = "form-status error";
+              status.textContent = error.message || "Ekspresi nominal tidak valid.";
+            }
+            expressionInput.focus();
+            return;
+          }
+          expressionInput.value += key;
+          expressionInput.focus();
+          return;
+        }
+
+        if (event.target.closest("[data-money-cancel]")) {
+          closeMoneyCalculator();
+          return;
+        }
+
         const opener = event.target.closest("[data-open-form]");
         if (opener) document.querySelector("#addBlock")?.classList.remove("open");
         if (opener?.dataset.openForm === "transaction") openTransactionForm("", { presetType: opener.dataset.transactionPreset || "" });
@@ -5562,6 +5692,7 @@
       });
 
       document.querySelector("#resetBudgetFormButton").addEventListener("click", () => resetBudgetForm());
+      attachRupiahInput("#budgetLimit");
 
       document.querySelector("#budgetForm").addEventListener("submit", (event) => {
         event.preventDefault();
@@ -5570,7 +5701,7 @@
         const name = document.querySelector("#budgetName").value.trim();
         const type = document.querySelector("#budgetType").value;
         const parentId = document.querySelector("#budgetParent").value || null;
-        const limit = Number(document.querySelector("#budgetLimit").value);
+        const limit = parseFormattedNumber(document.querySelector("#budgetLimit").value);
         const parent = parentId ? budgetById(parentId) : null;
         if (!name) return alert("Nama anggaran wajib diisi.");
         if (Number.isNaN(limit) || limit < 0) return alert("Limit budget harus angka valid.");

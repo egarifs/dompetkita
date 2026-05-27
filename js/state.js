@@ -22,6 +22,14 @@ window.AppState = {
     return items.filter((item) => !deleted.has(item.id));
   },
 
+  toNumber(value) {
+    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+    const text = String(value ?? "").trim();
+    if (!text) return 0;
+    const normalized = text.replace(/[^\d-]/g, "");
+    return Number(normalized || 0);
+  },
+
   transactionSourceModule(item = {}) {
     if (item.sourceModule) return item.sourceModule;
     if (item.vehicleId || item.vehicleRecordId) return "vehicles";
@@ -77,8 +85,8 @@ window.AppState = {
       id: item?.id || window.AppState.walletIdFromName(name),
       userId: item?.userId || "",
       name,
-      initialBalance: Number(item?.initialBalance ?? item?.openingBalance ?? 0),
-      currentBalance: Number(item?.currentBalance ?? item?.initialBalance ?? item?.openingBalance ?? 0),
+      initialBalance: window.AppState.toNumber(item?.initialBalance ?? item?.openingBalance ?? 0),
+      currentBalance: window.AppState.toNumber(item?.currentBalance ?? item?.initialBalance ?? item?.openingBalance ?? 0),
       type: item?.type || "Cash",
       color: item?.color || "",
       icon: item?.icon || "",
@@ -96,7 +104,7 @@ window.AppState = {
       date,
       category,
       description,
-      amount: Number(amount),
+      amount: window.AppState.toNumber(amount),
       subcategory: meta.subcategory || "",
       budgetId: meta.budgetId || meta.categoryId || "",
       sourceModule: window.AppState.transactionSourceModule(meta),
@@ -121,7 +129,7 @@ window.AppState = {
       date: item.date || "",
       category: item.category || "Lainnya",
       description: item.description || "",
-      amount: Number(item.amount || 0),
+      amount: window.AppState.toNumber(item.amount || 0),
       subcategory: item.subcategory || "",
       budgetId: item.budgetId || item.categoryId || "",
       sourceModule,
@@ -139,7 +147,7 @@ window.AppState = {
     const now = new Date().toISOString();
     const name = item.name || item.category || `Anggaran ${index + 1}`;
     const timestamp = item.createdAt || now;
-    const budgetLimit = Number(item.budgetLimit ?? item.limit ?? 0);
+    const budgetLimit = window.AppState.toNumber(item.budgetLimit ?? item.limit ?? 0);
     return {
       ...item,
       id: item.id || window.AppState.budgetIdFromName(name, index),
@@ -150,8 +158,8 @@ window.AppState = {
       parentId: item.parentId || null,
       budgetLimit,
       limit: budgetLimit,
-      usedAmount: Number(item.usedAmount || 0),
-      remainingAmount: Number(item.remainingAmount ?? budgetLimit),
+      usedAmount: window.AppState.toNumber(item.usedAmount || 0),
+      remainingAmount: window.AppState.toNumber(item.remainingAmount ?? budgetLimit),
       period: item.period || "monthly",
       icon: item.icon || "",
       color: item.color || "",
@@ -162,9 +170,9 @@ window.AppState = {
   },
 
   normalizeDebt(item = {}) {
-    const totalAmount = Number(item.totalAmount ?? item.amount ?? 0);
-    const paidAmount = Number(item.paidAmount || 0);
-    const remainingAmount = Math.max(0, Number(item.remainingAmount ?? (totalAmount - paidAmount)));
+    const totalAmount = window.AppState.toNumber(item.totalAmount ?? item.amount ?? 0);
+    const paidAmount = window.AppState.toNumber(item.paidAmount || 0);
+    const remainingAmount = Math.max(0, window.AppState.toNumber(item.remainingAmount ?? (totalAmount - paidAmount)));
     const normalizedStatus = item.status === "paid" ? "paid" : paidAmount > 0 ? "partial" : item.status === "partial" ? "partial" : "unpaid";
     return {
       ...item,
@@ -190,7 +198,7 @@ window.AppState = {
       id,
       type,
       date,
-      amount: Number(amount),
+      amount: window.AppState.toNumber(amount),
       note,
       createdAt: timestamp,
       updatedAt: meta.updatedAt || timestamp,
@@ -203,7 +211,7 @@ window.AppState = {
       id,
       title: category,
       category,
-      target: Number(target),
+      target: window.AppState.toNumber(target),
       targetDate,
       createdAt: todayDate,
       updatedAt: new Date().toISOString(),
@@ -218,7 +226,7 @@ window.AppState = {
       id: entry.id,
       type: entry.type || "deposit",
       date: entry.date || "",
-      amount: Number(entry.amount || 0),
+      amount: window.AppState.toNumber(entry.amount || 0),
       note: entry.note || "",
       createdAt: timestamp,
       updatedAt: entry.updatedAt || timestamp,
@@ -229,7 +237,7 @@ window.AppState = {
     const timestamp = goal.updatedAt || goal.createdAt || new Date().toISOString();
     return {
       ...goal,
-      target: Number(goal.target || 0),
+      target: window.AppState.toNumber(goal.target || 0),
       entries: Array.isArray(goal.entries) ? goal.entries.map(window.AppState.normalizeSavingsEntry) : [],
       updatedAt: timestamp,
     };
@@ -269,7 +277,7 @@ window.AppState = {
   },
 
   billReminder(id, title, category, amount, dueDate, note = "", status = "unpaid") {
-    return { id, title, category, amount: Number(amount), dueDate, note, status };
+    return { id, title, category, amount: window.AppState.toNumber(amount), dueDate, note, status };
   },
 
   normalizeState(data, deps) {

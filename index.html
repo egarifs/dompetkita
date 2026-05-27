@@ -746,7 +746,10 @@
                 </div>
                 <div class="field">
                   <label for="budgetLimit">Batas anggaran</label>
-                  <input id="budgetLimit" type="number" min="0" step="1000" placeholder="1500000" required />
+                  <div class="currency-input">
+                    <span>Rp</span>
+                    <input id="budgetLimit" type="text" inputmode="numeric" autocomplete="off" placeholder="0" required />
+                  </div>
                 </div>
                 <div class="row-actions">
                   <button class="button" id="resetBudgetFormButton" type="button">Reset</button>
