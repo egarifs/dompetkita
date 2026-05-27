@@ -746,9 +746,11 @@
                 </div>
                 <div class="field">
                   <label for="budgetLimit">Batas anggaran</label>
-                  <div class="currency-input">
-                    <span>Rp</span>
-                    <input id="budgetLimit" type="text" inputmode="numeric" autocomplete="off" placeholder="0" required />
+                  <div class="money-input">
+                    <div class="currency-input">
+                      <input id="budgetLimit" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp0" required />
+                    </div>
+                    <button class="money-calculator-link" type="button" data-open-money-calculator="budgetLimit">Gunakan Kalkulator</button>
                   </div>
                 </div>
                 <div class="row-actions">

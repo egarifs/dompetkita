@@ -51,6 +51,8 @@
         monthLabel,
         id,
         money,
+        formatRupiah,
+        parseRupiahToNumber,
         formatNumber,
         parseFormattedNumber,
         escapeHtml,
@@ -404,10 +406,10 @@
         input.dataset.moneyInputAttached = "true";
         input.inputMode = "numeric";
         input.autocomplete = "off";
+        input.value = formatRupiah(input.value);
         input.addEventListener("input", () => {
-          input.value = formatNumber(input.value);
+          input.value = formatRupiah(input.value);
         });
-        input.addEventListener("focus", () => openMoneyCalculator(input));
       }
 
       function attachRupiahInputs(selectors = []) {
@@ -415,11 +417,13 @@
       }
 
       function rupiahInputHtml(id, value = "", attributes = "") {
-        const formattedValue = value === "" || value === null || value === undefined ? "" : formatNumber(value);
+        const formattedValue = value === "" || value === null || value === undefined ? "" : formatRupiah(value);
         return `
-          <div class="currency-input">
-            <span>Rp</span>
-            <input id="${id}" type="text" inputmode="numeric" autocomplete="off" value="${formattedValue}" placeholder="0" ${attributes} />
+          <div class="money-input">
+            <div class="currency-input">
+              <input id="${id}" type="text" inputmode="numeric" autocomplete="off" value="${formattedValue}" placeholder="Rp0" ${attributes} />
+            </div>
+            <button class="money-calculator-link" type="button" data-open-money-calculator="${id}">Gunakan Kalkulator</button>
           </div>
         `;
       }
@@ -428,13 +432,16 @@
         const normalized = String(expression || "")
           .replace(/[xX×]/g, "*")
           .replace(/[÷:]/g, "/")
+          .replace(/rp/gi, "")
           .replace(/\./g, "")
           .replace(/,/g, "");
         if (!/^[\d+\-*/()\s]+$/.test(normalized)) throw new Error("Ekspresi hanya boleh berisi angka dan operator.");
         if (!/\d/.test(normalized)) return 0;
+        if (/\/\s*0+(?!\d)/.test(normalized)) throw new Error("Pembagian dengan 0 tidak diizinkan.");
         const result = Function(`"use strict"; return (${normalized});`)();
         if (!Number.isFinite(result)) throw new Error("Ekspresi tidak valid.");
-        return Math.max(0, Math.round(result));
+        if (result < 0) throw new Error("Hasil negatif tidak diizinkan untuk nominal ini.");
+        return Math.round(result);
       }
 
       function ensureMoneyCalculator() {
@@ -450,7 +457,10 @@
               <button class="icon-button" type="button" data-money-cancel title="Tutup">×</button>
             </div>
             <div class="money-calculator-body">
-              <input id="moneyCalculatorExpression" class="money-calculator-expression" type="text" inputmode="numeric" aria-label="Ekspresi nominal" />
+              <div class="money-calculator-display" aria-live="polite">
+                <span id="moneyCalculatorResult">Rp0</span>
+                <input id="moneyCalculatorExpression" class="money-calculator-expression" type="text" inputmode="numeric" aria-label="Ekspresi nominal" />
+              </div>
               <p class="form-status hidden" id="moneyCalculatorStatus"></p>
               <div class="money-keypad">
                 ${["7", "8", "9", "÷", "4", "5", "6", "×", "1", "2", "3", "-", "0", "000", "⌫", "+", "C", "=", "Batal", "Gunakan"].map((key) => `<button class="button ${key === "Gunakan" ? "primary" : key === "Batal" ? "danger" : ""}" type="button" data-money-key="${key}">${key}</button>`).join("")}
@@ -472,7 +482,8 @@
         const expressionInput = calculator.querySelector("#moneyCalculatorExpression");
         const status = calculator.querySelector("#moneyCalculatorStatus");
         calculator.dataset.targetInput = input.id;
-        expressionInput.value = parseFormattedNumber(input.value) || "";
+        expressionInput.value = parseRupiahToNumber(input.value) || "";
+        updateMoneyCalculatorResult();
         status.className = "form-status hidden";
         status.textContent = "";
         calculator.classList.remove("hidden");
@@ -481,6 +492,18 @@
 
       function closeMoneyCalculator() {
         document.querySelector("#moneyCalculator")?.classList.add("hidden");
+      }
+
+      function updateMoneyCalculatorResult() {
+        const calculator = document.querySelector("#moneyCalculator");
+        const expressionInput = calculator?.querySelector("#moneyCalculatorExpression");
+        const result = calculator?.querySelector("#moneyCalculatorResult");
+        if (!expressionInput || !result) return;
+        try {
+          result.textContent = money(calculateMoneyExpression(expressionInput.value));
+        } catch {
+          result.textContent = "Rp0";
+        }
       }
 
       function loadState() {
@@ -2662,7 +2685,7 @@
         document.querySelector("#budgetPeriod").value = budget.period || "monthly";
         renderCategoryOptions();
         document.querySelector("#budgetParent").value = budget.parentId || "";
-        document.querySelector("#budgetLimit").value = formatNumber(budget.budgetLimit ?? budget.limit ?? 0);
+        document.querySelector("#budgetLimit").value = formatRupiah(budget.budgetLimit ?? budget.limit ?? 0);
         openView("budgets");
         document.querySelector("#budgetName").focus();
       }
@@ -3001,10 +3024,7 @@
             <div class="form-grid">
               <div class="field">
                 <label for="transactionAmount">Nominal</label>
-                <div class="currency-input">
-                  <span>Rp</span>
-                  <input id="transactionAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${editingTransaction ? formatNumber(editingTransaction.amount) : ""}" required />
-                </div>
+                ${rupiahInputHtml("transactionAmount", editingTransaction?.amount ?? "", "required")}
               </div>
             </div>
             <div class="field">
@@ -3132,7 +3152,7 @@
             return;
           }
           if (values.amount <= 0) {
-            alert("Nominal pembayaran wajib lebih dari 0.");
+            alert("Nominal transaksi wajib lebih dari 0.");
             submitButton.disabled = false;
             submitButton.textContent = editingTransaction ? "Simpan Perubahan" : "Simpan Transaksi";
             return;
@@ -3252,6 +3272,12 @@
           const submitButton = event.submitter || document.querySelector("#debtForm .button.primary");
           submitButton.disabled = true;
           submitButton.textContent = "Menyimpan...";
+          const amount = parseFormattedNumber(document.querySelector("#debtAmount").value);
+          if (amount <= 0) {
+            submitButton.disabled = false;
+            submitButton.textContent = "Simpan Catatan";
+            return alert("Nominal hutang/piutang wajib lebih dari 0.");
+          }
           state.debts.push({
             id: id(),
             kind: document.querySelector("#debtKind").value,
@@ -3259,10 +3285,10 @@
             person: document.querySelector("#debtPerson").value.trim(),
             date: document.querySelector("#debtDate").value,
             dueDate: document.querySelector("#debtDueDate").value,
-            amount: parseFormattedNumber(document.querySelector("#debtAmount").value),
-            totalAmount: parseFormattedNumber(document.querySelector("#debtAmount").value),
-            paidAmount: document.querySelector("#debtStatus").value === "paid" ? parseFormattedNumber(document.querySelector("#debtAmount").value) : 0,
-            remainingAmount: document.querySelector("#debtStatus").value === "paid" ? 0 : parseFormattedNumber(document.querySelector("#debtAmount").value),
+            amount,
+            totalAmount: amount,
+            paidAmount: document.querySelector("#debtStatus").value === "paid" ? amount : 0,
+            remainingAmount: document.querySelector("#debtStatus").value === "paid" ? 0 : amount,
             paymentHistory: [],
             relatedTransactionIds: [],
             description: document.querySelector("#debtDescription").value.trim(),
@@ -3372,11 +3398,17 @@
           const submitButton = event.submitter || document.querySelector("#recurringForm .button.primary");
           submitButton.disabled = true;
           submitButton.textContent = "Menyimpan...";
+          const amount = parseFormattedNumber(document.querySelector("#recurringAmount").value);
+          if (amount <= 0) {
+            submitButton.disabled = false;
+            submitButton.textContent = "Simpan";
+            return alert("Nominal transaksi berulang wajib lebih dari 0.");
+          }
           state.recurring.push({
             id: id(),
             type: document.querySelector("#recurringType").value,
             category: document.querySelector("#recurringCategory").value,
-            amount: parseFormattedNumber(document.querySelector("#recurringAmount").value),
+            amount,
             walletId: document.querySelector("#recurringWallet").value,
             day: Number(document.querySelector("#recurringDay").value),
             description: document.querySelector("#recurringDescription").value.trim(),
@@ -3439,10 +3471,7 @@
             </div>
             <div class="field">
               <label for="billAmount">Nominal</label>
-              <div class="currency-input">
-                <span>Rp</span>
-                <input id="billAmount" type="text" inputmode="numeric" autocomplete="off" value="${editing ? formatNumber(editing.amount) : ""}" placeholder="0" required />
-              </div>
+              ${rupiahInputHtml("billAmount", editing?.amount ?? "", "required")}
             </div>
             <div class="field">
               <label for="billDueDate">Jatuh tempo</label>
@@ -3469,6 +3498,7 @@
             dueDate: document.querySelector("#billDueDate").value,
             note: document.querySelector("#billNote").value.trim(),
           };
+          if (values.amount <= 0) return alert("Nominal reminder tagihan wajib lebih dari 0.");
           if (editing) Object.assign(editing, values);
           else state.billReminders.push(billReminder(values.title, values.category, values.amount, values.dueDate, values.note, "unpaid"));
           closeModal();
@@ -3496,10 +3526,7 @@
             </div>
             <div class="field">
               <label for="walletInitialBalance">Saldo awal</label>
-              <div class="currency-input">
-                <span>Rp</span>
-                <input id="walletInitialBalance" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.initialBalance) : ""}" placeholder="Opsional" />
-              </div>
+              ${rupiahInputHtml("walletInitialBalance", editing?.initialBalance ?? "")}
             </div>
             <div class="row-actions">
               <button class="button" type="button" data-close-modal>Batal</button>
@@ -3731,10 +3758,7 @@
             </div>
             <div class="field">
               <label for="savingsTarget">Nominal Target</label>
-              <div class="currency-input">
-                <span>Rp</span>
-                <input id="savingsTarget" type="text" inputmode="numeric" autocomplete="off" value="${editing ? formatNumber(editing.target) : ""}" placeholder="0" required />
-              </div>
+              ${rupiahInputHtml("savingsTarget", editing?.target ?? "", "required")}
             </div>
             <div class="field">
               <label for="savingsTargetDate">Kapan ingin dicapai</label>
@@ -3765,14 +3789,20 @@
           submitButton.disabled = true;
           submitButton.textContent = "Menyimpan...";
           const category = document.querySelector("#savingsCategory").value;
+          const targetAmount = parseFormattedNumber(document.querySelector("#savingsTarget").value);
+          if (targetAmount <= 0) {
+            submitButton.disabled = false;
+            submitButton.textContent = editing ? "Simpan Perubahan" : "Simpan";
+            return alert("Nominal target tabungan wajib lebih dari 0.");
+          }
           if (editing) {
             editing.title = category;
             editing.category = category;
-            editing.target = parseFormattedNumber(document.querySelector("#savingsTarget").value);
+            editing.target = targetAmount;
             editing.targetDate = document.querySelector("#savingsTargetDate").value;
             touchSavingsGoal(editing);
           } else {
-            state.savings.push(savingsGoal(category, parseFormattedNumber(document.querySelector("#savingsTarget").value), document.querySelector("#savingsTargetDate").value));
+            state.savings.push(savingsGoal(category, targetAmount, document.querySelector("#savingsTargetDate").value));
           }
           saveState();
           closeModal();
@@ -3845,10 +3875,7 @@
           <form class="form" id="savingsEntryForm">
             <div class="field">
               <label for="savingsEntryAmount">Nominal</label>
-              <div class="currency-input">
-                <span>Rp</span>
-                <input id="savingsEntryAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="0" required />
-              </div>
+              ${rupiahInputHtml("savingsEntryAmount", "", "required")}
             </div>
             <div class="field">
               <label for="savingsEntryNote">Keterangan</label>
@@ -3871,8 +3898,14 @@
           const submitButton = event.submitter || document.querySelector("#savingsEntryForm .button.primary");
           submitButton.disabled = true;
           submitButton.textContent = "Menyimpan...";
+          const amount = parseFormattedNumber(document.querySelector("#savingsEntryAmount").value);
+          if (amount <= 0) {
+            submitButton.disabled = false;
+            submitButton.textContent = "Simpan";
+            return alert("Nominal tabungan wajib lebih dari 0.");
+          }
           goal.entries = goal.entries || [];
-          goal.entries.push(savingsEntry(type, document.querySelector("#savingsEntryDate").value, parseFormattedNumber(document.querySelector("#savingsEntryAmount").value), document.querySelector("#savingsEntryNote").value.trim()));
+          goal.entries.push(savingsEntry(type, document.querySelector("#savingsEntryDate").value, amount, document.querySelector("#savingsEntryNote").value.trim()));
           touchSavingsGoal(goal);
           saveState();
           closeModal();
@@ -3965,7 +3998,7 @@
             <details class="form-step">
               <summary>2. Biaya dan catatan</summary>
               <div class="form-grid"><div class="field"><label for="serviceType">Jenis service</label><input id="serviceType" required value="${escapeHtml(editing?.serviceType || "")}" placeholder="Service berkala" /></div><div class="field"><label for="serviceWorkshop">Nama bengkel</label><input id="serviceWorkshop" value="${escapeHtml(editing?.workshop || "")}" placeholder="Nama bengkel" /></div></div>
-              <div class="field"><label for="serviceCost">Biaya service</label><div class="currency-input"><span>Rp</span><input id="serviceCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.cost) : ""}" placeholder="0" /></div></div>
+              <div class="field"><label for="serviceCost">Biaya service</label>${rupiahInputHtml("serviceCost", editing?.cost ?? "")}</div>
               <div class="field"><label for="serviceNote">Catatan service</label><textarea id="serviceNote">${escapeHtml(editing?.note || "")}</textarea></div>
             </details>
             <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Service"}</button></div>
@@ -4005,7 +4038,7 @@
             </details>
             <details class="form-step">
               <summary>3. Biaya dan catatan</summary>
-              <div class="form-grid"><div class="field"><label for="oilBrand">Merk oli</label><input id="oilBrand" value="${escapeHtml(editing?.oilBrand || "")}" placeholder="Shell, Yamalube, dll" /></div><div class="field"><label for="oilCost">Biaya oli</label><div class="currency-input"><span>Rp</span><input id="oilCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.cost) : ""}" placeholder="0" /></div></div></div>
+              <div class="form-grid"><div class="field"><label for="oilBrand">Merk oli</label><input id="oilBrand" value="${escapeHtml(editing?.oilBrand || "")}" placeholder="Shell, Yamalube, dll" /></div><div class="field"><label for="oilCost">Biaya oli</label>${rupiahInputHtml("oilCost", editing?.cost ?? "")}</div></div></div>
               <div class="field"><label for="oilNote">Catatan</label><textarea id="oilNote">${escapeHtml(editing?.note || "")}</textarea></div>
             </details>
             <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Oli"}</button></div>
@@ -4045,7 +4078,7 @@
             </details>
             <details class="form-step">
               <summary>3. Biaya dan catatan</summary>
-              <div class="field"><label for="partCost">Biaya part</label><div class="currency-input"><span>Rp</span><input id="partCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.cost) : ""}" placeholder="0" /></div></div>
+              <div class="field"><label for="partCost">Biaya part</label>${rupiahInputHtml("partCost", editing?.cost ?? "")}</div>
               <div class="field"><label for="partNote">Catatan</label><textarea id="partNote">${escapeHtml(editing?.note || "")}</textarea></div>
             </details>
             <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Part"}</button></div>
@@ -4080,7 +4113,7 @@
             </details>
             <details class="form-step">
               <summary>2. Pembayaran</summary>
-              <div class="form-grid"><div class="field"><label for="taxCost">Estimasi biaya pajak</label><div class="currency-input"><span>Rp</span><input id="taxCost" type="text" inputmode="numeric" value="${editing ? formatNumber(editing.estimatedCost) : ""}" placeholder="0" /></div></div><div class="field"><label for="taxStatus">Status pembayaran</label><select id="taxStatus"><option value="unpaid" ${editing?.status !== "paid" ? "selected" : ""}>Belum dibayar</option><option value="paid" ${editing?.status === "paid" ? "selected" : ""}>Sudah dibayar</option></select></div></div>
+              <div class="form-grid"><div class="field"><label for="taxCost">Estimasi biaya pajak</label>${rupiahInputHtml("taxCost", editing?.estimatedCost ?? "")}</div><div class="field"><label for="taxStatus">Status pembayaran</label><select id="taxStatus"><option value="unpaid" ${editing?.status !== "paid" ? "selected" : ""}>Belum dibayar</option><option value="paid" ${editing?.status === "paid" ? "selected" : ""}>Sudah dibayar</option></select></div></div>
               <div class="field"><label for="taxPaidDate">Tanggal pembayaran</label><input id="taxPaidDate" type="date" value="${editing?.paidDate || ""}" /></div>
             </details>
             <details class="form-step">
@@ -4114,7 +4147,7 @@
           <form class="form" id="vehicleExpenseForm">
             <div class="form-grid"><div class="field"><label for="expenseVehicle">Kendaraan</label><select id="expenseVehicle" required>${vehicleOptions()}</select></div><div class="field"><label for="expenseType">Jenis biaya</label><select id="expenseType"><option>Bensin</option><option>Lainnya</option></select></div></div>
             <div class="field"><label for="expenseWallet">Dompet</label><select id="expenseWallet" required>${walletOptions(defaultWalletId())}</select></div>
-            <div class="form-grid"><div class="field"><label for="expenseDate">Tanggal</label><input id="expenseDate" type="date" value="${todayDate()}" required /></div><div class="field"><label for="expenseAmount">Nominal</label><div class="currency-input"><span>Rp</span><input id="expenseAmount" type="text" inputmode="numeric" required placeholder="0" /></div></div></div>
+            <div class="form-grid"><div class="field"><label for="expenseDate">Tanggal</label><input id="expenseDate" type="date" value="${todayDate()}" required /></div><div class="field"><label for="expenseAmount">Nominal</label>${rupiahInputHtml("expenseAmount", "", "required")}</div></div>
             <div class="field"><label for="expenseNote">Catatan</label><textarea id="expenseNote" placeholder="Contoh: Bensin full tank"></textarea></div>
             <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">Simpan Biaya</button></div>
           </form>
@@ -4124,7 +4157,7 @@
         document.querySelector("#vehicleExpenseForm").addEventListener("submit", async (event) => {
           event.preventDefault();
           const amount = parseFormattedNumber(document.querySelector("#expenseAmount").value);
-          if (amount < 0) return alert("Nominal biaya tidak boleh negatif.");
+          if (amount <= 0) return alert("Nominal biaya wajib lebih dari 0.");
           const record = { id: id(), vehicleId: document.querySelector("#expenseVehicle").value, walletId: document.querySelector("#expenseWallet").value };
           upsertVehicleTransaction(record, document.querySelector("#expenseType").value, amount, document.querySelector("#expenseDate").value, document.querySelector("#expenseNote").value.trim() || document.querySelector("#expenseType").value);
           closeModal();
@@ -5068,6 +5101,13 @@
       });
 
       document.body.addEventListener("click", async (event) => {
+        const moneyCalculatorTrigger = event.target.closest("[data-open-money-calculator]");
+        if (moneyCalculatorTrigger) {
+          const input = document.getElementById(moneyCalculatorTrigger.dataset.openMoneyCalculator);
+          if (input) openMoneyCalculator(input);
+          return;
+        }
+
         const moneyKey = event.target.closest("[data-money-key]");
         if (moneyKey) {
           const calculator = document.querySelector("#moneyCalculator");
@@ -5083,11 +5123,13 @@
           }
           if (key === "C") {
             expressionInput.value = "";
+            updateMoneyCalculatorResult();
             expressionInput.focus();
             return;
           }
           if (key === "⌫") {
             expressionInput.value = expressionInput.value.slice(0, -1);
+            updateMoneyCalculatorResult();
             expressionInput.focus();
             return;
           }
@@ -5095,9 +5137,10 @@
             try {
               const result = calculateMoneyExpression(expressionInput.value);
               expressionInput.value = String(result);
+              updateMoneyCalculatorResult();
               if (key === "Gunakan") {
-                const target = document.querySelector(`#${calculator.dataset.targetInput}`);
-                if (target) target.value = formatNumber(result);
+                const target = document.getElementById(calculator.dataset.targetInput);
+                if (target) target.value = formatRupiah(result);
                 closeMoneyCalculator();
               }
             } catch (error) {
@@ -5108,6 +5151,7 @@
             return;
           }
           expressionInput.value += key;
+          updateMoneyCalculatorResult();
           expressionInput.focus();
           return;
         }
@@ -5628,6 +5672,10 @@
           openTransactionDetail(target.id);
         };
         reader.readAsDataURL(file);
+      });
+
+      document.body.addEventListener("input", (event) => {
+        if (event.target.closest("#moneyCalculatorExpression")) updateMoneyCalculatorResult();
       });
 
       document.querySelector("#closeModalButton").addEventListener("click", closeModal);

@@ -1839,9 +1839,14 @@
         font-weight: 800;
       }
 
+      .money-input {
+        display: grid;
+        gap: 6px;
+      }
+
       .currency-input {
         display: grid;
-        grid-template-columns: auto 1fr;
+        grid-template-columns: 1fr;
         align-items: center;
         min-height: 48px;
         border: 1px solid var(--outline);
@@ -1865,6 +1870,24 @@
         border: 0;
         border-radius: 0;
         background: transparent;
+      }
+
+      .money-calculator-link {
+        width: max-content;
+        border: 0;
+        background: transparent;
+        color: var(--primary);
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.84rem;
+        font-weight: 850;
+        padding: 0;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      .money-calculator-link:hover {
+        color: var(--primary-dark);
       }
 
       .currency-input:focus-within {
@@ -1979,16 +2002,31 @@
         padding: 16px;
       }
 
-      .money-calculator-expression {
-        width: 100%;
-        min-height: 52px;
+      .money-calculator-display {
+        display: grid;
+        gap: 8px;
         border: 1px solid var(--outline);
         border-radius: var(--radius);
         background: var(--surface);
+        padding: 12px 14px;
+      }
+
+      .money-calculator-display span {
+        color: var(--primary);
+        font-size: 1.5rem;
+        font-weight: 950;
+      }
+
+      .money-calculator-expression {
+        width: 100%;
+        min-height: 34px;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
         color: var(--on-surface);
-        font-size: 1.15rem;
+        font-size: 1rem;
         font-weight: 850;
-        padding: 0 14px;
+        padding: 0;
       }
 
       .money-keypad {
@@ -2000,6 +2038,16 @@
       .money-keypad .button {
         min-height: 48px;
         padding: 0 10px;
+      }
+
+      @media (min-width: 760px) {
+        .money-calculator {
+          place-items: center;
+        }
+
+        .money-calculator-card {
+          border-radius: var(--radius-lg);
+        }
       }
 
       .modal-card {
