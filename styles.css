@@ -2769,6 +2769,35 @@
           display: block;
         }
 
+        .receipt-preview-button {
+          display: block;
+          width: 100%;
+          border: 0;
+          background: transparent;
+          padding: 0;
+          cursor: zoom-in;
+        }
+
+        .receipt-actions {
+          margin-top: 0;
+        }
+
+        .receipt-preview-detail {
+          display: grid;
+          gap: 16px;
+          padding: 18px;
+        }
+
+        .receipt-preview-detail img {
+          display: block;
+          width: 100%;
+          max-height: min(70vh, 720px);
+          object-fit: contain;
+          border: 1px solid var(--line);
+          border-radius: var(--radius);
+          background: var(--surface-container);
+        }
+
         .receipt-empty {
           display: grid;
           min-height: 154px;

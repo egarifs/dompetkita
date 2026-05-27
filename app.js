@@ -1714,11 +1714,17 @@
           <div class="transaction-detail" id="transactionDetailView">
             <section class="receipt-preview">
               ${receiptUrl
-                ? `<img src="${escapeHtml(receiptUrl)}" alt="Foto struk transaksi" />`
+                ? `<button class="receipt-preview-button" type="button" data-preview-receipt="${item.id}" aria-label="Lihat detail foto struk"><img src="${escapeHtml(receiptUrl)}" alt="Foto struk transaksi" /></button>`
                 : `<div class="receipt-empty"><strong>Belum ada foto struk</strong><span>Unggah foto struk agar transaksi lebih mudah diaudit.</span></div>`}
             </section>
             ${isChildUser() ? "" : `
-              <label class="button receipt-upload" for="receiptUploadInput">Unggah Foto Struk</label>
+              <div class="row-actions receipt-actions">
+                <label class="button receipt-upload" for="receiptUploadInput">${receiptUrl ? "Ganti Foto Struk" : "Unggah Foto Struk"}</label>
+                ${receiptUrl ? `
+                  <button class="button" type="button" data-preview-receipt="${item.id}">Preview Struk</button>
+                  <button class="button danger" type="button" data-delete-receipt="${item.id}">Hapus Struk</button>
+                ` : ""}
+              </div>
               <input class="hidden" id="receiptUploadInput" type="file" accept="image/*" data-receipt-transaction="${item.id}" />
             `}
             <section class="transaction-detail-summary">
@@ -1752,6 +1758,23 @@
                 <button class="button" type="button" data-edit-transaction="${item.id}">Edit</button>
                 <button class="button danger" type="button" data-delete-transaction="${item.id}">Hapus</button>
               `}
+            </div>
+          </div>
+        `;
+        showModal();
+      }
+
+      function openReceiptPreview(transactionId) {
+        const item = state.transactions.find((transaction) => transaction.id === transactionId);
+        const receiptUrl = item?.receiptUrl || item?.receiptImage || item?.strukUrl || "";
+        if (!item || !receiptUrl) return;
+        document.querySelector("#modalTitle").textContent = "Preview Struk";
+        document.querySelector("#modalBody").innerHTML = `
+          <div class="receipt-preview-detail">
+            <img src="${escapeHtml(receiptUrl)}" alt="Preview struk transaksi" />
+            <div class="row-actions">
+              <button class="button" type="button" data-open-transaction-detail="${item.id}">Kembali ke Detail</button>
+              ${isChildUser() ? "" : `<button class="button danger" type="button" data-delete-receipt="${item.id}">Hapus Struk</button>`}
             </div>
           </div>
         `;
@@ -5434,6 +5457,28 @@
             },
             undoFn: () => restoreItems("recurring", snapshot),
           });
+        }
+
+        const previewReceiptButton = event.target.closest("[data-preview-receipt]");
+        if (previewReceiptButton) {
+          openReceiptPreview(previewReceiptButton.dataset.previewReceipt);
+          return;
+        }
+
+        const deleteReceiptButton = event.target.closest("[data-delete-receipt]");
+        if (deleteReceiptButton) {
+          if (!requirePrimaryAccount()) return;
+          const target = state.transactions.find((item) => item.id === deleteReceiptButton.dataset.deleteReceipt);
+          if (!target) return;
+          if (!confirm("Hapus foto struk dari transaksi ini?")) return;
+          delete target.receiptImage;
+          delete target.receiptUrl;
+          delete target.strukUrl;
+          target.updatedAt = new Date().toISOString();
+          await persistChanges("Foto struk dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+          showSnackbar("Foto struk berhasil dihapus.");
+          openTransactionDetail(target.id);
+          return;
         }
       });
 
