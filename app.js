@@ -76,7 +76,7 @@
           "nav.account": "Akun",
           "common.add": "Tambah",
           "account.title": "Akun",
-          "account.subtitle": "Data, mode tampilan, dan transaksi berulang.",
+          "account.subtitle": "Profil, sinkronisasi, bahasa, dan tampilan aplikasi.",
           "account.cloudSync": "Sinkronisasi Cloud",
           "account.exportExcel": "Export data to Excel",
           "account.exportExcelDesc": "Unduh transaksi, anggaran, hutang piutang, dan transaksi berulang.",
@@ -97,7 +97,7 @@
           "nav.account": "Account",
           "common.add": "Add",
           "account.title": "Account",
-          "account.subtitle": "Data, display mode, and recurring transactions.",
+          "account.subtitle": "Profile, sync, language, and app appearance.",
           "account.cloudSync": "Cloud Sync",
           "account.exportExcel": "Export data to Excel",
           "account.exportExcelDesc": "Download transactions, budgets, debts, and recurring transactions.",
@@ -113,6 +113,7 @@
         id: {
           home: ["Beranda Keuangan", "Pantau pengeluaran bulan berjalan, saldo, dan sisa anggaran."],
           reports: ["Transaksi", "Lihat dan filter seluruh catatan pemasukan maupun pengeluaran."],
+          finance: ["Keuangan", "Kelola dompet, anggaran, tabungan, hutang piutang, dan laporan."],
           analytics: ["Analitik", "Pantau pola pengeluaran per kategori dan per hari."],
           budgets: ["Anggaran", "Atur batas pengeluaran dan pantau hutang piutang."],
           wallets: ["Dompet", "Kelola saldo Cash, Bank, E-Wallet, dan sumber uang lainnya."],
@@ -126,6 +127,7 @@
         en: {
           home: ["Finance Dashboard", "Track this month's spending, balance, and remaining budget."],
           reports: ["Transactions", "View and filter all income and expense records."],
+          finance: ["Finance", "Manage wallets, budgets, savings, debts, and reports."],
           analytics: ["Analytics", "Monitor spending patterns by category and by day."],
           budgets: ["Budget", "Set spending limits and monitor debts."],
           wallets: ["Wallets", "Manage Cash, Bank, E-Wallet, and other money sources."],
@@ -1683,7 +1685,7 @@
         const wallet = document.querySelector("#walletFilter")?.value || "all";
         const filtered = state.transactions
           .filter((item) => month === "all" || monthOf(item) === month)
-          .filter((item) => type === "all" || item.type === type)
+          .filter((item) => type === "all" || item.transactionType === type || item.type === type)
           .filter((item) => wallet === "all" || item.walletId === wallet)
           .filter((item) => selectedCategoryFilter === "all" || item.category === selectedCategoryFilter)
           .filter((item) => quickRangeMatch(item, quickTransactionRange))
@@ -2624,6 +2626,13 @@
         backButton.classList.toggle("hidden", view === "home");
       }
 
+      function navViewFor(view) {
+        if (["finance", "wallets", "walletDetail", "budgets", "savings", "balanceSheet", "analytics"].includes(view)) return "finance";
+        if (["vehicles"].includes(view)) return "vehicles";
+        if (["reports"].includes(view)) return "reports";
+        return view;
+      }
+
       function openView(view, options = {}) {
         const targetView = document.querySelector(`#${view}View`);
         if (!targetView) return;
@@ -2633,7 +2642,8 @@
         }
         document.querySelectorAll(".view").forEach((section) => section.classList.remove("active"));
         targetView.classList.add("active");
-        document.querySelectorAll(".nav-button[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === view));
+        const activeNav = navViewFor(view);
+        document.querySelectorAll(".nav-button[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === activeNav));
         const copy = currentPageCopy(view);
         document.querySelector("#pageHeading").textContent = copy[0];
         document.querySelector("#pageSubtitle").textContent = copy[1];
@@ -2646,7 +2656,7 @@
         openView(previousView, { fromBack: true });
       }
 
-      function openTransactionForm(transactionId = "") {
+      function openTransactionForm(transactionId = "", options = {}) {
         if (isChildUser()) return requirePrimaryAccount();
         if (!currentUser) {
           requireSignedIn();
@@ -2673,7 +2683,7 @@
         }
         ensureDebtCategory();
         document.querySelector("#modalTitle").textContent = editingTransaction ? "Edit Transaksi" : "Tambah Transaksi";
-        const selectedType = editingTransaction?.transactionType || editingTransaction?.debtPaymentType || editingTransaction?.type || "expense";
+        const selectedType = editingTransaction?.transactionType || editingTransaction?.debtPaymentType || editingTransaction?.type || options.presetType || "expense";
         const selectedCategory = editingTransaction?.category || categories[0] || "Lainnya";
         const selectedWallet = editingTransaction?.walletId || defaultWalletId();
         const payableOptions = state.debts
@@ -3081,7 +3091,7 @@
           });
           closeModal();
           await persistChanges("Transaksi berulang tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-          openView("account");
+          openView("reports");
         });
       }
 
@@ -4748,7 +4758,8 @@
 
       document.body.addEventListener("click", async (event) => {
         const opener = event.target.closest("[data-open-form]");
-        if (opener?.dataset.openForm === "transaction") openTransactionForm();
+        if (opener) document.querySelector("#addBlock")?.classList.remove("open");
+        if (opener?.dataset.openForm === "transaction") openTransactionForm("", { presetType: opener.dataset.transactionPreset || "" });
         if (opener?.dataset.openForm === "debt") openDebtForm();
         if (opener?.dataset.openForm === "recurring") openRecurringForm();
         if (opener?.dataset.openForm === "reminder") openReminderForm();

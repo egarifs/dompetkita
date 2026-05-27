@@ -739,10 +739,58 @@
 
       .shortcut-grid {
         display: grid;
-        grid-template-columns: repeat(9, minmax(76px, 1fr));
+        grid-template-columns: repeat(6, minmax(76px, 1fr));
         gap: 10px;
         overflow: visible;
         padding: 2px;
+      }
+
+      .finance-menu-grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .finance-card-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .finance-menu-card {
+        min-height: 136px;
+        display: grid;
+        align-content: start;
+        gap: 8px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface-container-low);
+        color: var(--on-surface);
+        padding: 16px;
+        text-align: left;
+        box-shadow: var(--shadow);
+      }
+
+      .finance-menu-card span {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 14px;
+        background: var(--primary-container);
+        color: var(--on-primary-container);
+        font-size: 1.1rem;
+        font-weight: 950;
+      }
+
+      .finance-menu-card strong {
+        font-size: 1rem;
+        font-weight: 900;
+      }
+
+      .finance-menu-card small {
+        color: var(--muted);
+        font-size: 0.82rem;
+        line-height: 1.35;
       }
 
       .quick-action,
@@ -1970,6 +2018,32 @@
         line-height: 1;
       }
 
+      .quick-add-block {
+        position: fixed;
+        right: 18px;
+        bottom: calc(94px + env(safe-area-inset-bottom));
+        z-index: 12;
+      }
+
+      .quick-add-block .mobile-fab {
+        position: static;
+        display: grid;
+        place-items: center;
+      }
+
+      .quick-add-menu {
+        position: absolute;
+        right: 0;
+        bottom: 70px;
+        width: min(280px, calc(100vw - 32px));
+        margin: 0;
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface-container-low);
+        box-shadow: var(--shadow-2);
+      }
+
       .hidden {
         display: none !important;
       }
@@ -1984,7 +2058,8 @@
         .budget-page-grid,
         .balance-sheet-grid,
         .compact-stats,
-        .account-grid {
+        .account-grid,
+        .finance-card-grid {
           grid-template-columns: 1fr;
         }
       }
@@ -2030,20 +2105,6 @@
           text-align: center;
         }
 
-        .add-menu {
-          position: absolute;
-          right: 0;
-          bottom: 64px;
-          left: auto;
-          width: min(260px, calc(100vw - 32px));
-          margin-left: 0;
-          padding: 8px;
-          border: 1px solid var(--border);
-          border-radius: var(--radius);
-          background: var(--surface-container-low);
-          box-shadow: var(--shadow-2);
-        }
-
         .add-choice {
           min-height: 44px;
         }
@@ -2074,9 +2135,9 @@
           flex: 1 1 150px;
         }
 
-        .mobile-fab {
-          display: grid;
-          place-items: center;
+        .quick-add-block {
+          right: 18px;
+          bottom: calc(94px + env(safe-area-inset-bottom));
         }
 
         .stats-grid {
