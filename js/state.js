@@ -46,6 +46,14 @@ window.AppState = {
     return `wallet-${slug || "default"}`;
   },
 
+  budgetIdFromName(name = "", index = 0) {
+    const slug = String(name || "budget")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    return `budget-${slug || index + 1}`;
+  },
+
   normalizeWallet(item, index = 0) {
     const now = new Date().toISOString();
     if (typeof item === "string") {
@@ -90,6 +98,7 @@ window.AppState = {
       description,
       amount: Number(amount),
       subcategory: meta.subcategory || "",
+      budgetId: meta.budgetId || meta.categoryId || "",
       sourceModule: window.AppState.transactionSourceModule(meta),
       sourceId: window.AppState.transactionSourceId(meta),
       walletId: meta.walletId || meta.dompetId || "",
@@ -114,12 +123,39 @@ window.AppState = {
       description: item.description || "",
       amount: Number(item.amount || 0),
       subcategory: item.subcategory || "",
+      budgetId: item.budgetId || item.categoryId || "",
       sourceModule,
       sourceId,
       walletId: item.walletId || item.dompetId || "",
       debtId: item.debtId || "",
       receivableId: item.receivableId || "",
       debtPaymentType: item.debtPaymentType || (transactionType === "debt_payment" || transactionType === "receivable_payment" ? transactionType : ""),
+      createdAt: timestamp,
+      updatedAt: item.updatedAt || timestamp,
+    };
+  },
+
+  normalizeBudget(item = {}, index = 0) {
+    const now = new Date().toISOString();
+    const name = item.name || item.category || `Anggaran ${index + 1}`;
+    const timestamp = item.createdAt || now;
+    const budgetLimit = Number(item.budgetLimit ?? item.limit ?? 0);
+    return {
+      ...item,
+      id: item.id || window.AppState.budgetIdFromName(name, index),
+      userId: item.userId || "",
+      name,
+      category: item.category || name,
+      type: item.type === "income" ? "income" : "expense",
+      parentId: item.parentId || null,
+      budgetLimit,
+      limit: budgetLimit,
+      usedAmount: Number(item.usedAmount || 0),
+      remainingAmount: Number(item.remainingAmount ?? budgetLimit),
+      period: item.period || "monthly",
+      icon: item.icon || "",
+      color: item.color || "",
+      isActive: item.isActive !== false,
       createdAt: timestamp,
       updatedAt: item.updatedAt || timestamp,
     };
@@ -243,6 +279,7 @@ window.AppState = {
       debts: window.AppState.deletionList(data, "debts"),
       savings: window.AppState.deletionList(data, "savings"),
       billReminders: window.AppState.deletionList(data, "billReminders"),
+      budgets: window.AppState.deletionList(data, "budgets"),
       recurring: window.AppState.deletionList(data, "recurring"),
       wallets: window.AppState.deletionList(data, "wallets"),
       vehicles: window.AppState.deletionList(data, "vehicles"),
@@ -256,7 +293,7 @@ window.AppState = {
       syncStatus: ["synced", "pending", "failed"].includes(data.syncStatus) ? data.syncStatus : "synced",
       localChangedAt: data.localChangedAt || "",
       transactions: window.AppState.withoutDeleted(Array.isArray(data.transactions) ? data.transactions : [], deleted.transactions).map(window.AppState.normalizeTransaction),
-      budgets: Array.isArray(data.budgets) ? data.budgets : [],
+      budgets: window.AppState.withoutDeleted(Array.isArray(data.budgets) ? data.budgets : [], deleted.budgets).map(window.AppState.normalizeBudget),
       debts: window.AppState.withoutDeleted(Array.isArray(data.debts) ? data.debts : [], deleted.debts).map(window.AppState.normalizeDebt),
       savings: window.AppState.withoutDeleted(Array.isArray(data.savings) ? data.savings : [], deleted.savings).map(window.AppState.normalizeSavingsGoal),
       billReminders: window.AppState.withoutDeleted(Array.isArray(data.billReminders) ? data.billReminders : [], deleted.billReminders),

@@ -714,15 +714,43 @@
                 </div>
               </div>
               <form class="form" id="budgetForm">
+                <input id="budgetId" type="hidden" />
                 <div class="field">
-                  <label for="budgetCategory">Kategori</label>
-                  <select id="budgetCategory"></select>
+                  <label for="budgetName">Nama anggaran</label>
+                  <input id="budgetName" type="text" placeholder="Contoh: Makanan" required />
+                </div>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="budgetType">Tipe</label>
+                    <select id="budgetType" required>
+                      <option value="expense">Pengeluaran</option>
+                      <option value="income">Pemasukan</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="budgetPeriod">Periode</label>
+                    <select id="budgetPeriod" required>
+                      <option value="daily">Harian</option>
+                      <option value="weekly">Mingguan</option>
+                      <option value="monthly" selected>Bulanan</option>
+                      <option value="yearly">Tahunan</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="budgetParent">Parent anggaran</label>
+                  <select id="budgetParent">
+                    <option value="">Jadikan parent utama</option>
+                  </select>
                 </div>
                 <div class="field">
                   <label for="budgetLimit">Batas anggaran</label>
                   <input id="budgetLimit" type="number" min="0" step="1000" placeholder="1500000" required />
                 </div>
-                <button class="button primary" type="submit">Simpan Anggaran</button>
+                <div class="row-actions">
+                  <button class="button" id="resetBudgetFormButton" type="button">Reset</button>
+                  <button class="button primary" type="submit">Simpan Anggaran</button>
+                </div>
               </form>
             </section>
 

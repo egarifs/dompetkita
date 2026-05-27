@@ -525,6 +525,7 @@
         const deleted = {
           transactions: mergeDeletedIds(cloud, local, "transactions"),
           debts: mergeDeletedIds(cloud, local, "debts"),
+          budgets: mergeDeletedIds(cloud, local, "budgets"),
           savings: mergeDeletedIds(cloud, local, "savings"),
           billReminders: mergeDeletedIds(cloud, local, "billReminders"),
           recurring: mergeDeletedIds(cloud, local, "recurring"),
@@ -536,12 +537,9 @@
           vehicleTaxes: mergeDeletedIds(cloud, local, "vehicleTaxes"),
           familyMembers: mergeDeletedIds(cloud, local, "familyMembers"),
         };
-        const budgetMap = new Map();
-        cloud.budgets.forEach((item) => budgetMap.set(item.category, item));
-        local.budgets.forEach((item) => budgetMap.set(item.category, item));
         return normalizeState({
           transactions: withoutDeleted(mergeById(cloud.transactions, local.transactions), deleted.transactions),
-          budgets: [...budgetMap.values()],
+          budgets: withoutDeleted(mergeById(cloud.budgets, local.budgets), deleted.budgets),
           debts: withoutDeleted(mergeById(cloud.debts, local.debts), deleted.debts),
           savings: withoutDeleted(mergeSavingsGoals(cloud.savings, local.savings), deleted.savings),
           billReminders: withoutDeleted(mergeById(cloud.billReminders, local.billReminders), deleted.billReminders),
@@ -1088,13 +1086,98 @@
       }
 
       function currentBudgetTotal() {
-        return state.budgets.reduce((sum, item) => sum + Number(item.limit || 0), 0);
+        return activeBudgets()
+          .filter((item) => !item.parentId)
+          .reduce((sum, item) => sum + Number(item.budgetLimit ?? item.limit ?? 0), 0);
       }
 
       function expenseForCategory(category, month = currentMonthKey()) {
         return transactionsByMonth(month)
           .filter((item) => item.type === "expense" && item.category === category)
           .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      }
+
+      function activeBudgets(type = "") {
+        return state.budgets.filter((budget) => budget.isActive !== false && (!type || budget.type === type));
+      }
+
+      function budgetById(budgetId) {
+        return state.budgets.find((budget) => budget.id === budgetId);
+      }
+
+      function childBudgets(parentId) {
+        return activeBudgets().filter((budget) => budget.parentId === parentId);
+      }
+
+      function budgetDisplayName(budget) {
+        const parent = budget?.parentId ? budgetById(budget.parentId) : null;
+        return parent ? `${parent.name} - ${budget.name}` : budget?.name || budget?.category || "";
+      }
+
+      function transactionMatchesBudget(transaction, budget) {
+        if (!budget) return false;
+        return transaction.budgetId === budget.id || (!transaction.budgetId && transaction.category === (budget.category || budget.name));
+      }
+
+      function budgetUsedAmount(budget, month = currentMonthKey()) {
+        const children = childBudgets(budget.id);
+        const selfUsed = transactionsByMonth(month)
+          .filter((item) => item.type === budget.type)
+          .filter((item) => transactionMatchesBudget(item, budget))
+          .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        const childUsed = children.reduce((sum, child) => sum + budgetUsedAmount(child, month), 0);
+        return selfUsed + childUsed;
+      }
+
+      function budgetRemainingAmount(budget, month = currentMonthKey()) {
+        return Number(budget?.budgetLimit ?? budget?.limit ?? 0) - budgetUsedAmount(budget, month);
+      }
+
+      function budgetOptions(type = "expense", selectedId = "") {
+        const parents = activeBudgets(type).filter((budget) => !budget.parentId);
+        return parents.map((parent) => {
+          const children = childBudgets(parent.id).filter((child) => child.type === type);
+          return `
+            <option value="${parent.id}" ${selectedId === parent.id ? "selected" : ""}>${escapeHtml(parent.name)}</option>
+            ${children.map((child) => `<option value="${child.id}" ${selectedId === child.id ? "selected" : ""}>-- ${escapeHtml(child.name)}</option>`).join("")}
+          `;
+        }).join("");
+      }
+
+      function syncCategoriesFromBudgets() {
+        const names = activeBudgets().map((budget) => budget.name).filter(Boolean);
+        state.categories = [...new Set([...(state.categories || []), ...names])];
+        categories = state.categories;
+      }
+
+      function budgetHasCircularParent(budgetId, parentId) {
+        let cursor = parentId;
+        while (cursor) {
+          if (cursor === budgetId) return true;
+          cursor = budgetById(cursor)?.parentId || null;
+        }
+        return false;
+      }
+
+      function validateSubBudgetLimit({ parentId, budgetLimit, editingId = "" }) {
+        if (!parentId) return true;
+        const parent = budgetById(parentId);
+        if (!parent || !Number(parent.budgetLimit || parent.limit || 0)) return true;
+        const siblingTotal = activeBudgets()
+          .filter((budget) => budget.parentId === parentId && budget.id !== editingId)
+          .reduce((sum, budget) => sum + Number(budget.budgetLimit ?? budget.limit ?? 0), 0);
+        return siblingTotal + Number(budgetLimit || 0) <= Number(parent.budgetLimit ?? parent.limit ?? 0);
+      }
+
+      function syncBudgetUsageState(month = currentMonthKey()) {
+        state.budgets.forEach((budget) => {
+          const usedAmount = budget.isActive === false ? Number(budget.usedAmount || 0) : budgetUsedAmount(budget, month);
+          const limit = Number(budget.budgetLimit ?? budget.limit ?? 0);
+          budget.usedAmount = usedAmount;
+          budget.remainingAmount = limit - usedAmount;
+          budget.limit = limit;
+          budget.budgetLimit = limit;
+        });
       }
 
       function savingsBalance(goal) {
@@ -1694,19 +1777,53 @@
       }
 
       function renderBudgets() {
-        const rows = state.budgets.map((budget) => {
-          const spent = expenseForCategory(budget.category);
-          const percent = budget.limit ? Math.min(100, Math.round((spent / budget.limit) * 100)) : 0;
+        const month = currentMonthKey();
+        const parents = activeBudgets().filter((budget) => !budget.parentId);
+        const rows = parents.map((budget) => {
+          const limit = Number(budget.budgetLimit ?? budget.limit ?? 0);
+          const spent = budgetUsedAmount(budget, month);
+          const percent = limit ? Math.min(100, Math.round((spent / limit) * 100)) : 0;
           const statusClass = percent >= 100 ? "danger" : percent >= 80 ? "warn" : "";
+          const children = childBudgets(budget.id);
           return `
-            <article class="budget-row">
-              <div class="budget-row-top">
-                <strong>${escapeHtml(budget.category)}</strong>
-                <span>${money(spent)} / ${money(budget.limit)}</span>
-              </div>
+            <details class="budget-row budget-parent" open>
+              <summary class="budget-row-top">
+                <div>
+                  <strong>${escapeHtml(budget.name)}</strong>
+                  <span>${budget.type === "income" ? "Pemasukan" : "Pengeluaran"} - ${escapeHtml(budget.period || "monthly")}</span>
+                </div>
+                <span>${money(spent)} / ${money(limit)}</span>
+              </summary>
               <div class="progress ${statusClass}"><i style="width: ${percent}%"></i></div>
-              <div class="stat-sub">${budget.limit - spent >= 0 ? "Sisa" : "Lewat"} ${money(Math.abs(budget.limit - spent))}</div>
-            </article>
+              <div class="stat-sub">${budgetRemainingAmount(budget, month) >= 0 ? "Sisa" : "Lewat"} ${money(Math.abs(budgetRemainingAmount(budget, month)))}</div>
+              <div class="row-actions budget-actions">
+                <button class="button" type="button" data-add-sub-budget="${budget.id}">Tambah Sub Kategori</button>
+                <button class="button" type="button" data-edit-budget="${budget.id}">Edit</button>
+                <button class="button danger" type="button" data-delete-budget="${budget.id}">Hapus</button>
+              </div>
+              ${children.length ? `<div class="budget-sub-list">${children.map((child) => {
+                const childLimit = Number(child.budgetLimit ?? child.limit ?? 0);
+                const childSpent = budgetUsedAmount(child, month);
+                const childPercent = childLimit ? Math.min(100, Math.round((childSpent / childLimit) * 100)) : 0;
+                const childStatus = childPercent >= 100 ? "danger" : childPercent >= 80 ? "warn" : "";
+                return `
+                  <article class="budget-row budget-child">
+                    <div class="budget-row-top">
+                      <div>
+                        <strong>${escapeHtml(child.name)}</strong>
+                        <span>${money(childSpent)} / ${money(childLimit)}</span>
+                      </div>
+                      <div class="row-actions">
+                        <button class="icon-button" type="button" title="Edit sub kategori" data-edit-budget="${child.id}">✎</button>
+                        <button class="icon-button danger" type="button" title="Hapus sub kategori" data-delete-budget="${child.id}">×</button>
+                      </div>
+                    </div>
+                    <div class="progress ${childStatus}"><i style="width: ${childPercent}%"></i></div>
+                    <div class="stat-sub">${budgetRemainingAmount(child, month) >= 0 ? "Sisa" : "Lewat"} ${money(Math.abs(budgetRemainingAmount(child, month)))}</div>
+                  </article>
+                `;
+              }).join("")}</div>` : `<div class="stat-sub">Belum ada sub kategori.</div>`}
+            </details>
           `;
         }).join("");
 
@@ -2129,13 +2246,14 @@
           });
         }
 
-        state.budgets.forEach((budget) => {
-          const spent = expenseForCategory(budget.category, month);
-          const percent = budget.limit ? Math.round((spent / budget.limit) * 100) : 0;
+        activeBudgets("expense").filter((budget) => !budget.parentId).forEach((budget) => {
+          const spent = budgetUsedAmount(budget, month);
+          const limit = Number(budget.budgetLimit ?? budget.limit ?? 0);
+          const percent = limit ? Math.round((spent / limit) * 100) : 0;
           if (percent >= 80) {
             insights.push({
-              title: `Budget ${budget.category}`,
-              text: `Budget ${budget.category.toLowerCase()} sudah terpakai ${percent}%.`,
+              title: `Budget ${budget.name}`,
+              text: `Budget ${budget.name.toLowerCase()} sudah terpakai ${percent}%.`,
               tone: percent >= 100 ? "expense" : "debt",
             });
           }
@@ -2183,12 +2301,12 @@
       }
 
       function budgetSuggestionAction(month = currentMonthKey()) {
-        const budgetRows = state.budgets
+        const budgetRows = activeBudgets("expense").filter((budget) => !budget.parentId)
           .map((budget) => {
-            const spent = expenseForCategory(budget.category, month);
-            const limit = Number(budget.limit || 0);
+            const spent = budgetUsedAmount(budget, month);
+            const limit = Number(budget.budgetLimit ?? budget.limit ?? 0);
             const percent = limit ? Math.round((spent / limit) * 100) : 0;
-            return { category: budget.category, spent, limit, percent };
+            return { category: budget.name || budget.category, spent, limit, percent };
           })
           .filter((item) => item.spent > 0)
           .sort((a, b) => b.percent - a.percent || b.spent - a.spent);
@@ -2403,9 +2521,47 @@
       }
 
       function renderCategoryOptions() {
-        const budgetCategory = document.querySelector("#budgetCategory");
         categories = state.categories?.length ? state.categories : [...defaultCategories];
-        budgetCategory.innerHTML = categories.map((category) => `<option value="${category}">${category}</option>`).join("");
+        const budgetType = document.querySelector("#budgetType")?.value || "expense";
+        const budgetParent = document.querySelector("#budgetParent");
+        const editingId = document.querySelector("#budgetId")?.value || "";
+        if (budgetParent) {
+          const parents = activeBudgets(budgetType).filter((budget) => !budget.parentId && budget.id !== editingId);
+          budgetParent.innerHTML = `<option value="">Jadikan parent utama</option>${parents.map((budget) => `<option value="${budget.id}">${escapeHtml(budget.name)}</option>`).join("")}`;
+        }
+      }
+
+      function resetBudgetForm(parentId = "") {
+        const form = document.querySelector("#budgetForm");
+        if (!form) return;
+        form.reset();
+        document.querySelector("#budgetId").value = "";
+        document.querySelector("#budgetPeriod").value = "monthly";
+        if (parentId) {
+          const parent = budgetById(parentId);
+          if (parent) {
+            document.querySelector("#budgetType").value = parent.type;
+            renderCategoryOptions();
+            document.querySelector("#budgetParent").value = parent.id;
+            document.querySelector("#budgetName").focus();
+            return;
+          }
+        }
+        renderCategoryOptions();
+      }
+
+      function editBudgetForm(budgetId) {
+        const budget = budgetById(budgetId);
+        if (!budget) return;
+        document.querySelector("#budgetId").value = budget.id;
+        document.querySelector("#budgetName").value = budget.name;
+        document.querySelector("#budgetType").value = budget.type;
+        document.querySelector("#budgetPeriod").value = budget.period || "monthly";
+        renderCategoryOptions();
+        document.querySelector("#budgetParent").value = budget.parentId || "";
+        document.querySelector("#budgetLimit").value = Number(budget.budgetLimit ?? budget.limit ?? 0);
+        openView("budgets");
+        document.querySelector("#budgetName").focus();
       }
 
       function renderCategoryBreakdown() {
@@ -2592,9 +2748,11 @@
         state.categories = categories;
         ensureVehicleCategory();
         ensureDebtCategory();
+        syncCategoriesFromBudgets();
         ensureTransactionWallets();
         recalculateWalletBalances();
         syncDebtPaymentState();
+        syncBudgetUsageState();
         renderDashboardMenuOrder();
         applyDarkMode();
         saveState();
@@ -2685,6 +2843,7 @@
         document.querySelector("#modalTitle").textContent = editingTransaction ? "Edit Transaksi" : "Tambah Transaksi";
         const selectedType = editingTransaction?.transactionType || editingTransaction?.debtPaymentType || editingTransaction?.type || options.presetType || "expense";
         const selectedCategory = editingTransaction?.category || categories[0] || "Lainnya";
+        const selectedBudgetId = editingTransaction?.budgetId || activeBudgets(editingTransaction?.type || selectedType).find((budget) => budget.category === editingTransaction?.category || budget.name === editingTransaction?.category)?.id || "";
         const selectedWallet = editingTransaction?.walletId || defaultWalletId();
         const payableOptions = state.debts
           .filter((debt) => debt.kind === "payable" && (debt.status !== "paid" || debt.id === editingTransaction?.debtId))
@@ -2716,6 +2875,15 @@
                 <label for="transactionCategory">Kategori</label>
                 <select id="transactionCategory">${categories.map((category) => `<option value="${category}" ${category === selectedCategory ? "selected" : ""}>${category}</option>`).join("")}</select>
               </div>
+              <div class="field">
+                <label for="transactionBudget">Anggaran</label>
+                <select id="transactionBudget">
+                  <option value="">Tidak terkait anggaran</option>
+                </select>
+                <p class="field-helper">Pilih sub kategori agar laporan budget lebih detail.</p>
+              </div>
+            </div>
+            <div class="form-grid">
               <div class="field">
                 <label for="transactionAmount">Nominal</label>
                 <div class="currency-input">
@@ -2766,6 +2934,7 @@
         attachRupiahInput("#transactionAmount");
         const typeInput = document.querySelector("#transactionType");
         const categoryInput = document.querySelector("#transactionCategory");
+        const budgetInput = document.querySelector("#transactionBudget");
         const descriptionInput = document.querySelector("#transactionDescription");
         const debtInput = document.querySelector("#transactionDebt");
         const receivableInput = document.querySelector("#transactionReceivable");
@@ -2778,9 +2947,12 @@
           const selected = typeInput.value;
           const isDebtPayment = selected === "debt_payment";
           const isReceivablePayment = selected === "receivable_payment";
+          const budgetType = isReceivablePayment || selected === "income" ? "income" : "expense";
+          budgetInput.innerHTML = `<option value="">Tidak terkait anggaran</option>${budgetOptions(budgetType, budgetInput.value || selectedBudgetId)}`;
           document.querySelector("#debtPaymentField").classList.toggle("hidden", !isDebtPayment);
           document.querySelector("#receivablePaymentField").classList.toggle("hidden", !isReceivablePayment);
           categoryInput.disabled = isDebtPayment || isReceivablePayment;
+          budgetInput.disabled = isDebtPayment || isReceivablePayment;
           if (isDebtPayment) {
             categoryInput.value = categories.includes("Hutang Piutang") ? "Hutang Piutang" : categoryInput.value;
             const debt = state.debts.find((item) => item.id === debtInput.value);
@@ -2793,6 +2965,10 @@
             if (!descriptionInput.value.trim() && debt) descriptionInput.value = `Terima piutang ${debt.person || ""}`.trim();
           }
         };
+        budgetInput.addEventListener("change", () => {
+          const budget = budgetById(budgetInput.value);
+          if (budget && !categoryInput.disabled) categoryInput.value = budget.category || budget.name;
+        });
         typeInput.addEventListener("change", updatePaymentFields);
         debtInput.addEventListener("change", updatePaymentFields);
         receivableInput.addEventListener("change", updatePaymentFields);
@@ -2822,13 +2998,14 @@
             type: isDebtPayment ? "expense" : isReceivablePayment ? "income" : selectedTransactionType,
             transactionType: selectedTransactionType,
             date: document.querySelector("#transactionDate").value,
-            category: isDebtPayment || isReceivablePayment ? "Hutang Piutang" : document.querySelector("#transactionCategory").value,
+            category: isDebtPayment || isReceivablePayment ? "Hutang Piutang" : (budgetById(document.querySelector("#transactionBudget").value)?.category || document.querySelector("#transactionCategory").value),
             amount: parseFormattedNumber(document.querySelector("#transactionAmount").value),
             description: document.querySelector("#transactionDescription").value.trim(),
             walletId: document.querySelector("#transactionWallet").value,
             sourceModule: isDebtPayment || isReceivablePayment ? "debts" : editingTransaction?.sourceModule || "manual",
             sourceId: relatedDebtId || editingTransaction?.sourceId || "",
             subcategory: isDebtPayment ? "Bayar Hutang" : isReceivablePayment ? "Terima Piutang" : editingTransaction?.subcategory || "",
+            budgetId: isDebtPayment || isReceivablePayment ? "" : document.querySelector("#transactionBudget").value,
             debtId: isDebtPayment ? relatedDebtId : "",
             receivableId: isReceivablePayment ? relatedDebtId : "",
             debtPaymentType: isDebtPayment ? "debt_payment" : isReceivablePayment ? "receivable_payment" : "",
@@ -3393,7 +3570,24 @@
           const category = document.querySelector("#categoryName").value.trim();
           if (category && !state.categories.includes(category)) {
             state.categories.push(category);
-            state.budgets.push({ category, limit: 0 });
+            state.budgets.push({
+              id: id(),
+              userId: currentUser?.id || "",
+              name: category,
+              category,
+              type: "expense",
+              parentId: null,
+              budgetLimit: 0,
+              limit: 0,
+              usedAmount: 0,
+              remainingAmount: 0,
+              period: "monthly",
+              icon: "",
+              color: "",
+              isActive: true,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
           }
           closeModal();
           renderAll();
@@ -4135,7 +4329,7 @@
             <head><meta charset="UTF-8" /></head>
             <body>
               ${table("Transaksi", ["Tanggal", "Kategori", "Subkategori", "Dompet", "Deskripsi", "Tipe", "Nominal", "Sumber", "Dibuat", "Diperbarui"], state.transactions.map((item) => [item.date, item.category, item.subcategory || "", walletName(item.walletId), item.description, item.type, item.amount, item.sourceModule || "manual", item.createdAt || "", item.updatedAt || ""]))}
-              ${table("Anggaran", ["Kategori", "Batas"], state.budgets.map((item) => [item.category, item.limit]))}
+              ${table("Anggaran", ["Nama", "Tipe", "Parent", "Batas", "Periode", "Status"], state.budgets.map((item) => [item.name || item.category, item.type, budgetById(item.parentId)?.name || "", item.budgetLimit ?? item.limit, item.period || "monthly", item.isActive === false ? "Nonaktif" : "Aktif"]))}
               ${table("Hutang Piutang", ["Tanggal", "Jatuh Tempo", "Jenis", "Nama", "Deskripsi", "Nominal", "Status"], state.debts.map((item) => [item.date, item.dueDate, item.kind, item.person, item.description, item.amount, item.status]))}
               ${table("Tabungan", ["Judul", "Kategori", "Target", "Terkumpul", "Target Tanggal"], state.savings.map((item) => [item.title, item.category, item.target, savingsBalance(item), item.targetDate]))}
               ${table("Reminder Tagihan", ["Nama", "Kategori", "Nominal", "Jatuh Tempo", "Catatan", "Status"], state.billReminders.map((item) => [item.title, item.category, item.amount, item.dueDate, item.note, item.status]))}
@@ -5073,6 +5267,43 @@
           return;
         }
 
+        const addSubBudgetButton = event.target.closest("[data-add-sub-budget]");
+        if (addSubBudgetButton) {
+          if (!requirePrimaryAccount()) return;
+          resetBudgetForm(addSubBudgetButton.dataset.addSubBudget);
+          openView("budgets");
+          return;
+        }
+
+        const editBudgetButton = event.target.closest("[data-edit-budget]");
+        if (editBudgetButton) {
+          if (!requirePrimaryAccount()) return;
+          editBudgetForm(editBudgetButton.dataset.editBudget);
+          return;
+        }
+
+        const deleteBudgetButton = event.target.closest("[data-delete-budget]");
+        if (deleteBudgetButton) {
+          if (!requirePrimaryAccount()) return;
+          const target = budgetById(deleteBudgetButton.dataset.deleteBudget);
+          if (!target) return;
+          const children = state.budgets.filter((budget) => budget.parentId === target.id);
+          const used = state.transactions.some((item) => item.budgetId === target.id || (!item.budgetId && item.category === (target.category || target.name)));
+          if (!confirm(`Hapus anggaran "${target.name}"?`)) return;
+          if (used || children.length) {
+            const timestamp = new Date().toISOString();
+            [target, ...children].forEach((budget) => {
+              budget.isActive = false;
+              budget.updatedAt = timestamp;
+            });
+          } else {
+            markDeleted("budgets", target.id);
+            state.budgets = state.budgets.filter((budget) => budget.id !== target.id);
+          }
+          await persistChanges("Anggaran dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+          return;
+        }
+
         const categoryDeleteButton = event.target.closest("[data-delete-category]");
         if (categoryDeleteButton) {
           if (!requirePrimaryAccount()) return;
@@ -5262,15 +5493,63 @@
         saveState();
       });
 
+      document.querySelector("#budgetType").addEventListener("change", () => {
+        const parent = document.querySelector("#budgetParent");
+        renderCategoryOptions();
+        if (parent) parent.value = "";
+      });
+
+      document.querySelector("#resetBudgetFormButton").addEventListener("click", () => resetBudgetForm());
+
       document.querySelector("#budgetForm").addEventListener("submit", (event) => {
         event.preventDefault();
         if (!requirePrimaryAccount()) return;
-        const category = document.querySelector("#budgetCategory").value;
+        const editingId = document.querySelector("#budgetId").value;
+        const name = document.querySelector("#budgetName").value.trim();
+        const type = document.querySelector("#budgetType").value;
+        const parentId = document.querySelector("#budgetParent").value || null;
         const limit = Number(document.querySelector("#budgetLimit").value);
-        const existing = state.budgets.find((item) => item.category === category);
-        if (existing) existing.limit = limit;
-        else state.budgets.push({ category, limit });
-        document.querySelector("#budgetLimit").value = "";
+        const parent = parentId ? budgetById(parentId) : null;
+        if (!name) return alert("Nama anggaran wajib diisi.");
+        if (Number.isNaN(limit) || limit < 0) return alert("Limit budget harus angka valid.");
+        if (parent && parent.type !== type) return alert("Sub kategori harus mengikuti tipe parent.");
+        if (budgetHasCircularParent(editingId, parentId)) return alert("Parent tidak valid karena membuat relasi melingkar.");
+        if (!validateSubBudgetLimit({ parentId, budgetLimit: limit, editingId })) {
+          return alert("Total budget sub kategori melebihi budget parent.");
+        }
+        const timestamp = new Date().toISOString();
+        const existing = editingId ? budgetById(editingId) : null;
+        if (existing) {
+          existing.name = name;
+          existing.category = name;
+          existing.type = type;
+          existing.parentId = parentId;
+          existing.budgetLimit = limit;
+          existing.limit = limit;
+          existing.period = document.querySelector("#budgetPeriod").value;
+          existing.updatedAt = timestamp;
+        } else {
+          state.budgets.push({
+            id: id(),
+            userId: currentUser?.id || "",
+            name,
+            category: name,
+            type,
+            parentId,
+            budgetLimit: limit,
+            limit,
+            usedAmount: 0,
+            remainingAmount: limit,
+            period: document.querySelector("#budgetPeriod").value,
+            icon: "",
+            color: "",
+            isActive: true,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          });
+        }
+        syncCategoriesFromBudgets();
+        resetBudgetForm();
         persistChanges("Anggaran tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
       });
 
@@ -5372,7 +5651,7 @@
           const normalized = normalizeState(fresh);
           applyState({
             ...normalized,
-            deleted: { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], wallets: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [], familyMembers: [] },
+            deleted: { transactions: [], debts: [], budgets: [], savings: [], billReminders: [], recurring: [], wallets: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [], familyMembers: [] },
           });
           renderAll();
         }
@@ -5381,7 +5660,24 @@
         if (!requireAdmin()) return;
         if (confirm("Kosongkan semua data transaksi, anggaran, dan hutang piutang?")) {
           state.transactions = [];
-          state.budgets = categories.map((category) => ({ category, limit: 0 }));
+          state.budgets = categories.map((category) => ({
+            id: id(),
+            userId: currentUser?.id || "",
+            name: category,
+            category,
+            type: "expense",
+            parentId: null,
+            budgetLimit: 0,
+            limit: 0,
+            usedAmount: 0,
+            remainingAmount: 0,
+            period: "monthly",
+            icon: "",
+            color: "",
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }));
           state.debts = [];
           state.savings = [];
           state.billReminders = [];
@@ -5391,7 +5687,7 @@
           state.vehicleOilChanges = [];
           state.vehicleParts = [];
           state.vehicleTaxes = [];
-          state.deleted = { transactions: [], debts: [], savings: [], billReminders: [], recurring: [], wallets: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [], familyMembers: [] };
+          state.deleted = { transactions: [], debts: [], budgets: [], savings: [], billReminders: [], recurring: [], wallets: [], vehicles: [], vehicleServices: [], vehicleOilChanges: [], vehicleParts: [], vehicleTaxes: [], familyMembers: [] };
           persistChanges("Data sudah dikosongkan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
         }
       });

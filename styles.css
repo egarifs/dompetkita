@@ -1158,6 +1158,40 @@
         padding: 12px;
       }
 
+      details.budget-row {
+        display: block;
+      }
+
+      details.budget-row > summary {
+        cursor: pointer;
+        list-style: none;
+      }
+
+      details.budget-row > summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .budget-parent {
+        display: grid;
+        gap: 12px;
+      }
+
+      .budget-sub-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 4px;
+      }
+
+      .budget-child {
+        background: var(--surface-container-low);
+        box-shadow: none;
+        padding: 12px;
+      }
+
+      .budget-actions {
+        margin-top: 2px;
+      }
+
       .budget-row-top,
       .debt-row-top,
       .category-row-top {
