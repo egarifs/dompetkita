@@ -135,6 +135,7 @@ window.AppCloud = {
       try {
         await window.AppCloud.ensureCloudSession(client);
         const payload = normalizeState(state);
+        window.AppCloud.stripLocalOnlyReceiptData(payload);
         payload.syncStatus = "synced";
         const { data, error } = await client.from(cloudConfig.table).upsert({
           user_id: userKey,
@@ -161,6 +162,18 @@ window.AppCloud = {
       return window.AppCloud.saveCloudState(ctx);
     }
     return saved;
+  },
+
+  stripLocalOnlyReceiptData(payload) {
+    if (!payload || !Array.isArray(payload.transactions)) return payload;
+    payload.transactions = payload.transactions.map((transaction) => {
+      const sanitized = { ...transaction };
+      delete sanitized.receiptImage;
+      delete sanitized.receiptUrl;
+      delete sanitized.strukUrl;
+      return sanitized;
+    });
+    return payload;
   },
 
   stopRealtimeSync(cloudSync) {

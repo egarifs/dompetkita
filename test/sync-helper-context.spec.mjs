@@ -61,6 +61,7 @@ if (recurringTransaction.sourceModule !== "recurring" || recurringTransaction.so
 
 let selected = false;
 let saved = false;
+let savedPayload = null;
 const { loadCloudState, saveCloudState } = window.AppCloud;
 const cloudSync = {
   enabled: true,
@@ -94,8 +95,9 @@ const client = {
       async maybeSingle() {
         return { data: null, error: null };
       },
-      upsert() {
+      upsert(payload) {
         saved = true;
+        savedPayload = payload?.payload || null;
         return this;
       },
       async single() {
@@ -106,6 +108,18 @@ const client = {
 };
 
 const state = normalizeState({}, { defaultCategories: ["Lainnya"], translations: { id: {} } });
+state.transactions.push({
+  id: "receipt-local",
+  type: "expense",
+  transactionType: "expense",
+  date: "2026-05-24",
+  category: "Makanan",
+  description: "Struk lokal",
+  amount: 10000,
+  receiptImage: "data:image/png;base64,local-only",
+  receiptUrl: "data:image/png;base64,local-url",
+  strukUrl: "data:image/png;base64,local-struk",
+});
 const ctx = {
   cloudSync,
   setupCloudClient: () => client,
@@ -126,6 +140,11 @@ await loadCloudState(ctx);
 
 if (!selected || !saved || cloudSync.lastError) {
   throw new Error(`Cloud helper context regression failed: ${cloudSync.lastError}`);
+}
+
+const cloudReceipt = savedPayload?.transactions?.find((item) => item.id === "receipt-local");
+if (!state.transactions[0].receiptImage || cloudReceipt?.receiptImage || cloudReceipt?.receiptUrl || cloudReceipt?.strukUrl) {
+  throw new Error("Receipt image data must stay local and must not be uploaded to cloud payload.");
 }
 
 console.log("Sync helper context OK");
