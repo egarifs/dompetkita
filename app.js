@@ -459,7 +459,7 @@
             <div class="money-calculator-body">
               <div class="money-calculator-display" aria-live="polite">
                 <span id="moneyCalculatorResult">Rp0</span>
-                <input id="moneyCalculatorExpression" class="money-calculator-expression" type="text" inputmode="numeric" aria-label="Ekspresi nominal" />
+                <input id="moneyCalculatorExpression" class="money-calculator-expression" type="text" inputmode="none" aria-label="Ekspresi nominal" readonly tabindex="-1" />
               </div>
               <p class="form-status hidden" id="moneyCalculatorStatus"></p>
               <div class="money-keypad">
@@ -474,6 +474,7 @@
 
       function openMoneyCalculator(input) {
         if (!input || input.dataset.calculatorOpening === "true") return;
+        input.blur();
         input.dataset.calculatorOpening = "true";
         setTimeout(() => {
           input.dataset.calculatorOpening = "false";
@@ -487,7 +488,6 @@
         status.className = "form-status hidden";
         status.textContent = "";
         calculator.classList.remove("hidden");
-        expressionInput.focus();
       }
 
       function closeMoneyCalculator() {
@@ -5100,9 +5100,17 @@
         document.querySelector("#addBlock").classList.toggle("open");
       });
 
+      document.body.addEventListener("pointerdown", (event) => {
+        const moneyCalculatorTrigger = event.target.closest("[data-open-money-calculator]");
+        if (!moneyCalculatorTrigger) return;
+        event.preventDefault();
+      });
+
       document.body.addEventListener("click", async (event) => {
         const moneyCalculatorTrigger = event.target.closest("[data-open-money-calculator]");
         if (moneyCalculatorTrigger) {
+          event.preventDefault();
+          event.stopPropagation();
           const input = document.getElementById(moneyCalculatorTrigger.dataset.openMoneyCalculator);
           if (input) openMoneyCalculator(input);
           return;
@@ -5124,13 +5132,11 @@
           if (key === "C") {
             expressionInput.value = "";
             updateMoneyCalculatorResult();
-            expressionInput.focus();
             return;
           }
           if (key === "⌫") {
             expressionInput.value = expressionInput.value.slice(0, -1);
             updateMoneyCalculatorResult();
-            expressionInput.focus();
             return;
           }
           if (key === "=" || key === "Gunakan") {
@@ -5147,12 +5153,10 @@
               status.className = "form-status error";
               status.textContent = error.message || "Ekspresi nominal tidak valid.";
             }
-            expressionInput.focus();
             return;
           }
           expressionInput.value += key;
           updateMoneyCalculatorResult();
-          expressionInput.focus();
           return;
         }
 
