@@ -152,6 +152,7 @@
       let hasUnsyncedChanges = state.syncStatus === "pending" || state.syncStatus === "failed";
       let quickTransactionRange = "month";
       let selectedCategoryFilter = "all";
+      let showAllDailyExpenses = false;
       let viewHistory = [];
       let selectedWalletDetailId = "";
       const idleTimeoutMs = IDLE_TIMEOUT_MINUTES * 60 * 1000;
@@ -2583,6 +2584,7 @@
 
       function renderDailyExpenses() {
         const monthFilter = document.querySelector("#monthFilter")?.value || "all";
+        const today = todayDate();
         const dailyDateLabel = (date) => new Intl.DateTimeFormat("id-ID", {
           day: "2-digit",
           month: "long",
@@ -2590,7 +2592,7 @@
         }).format(new Date(`${date}T00:00:00`));
         const rows = state.transactions
           .filter((item) => item.type === "expense")
-          .filter((item) => monthFilter === "all" || monthOf(item) === monthFilter)
+          .filter((item) => !showAllDailyExpenses || monthFilter === "all" || monthOf(item) === monthFilter)
           .reduce((summary, item) => {
             if (!summary[item.date]) summary[item.date] = { date: item.date, count: 0, total: 0, transactions: [] };
             summary[item.date].count += 1;
@@ -2599,7 +2601,18 @@
             return summary;
           }, {});
 
-        const data = Object.values(rows).sort((a, b) => b.date.localeCompare(a.date));
+        const allData = Object.values(rows).sort((a, b) => b.date.localeCompare(a.date));
+        const data = showAllDailyExpenses ? allData : allData.filter((item) => item.date === today);
+        const button = document.querySelector("#showAllDailyExpensesButton");
+        const subtitle = document.querySelector("#dailyExpenseSubtitle");
+        if (button) {
+          button.classList.toggle("hidden", showAllDailyExpenses || allData.length <= data.length);
+        }
+        if (subtitle) {
+          subtitle.textContent = showAllDailyExpenses
+            ? "Semua tanggal pengeluaran yang tercatat."
+            : `Pengeluaran hari ini, ${dailyDateLabel(today)}.`;
+        }
         document.querySelector("#dailyExpenseList").innerHTML = data.length
           ? `
             <div class="daily-expense-list">
@@ -2636,7 +2649,7 @@
               `).join("")}
             </div>
           `
-          : `<div class="empty"><p>Belum ada pengeluaran untuk ditampilkan.</p></div>`;
+          : `<div class="empty"><p>${showAllDailyExpenses ? "Belum ada pengeluaran untuk ditampilkan." : "Belum ada transaksi hari ini."}</p></div>`;
       }
 
       function renderRecurring() {
@@ -5486,6 +5499,10 @@
       document.querySelector("#viewAllSavingsButton").addEventListener("click", () => openView("savings"));
       document.querySelector("#homeSavingsHistoryButton").addEventListener("click", openSavingsHistory);
       document.querySelector("#savingsHistoryButton").addEventListener("click", openSavingsHistory);
+      document.querySelector("#showAllDailyExpensesButton").addEventListener("click", () => {
+        showAllDailyExpenses = true;
+        renderDailyExpenses();
+      });
       document.querySelector("#toggleTotalBalanceVisibilityButton").addEventListener("click", () => {
         if (!requirePrimaryAccount()) return;
         state.settings.totalBalanceVisible = !state.settings.totalBalanceVisible;

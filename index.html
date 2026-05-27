@@ -118,35 +118,35 @@
         </div>
 
         <nav class="nav" aria-label="Menu utama">
-          <button class="nav-button active" type="button" data-view="home">
+          <button class="nav-button active" type="button" data-view="home" aria-label="Beranda" title="Beranda">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M4 10.5 12 4l8 6.5V20H6.5A2.5 2.5 0 0 1 4 17.5v-7Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
               <path d="M9 20v-6h6v6" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
             </svg>
             <span data-i18n="nav.home">Beranda</span>
           </button>
-          <button class="nav-button" type="button" data-view="reports">
+          <button class="nav-button" type="button" data-view="reports" aria-label="Transaksi" title="Transaksi">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M5 7h14M5 12h14M5 17h9" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
               <path d="M17 15.5 19.5 18 22 15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
             <span data-i18n="nav.reports">Transaksi</span>
           </button>
-          <button class="nav-button" type="button" data-view="finance">
+          <button class="nav-button" type="button" data-view="finance" aria-label="Keuangan" title="Keuangan">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M4.5 8.5h15v10h-15z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
               <path d="M8 12h3M15.5 15.5h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
             </svg>
             <span>Keuangan</span>
           </button>
-          <button class="nav-button" type="button" data-view="vehicles">
+          <button class="nav-button" type="button" data-view="vehicles" aria-label="Kendaraan" title="Kendaraan">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M5 14h14l-1.5-4.5A2 2 0 0 0 15.6 8H8.4a2 2 0 0 0-1.9 1.5L5 14Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
               <path d="M7 17h.01M17 17h.01M5 14v4h14v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
             </svg>
             <span>Kendaraan</span>
           </button>
-          <button class="nav-button" type="button" data-view="account">
+          <button class="nav-button" type="button" data-view="account" aria-label="Akun" title="Akun">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4.5 20a7.5 7.5 0 0 1 15 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
             </svg>
@@ -194,7 +194,7 @@
               <span class="stat-sub">Akumulasi semua dompet</span>
             </article>
 
-            <article class="panel net-worth-card">
+            <article class="panel net-worth-card hidden">
               <div class="net-worth-main">
                 <div>
                   <span class="stat-label">Kekayaan Bersih</span>
@@ -214,8 +214,9 @@
               <div class="panel-header">
                 <div class="panel-title">
                   <h3>Pengeluaran per Hari</h3>
-                  <p>Jumlah transaksi dan total pengeluaran untuk setiap tanggal.</p>
+                  <p id="dailyExpenseSubtitle">Pengeluaran hari ini berdasarkan tanggal sistem.</p>
                 </div>
+                <button class="button" id="showAllDailyExpensesButton" type="button">Lihat Semua</button>
               </div>
               <div class="table-wrap" id="dailyExpenseList"></div>
             </section>
@@ -231,7 +232,7 @@
           </section>
 
           <div class="dashboard-sections" id="dashboardSections">
-            <section class="panel" data-home-section="wallets">
+            <section class="panel hidden" data-home-section="wallets">
               <div class="panel-header">
                 <div class="panel-title">
                   <h3>Saldo Dompet</h3>
@@ -255,7 +256,7 @@
             <div class="debt-list" id="insightList"></div>
           </section>
 
-            <section class="panel" data-home-section="latestTransactions">
+            <section class="panel hidden" data-home-section="latestTransactions">
             <div class="panel-header">
               <div class="panel-title">
                 <h3>Transaksi Terbaru</h3>
@@ -606,9 +607,9 @@
                 </div>
               </summary>
               <div class="finance-card-grid">
-                <button class="finance-menu-card" type="button" data-view="wallets"><span>□</span><strong>Dompet</strong><small>Kelola saldo setiap sumber uang.</small></button>
-                <button class="finance-menu-card" type="button" data-view="budgets"><span>%</span><strong>Anggaran</strong><small>Atur batas pengeluaran bulanan.</small></button>
-                <button class="finance-menu-card" type="button" data-view="savings"><span>◎</span><strong>Tabungan</strong><small>Pantau target dan progres goals.</small></button>
+                <button class="finance-menu-card" type="button" data-view="wallets"><strong>Dompet</strong><small>Kelola saldo setiap sumber uang.</small></button>
+                <button class="finance-menu-card" type="button" data-view="budgets"><strong>Anggaran</strong><small>Atur batas pengeluaran bulanan.</small></button>
+                <button class="finance-menu-card" type="button" data-view="savings"><strong>Tabungan</strong><small>Pantau target dan progres goals.</small></button>
               </div>
             </details>
 
@@ -620,8 +621,8 @@
                 </div>
               </summary>
               <div class="finance-card-grid">
-                <button class="finance-menu-card" type="button" data-view="budgets"><span>⇄</span><strong>Hutang & Piutang</strong><small>Bayar, terima, dan cek riwayat.</small></button>
-                <button class="finance-menu-card" type="button" data-open-form="billReminder"><span>⏰</span><strong>Reminder Tagihan</strong><small>Tambah pengingat jatuh tempo.</small></button>
+                <button class="finance-menu-card" type="button" data-view="budgets"><strong>Hutang & Piutang</strong><small>Bayar, terima, dan cek riwayat.</small></button>
+                <button class="finance-menu-card" type="button" data-open-form="billReminder"><strong>Reminder Tagihan</strong><small>Tambah pengingat jatuh tempo.</small></button>
               </div>
             </details>
 
@@ -633,8 +634,8 @@
                 </div>
               </summary>
               <div class="finance-card-grid">
-                <button class="finance-menu-card" type="button" data-view="balanceSheet"><span>∑</span><strong>Neraca Keuangan</strong><small>Aset, kewajiban, dan kekayaan bersih.</small></button>
-                <button class="finance-menu-card" type="button" data-view="analytics"><span>▥</span><strong>Laporan / Analitik</strong><small>Grafik, anggaran, dan kategori.</small></button>
+                <button class="finance-menu-card" type="button" data-view="balanceSheet"><strong>Neraca Keuangan</strong><small>Aset, kewajiban, dan kekayaan bersih.</small></button>
+                <button class="finance-menu-card" type="button" data-view="analytics"><strong>Laporan / Analitik</strong><small>Grafik, anggaran, dan kategori.</small></button>
               </div>
             </details>
           </div>
