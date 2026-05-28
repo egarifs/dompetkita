@@ -432,6 +432,55 @@
         trashIcon,
         walletName,
       });
+      const budgetService = window.AppBudgetService.createService({
+        escapeHtml,
+        getCategories: () => categories,
+        getState: () => state,
+        setCategories: (nextCategories) => {
+          categories = nextCategories;
+        },
+        currentMonthKey,
+        transactionsByMonth,
+      });
+      const budgetRenderer = window.AppBudgetRender.createRenderer({
+        activeBudgets,
+        budgetRemainingAmount,
+        budgetUsedAmount,
+        childBudgets,
+        currentMonthKey,
+        editIcon,
+        escapeHtml,
+        money,
+        trashIcon,
+      });
+      const savingsService = window.AppSavingsService.createService({
+        id,
+        savingsEntry: window.AppState.savingsEntry,
+        savingsGoal: window.AppState.savingsGoal,
+        todayDate,
+      });
+      const savingsRenderer = window.AppSavingsRender.createRenderer({
+        escapeHtml,
+        getState: () => state,
+        isSavingsAchieved,
+        money,
+        savingsBalance,
+        savingsPercent,
+        trashIcon,
+      });
+      const debtService = window.AppDebtService.createService({
+        getState: () => state,
+      });
+      const debtRenderer = window.AppDebtRender.createRenderer({
+        appIcon,
+        debtPaymentTransactions,
+        escapeHtml,
+        getState: () => state,
+        money,
+        transactionDateLabel,
+        trashIcon,
+        walletName,
+      });
 
       function activeView() {
         return router.activeView();
@@ -858,11 +907,11 @@
       }
 
       function savingsEntry(type, date, amount, note) {
-        return window.AppState.savingsEntry(id(), type, date, amount, note);
+        return savingsService.entry(type, date, amount, note);
       }
 
       function savingsGoal(category, target, targetDate, entries = []) {
-        return window.AppState.savingsGoal(id(), todayDate(), category, target, targetDate, entries);
+        return savingsService.goal(category, target, targetDate, entries);
       }
 
       function touchSavingsGoal(goal) {
@@ -979,55 +1028,31 @@
       }
 
       function debtPaymentTransactionTypeForDebt(debt) {
-        return debt?.kind === "receivable" ? "receivable_payment" : "debt_payment";
+        return debtService.paymentTransactionTypeForDebt(debt);
       }
 
       function transactionPaymentDebtId(transaction) {
-        return transaction.debtId || transaction.receivableId || "";
+        return debtService.transactionPaymentDebtId(transaction);
       }
 
       function isDebtPaymentTransaction(transaction) {
-        return transaction?.transactionType === "debt_payment" || transaction?.transactionType === "receivable_payment" || transaction?.debtPaymentType === "debt_payment" || transaction?.debtPaymentType === "receivable_payment";
+        return debtService.isPaymentTransaction(transaction);
       }
 
       function debtPaymentTransactions(debtId, options = {}) {
-        return state.transactions.filter((transaction) => {
-          if (!isDebtPaymentTransaction(transaction)) return false;
-          if (transactionPaymentDebtId(transaction) !== debtId) return false;
-          if (options.excludeTransactionId && transaction.id === options.excludeTransactionId) return false;
-          return true;
-        });
+        return debtService.paymentTransactions(debtId, options);
       }
 
       function debtPaidAmount(debt, options = {}) {
-        return debtPaymentTransactions(debt.id, options).reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+        return debtService.paidAmount(debt, options);
       }
 
       function debtRemainingAmount(debt, options = {}) {
-        return Math.max(0, Number(debt?.totalAmount ?? debt?.amount ?? 0) - debtPaidAmount(debt, options));
+        return debtService.remainingAmount(debt, options);
       }
 
       function syncDebtPaymentState() {
-        state.debts.forEach((debt) => {
-          const totalAmount = Number(debt.totalAmount ?? debt.amount ?? 0);
-          const payments = debtPaymentTransactions(debt.id);
-          const keepManualPaid = !payments.length && debt.status === "paid" && Number(debt.paidAmount || 0) >= totalAmount && !(debt.relatedTransactionIds || []).length;
-          const paidAmount = payments.reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
-          const effectivePaidAmount = keepManualPaid ? totalAmount : paidAmount;
-          const remainingAmount = Math.max(0, totalAmount - effectivePaidAmount);
-          debt.amount = totalAmount;
-          debt.totalAmount = totalAmount;
-          debt.paidAmount = effectivePaidAmount;
-          debt.remainingAmount = remainingAmount;
-          debt.relatedTransactionIds = payments.map((transaction) => transaction.id);
-          debt.paymentHistory = payments.map((transaction) => ({
-            transactionId: transaction.id,
-            date: transaction.date,
-            amount: Number(transaction.amount || 0),
-            walletId: transaction.walletId || "",
-          }));
-          debt.status = remainingAmount <= 0 && totalAmount > 0 ? "paid" : effectivePaidAmount > 0 ? "partial" : "unpaid";
-        });
+        debtService.syncPaymentState();
       }
 
       function vehicleName(vehicleId) {
@@ -1146,103 +1171,67 @@
       }
 
       function activeBudgets(type = "") {
-        return state.budgets.filter((budget) => budget.isActive !== false && (!type || budget.type === type));
+        return budgetService.active(type);
       }
 
       function budgetById(budgetId) {
-        return state.budgets.find((budget) => budget.id === budgetId);
+        return budgetService.byId(budgetId);
       }
 
       function childBudgets(parentId) {
-        return activeBudgets().filter((budget) => budget.parentId === parentId);
+        return budgetService.children(parentId);
       }
 
       function budgetDisplayName(budget) {
-        const parent = budget?.parentId ? budgetById(budget.parentId) : null;
-        return parent ? `${parent.name} - ${budget.name}` : budget?.name || budget?.category || "";
+        return budgetService.displayName(budget);
       }
 
       function transactionMatchesBudget(transaction, budget) {
-        if (!budget) return false;
-        return transaction.budgetId === budget.id || (!transaction.budgetId && transaction.category === (budget.category || budget.name));
+        return budgetService.transactionMatches(transaction, budget);
       }
 
       function budgetUsedAmount(budget, month = currentMonthKey()) {
-        const children = childBudgets(budget.id);
-        const selfUsed = transactionsByMonth(month)
-          .filter((item) => item.type === budget.type)
-          .filter((item) => transactionMatchesBudget(item, budget))
-          .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-        const childUsed = children.reduce((sum, child) => sum + budgetUsedAmount(child, month), 0);
-        return selfUsed + childUsed;
+        return budgetService.usedAmount(budget, month);
       }
 
       function budgetRemainingAmount(budget, month = currentMonthKey()) {
-        return Number(budget?.budgetLimit ?? budget?.limit ?? 0) - budgetUsedAmount(budget, month);
+        return budgetService.remainingAmount(budget, month);
       }
 
       function budgetOptions(type = "expense", selectedId = "") {
-        const parents = activeBudgets(type).filter((budget) => !budget.parentId);
-        return parents.map((parent) => {
-          const children = childBudgets(parent.id).filter((child) => child.type === type);
-          return `
-            <option value="${parent.id}" ${selectedId === parent.id ? "selected" : ""}>${escapeHtml(parent.name)}</option>
-            ${children.map((child) => `<option value="${child.id}" ${selectedId === child.id ? "selected" : ""}>-- ${escapeHtml(child.name)}</option>`).join("")}
-          `;
-        }).join("");
+        return budgetService.options(type, selectedId);
       }
 
       function syncCategoriesFromBudgets() {
-        const names = activeBudgets().map((budget) => budget.name).filter(Boolean);
-        state.categories = [...new Set([...(state.categories || []), ...names])];
-        categories = state.categories;
+        budgetService.syncCategoriesFromBudgets();
       }
 
       function budgetHasCircularParent(budgetId, parentId) {
-        let cursor = parentId;
-        while (cursor) {
-          if (cursor === budgetId) return true;
-          cursor = budgetById(cursor)?.parentId || null;
-        }
-        return false;
+        return budgetService.hasCircularParent(budgetId, parentId);
       }
 
       function validateSubBudgetLimit({ parentId, budgetLimit, editingId = "" }) {
-        if (!parentId) return true;
-        const parent = budgetById(parentId);
-        if (!parent || !Number(parent.budgetLimit || parent.limit || 0)) return true;
-        const siblingTotal = activeBudgets()
-          .filter((budget) => budget.parentId === parentId && budget.id !== editingId)
-          .reduce((sum, budget) => sum + Number(budget.budgetLimit ?? budget.limit ?? 0), 0);
-        return siblingTotal + Number(budgetLimit || 0) <= Number(parent.budgetLimit ?? parent.limit ?? 0);
+        return budgetService.validateSubLimit({ parentId, budgetLimit, editingId });
       }
 
       function syncBudgetUsageState(month = currentMonthKey()) {
-        state.budgets.forEach((budget) => {
-          const usedAmount = budget.isActive === false ? Number(budget.usedAmount || 0) : budgetUsedAmount(budget, month);
-          const limit = Number(budget.budgetLimit ?? budget.limit ?? 0);
-          budget.usedAmount = usedAmount;
-          budget.remainingAmount = limit - usedAmount;
-          budget.limit = limit;
-          budget.budgetLimit = limit;
-        });
+        budgetService.syncUsageState(month);
       }
 
       function savingsBalance(goal) {
-        return (goal.entries || []).reduce((sum, entry) => sum + (entry.type === "withdraw" ? -Number(entry.amount || 0) : Number(entry.amount || 0)), 0);
+        return savingsService.balance(goal);
       }
 
       function savingsPercent(goal) {
-        if (!goal.target) return 0;
-        return Math.min(100, Math.max(0, Math.round((savingsBalance(goal) / Number(goal.target)) * 100)));
+        return savingsService.percent(goal);
       }
 
       function isSavingsAchieved(goal) {
-        return Number(goal?.target || 0) > 0 && savingsBalance(goal) >= Number(goal.target || 0);
+        return savingsService.isAchieved(goal);
       }
 
       function activeDebts(kind) {
-        return state.debts.filter((item) => item.kind === kind && item.status !== "paid");
+        return debtService.active(kind);
       }
 
       function netWorthStatus(netWorth, totalAssets) {
@@ -1446,127 +1435,19 @@
       }
 
       function renderBudgets() {
-        const month = currentMonthKey();
-        const parents = activeBudgets().filter((budget) => !budget.parentId);
-        const rows = parents.map((budget) => {
-          const limit = Number(budget.budgetLimit ?? budget.limit ?? 0);
-          const spent = budgetUsedAmount(budget, month);
-          const percent = limit ? Math.min(100, Math.round((spent / limit) * 100)) : 0;
-          const statusClass = percent >= 100 ? "danger" : percent >= 80 ? "warn" : "";
-          const children = childBudgets(budget.id);
-          return `
-            <details class="budget-row budget-parent" open>
-              <summary class="budget-row-top">
-                <div>
-                  <strong>${escapeHtml(budget.name)}</strong>
-                  <span>${budget.type === "income" ? "Pemasukan" : "Pengeluaran"} - ${escapeHtml(budget.period || "monthly")}</span>
-                </div>
-                <span>${money(spent)} / ${money(limit)}</span>
-              </summary>
-              <div class="progress ${statusClass}"><i style="width: ${percent}%"></i></div>
-              <div class="stat-sub">${budgetRemainingAmount(budget, month) >= 0 ? "Sisa" : "Lewat"} ${money(Math.abs(budgetRemainingAmount(budget, month)))}</div>
-              <div class="row-actions budget-actions">
-                <button class="button" type="button" data-add-sub-budget="${budget.id}">Tambah Sub Kategori</button>
-                <button class="button" type="button" data-edit-budget="${budget.id}">Edit</button>
-                <button class="button danger" type="button" data-delete-budget="${budget.id}">Hapus</button>
-              </div>
-              ${children.length ? `<div class="budget-sub-list">${children.map((child) => {
-                const childLimit = Number(child.budgetLimit ?? child.limit ?? 0);
-                const childSpent = budgetUsedAmount(child, month);
-                const childPercent = childLimit ? Math.min(100, Math.round((childSpent / childLimit) * 100)) : 0;
-                const childStatus = childPercent >= 100 ? "danger" : childPercent >= 80 ? "warn" : "";
-                return `
-                  <article class="budget-row budget-child">
-                    <div class="budget-row-top">
-                      <div>
-                        <strong>${escapeHtml(child.name)}</strong>
-                        <span>${money(childSpent)} / ${money(childLimit)}</span>
-                      </div>
-                      <div class="row-actions">
-                        <button class="icon-button" type="button" title="Edit sub kategori" data-edit-budget="${child.id}">${editIcon()}</button>
-                        <button class="icon-button danger" type="button" title="Hapus sub kategori" data-delete-budget="${child.id}">${trashIcon()}</button>
-                      </div>
-                    </div>
-                    <div class="progress ${childStatus}"><i style="width: ${childPercent}%"></i></div>
-                    <div class="stat-sub">${budgetRemainingAmount(child, month) >= 0 ? "Sisa" : "Lewat"} ${money(Math.abs(budgetRemainingAmount(child, month)))}</div>
-                  </article>
-                `;
-              }).join("")}</div>` : `<div class="stat-sub">Belum ada sub kategori.</div>`}
-            </details>
-          `;
-        }).join("");
-
-        document.querySelector("#homeBudgetList").innerHTML = rows || `<div class="empty"><p>Belum ada anggaran.</p></div>`;
-        document.querySelector("#budgetPageList").innerHTML = rows || `<div class="empty"><p>Belum ada anggaran.</p></div>`;
+        budgetRenderer.renderBudgets();
       }
 
       function savingsRows(limit = null) {
-        const activeGoals = state.savings.filter((goal) => !isSavingsAchieved(goal));
-        const goals = [...activeGoals].sort((a, b) => (a.targetDate || "").localeCompare(b.targetDate || "")).slice(0, limit ?? activeGoals.length);
-        if (!goals.length) {
-          return `
-            <div class="empty">
-              <p>Belum ada tujuan tabungan.</p>
-              <button class="button primary" type="button" data-open-form="savingsGoal">Tambah Tujuan</button>
-            </div>
-          `;
-        }
-
-        return goals.map((goal) => {
-          const balance = savingsBalance(goal);
-          const percent = savingsPercent(goal);
-          return `
-            <article class="budget-row" data-open-savings="${goal.id}">
-              <div class="budget-row-top">
-                <div>
-                  <strong>${escapeHtml(goal.title)}</strong>
-                  <span>${percent}%</span>
-                </div>
-                <button class="icon-button danger" type="button" data-delete-savings="${goal.id}" aria-label="Hapus tabungan ${escapeHtml(goal.title)}" title="Hapus tabungan">
-                  ${trashIcon()}
-                </button>
-              </div>
-              <div class="progress"><i style="width: ${percent}%"></i></div>
-              <div class="stat-sub">${money(balance)} dari ${money(goal.target)} - Target ${escapeHtml(goal.targetDate || "-")}</div>
-            </article>
-          `;
-        }).join("");
+        return savingsRenderer.rows(limit);
       }
 
       function savingsHistoryRows() {
-        const achievedGoals = state.savings
-          .filter((goal) => isSavingsAchieved(goal))
-          .sort((a, b) => (b.targetDate || "").localeCompare(a.targetDate || ""));
-
-        if (!achievedGoals.length) {
-          return `<div class="empty"><p>Belum ada riwayat tabungan yang tercapai.</p></div>`;
-        }
-
-        return achievedGoals.map((goal) => {
-          const balance = savingsBalance(goal);
-          return `
-            <article class="budget-row" data-open-savings="${goal.id}">
-              <div class="budget-row-top">
-                <div>
-                  <strong>${escapeHtml(goal.title)}</strong>
-                  <span>Tercapai</span>
-                </div>
-                <button class="icon-button danger" type="button" data-delete-savings="${goal.id}" aria-label="Hapus riwayat tabungan ${escapeHtml(goal.title)}" title="Hapus tabungan">
-                  ${trashIcon()}
-                </button>
-              </div>
-              <div class="progress success"><i style="width: 100%"></i></div>
-              <div class="stat-sub">${money(balance)} dari ${money(goal.target)} - Target ${escapeHtml(goal.targetDate || "-")}</div>
-            </article>
-          `;
-        }).join("");
+        return savingsRenderer.historyRows();
       }
 
       function renderSavings() {
-        const activeCount = state.savings.filter((goal) => !isSavingsAchieved(goal)).length;
-        document.querySelector("#homeSavingsList").innerHTML = savingsRows(3);
-        document.querySelector("#allSavingsList").innerHTML = savingsRows();
-        document.querySelector("#viewAllSavingsButton").classList.toggle("hidden", activeCount <= 3);
+        savingsRenderer.renderSavings();
       }
 
       function latestVehicleOil(vehicleId) {
@@ -2093,55 +1974,11 @@
       }
 
       function renderDebts() {
-        const list = document.querySelector("#debtList");
-        const activeDebts = state.debts.filter((item) => item.status !== "paid");
-        if (!activeDebts.length) {
-          list.innerHTML = `<div class="empty"><p>Belum ada hutang piutang.</p></div>`;
-          return;
-        }
-
-        list.innerHTML = activeDebts
-          .sort((a, b) => b.date.localeCompare(a.date))
-          .map((item) => `
-            <article class="debt-row">
-              <div class="debt-row-top">
-                <strong>${escapeHtml(item.person)} - ${item.kind === "receivable" ? "Piutang" : "Hutang"}</strong>
-                <span>${money(item.remainingAmount ?? item.amount)}</span>
-              </div>
-              <p style="margin-top: 7px; color: var(--muted); font-size: .9rem">${escapeHtml(item.description)}</p>
-              <div class="debt-payment-summary">
-                <span>Total ${money(item.totalAmount ?? item.amount)}</span>
-                <span>${item.kind === "receivable" ? "Sudah diterima" : "Sudah dibayar"} ${money(item.paidAmount || 0)}</span>
-                <span>Sisa ${money(item.remainingAmount ?? item.amount)}</span>
-              </div>
-              ${debtPaymentHistoryHtml(item)}
-              <div class="tags" style="display:flex; flex-wrap:wrap; gap:7px; margin-top:10px">
-                <span class="pill debt">Tanggal ${escapeHtml(item.date)}</span>
-                <span class="pill debt">Jatuh tempo ${escapeHtml(item.dueDate || "-")}</span>
-                <span class="pill ${item.status === "partial" ? "debt" : item.status === "paid" ? "income" : "expense"}">${item.status === "partial" ? "Sebagian" : item.status === "paid" ? "Lunas" : "Belum lunas"}</span>
-                <button class="icon-button" type="button" title="Ubah status" data-toggle-debt="${item.id}">
-                  ${appIcon("check", 17)}
-                </button>
-                <button class="icon-button" type="button" title="Hapus hutang piutang" data-delete-debt="${item.id}">
-                  ${trashIcon()}
-                </button>
-              </div>
-            </article>
-          `).join("");
+        debtRenderer.renderDebts();
       }
 
       function debtPaymentHistoryHtml(debt) {
-        const payments = debtPaymentTransactions(debt.id).sort((a, b) => b.date.localeCompare(a.date));
-        if (!payments.length) return "";
-        const title = debt.kind === "receivable" ? "Riwayat Penerimaan" : "Riwayat Pembayaran";
-        return `
-          <div class="debt-payment-history">
-            <strong>${title}</strong>
-            ${payments.map((payment) => `
-              <span>${escapeHtml(transactionDateLabel(payment.date))} - ${money(payment.amount)} - ${escapeHtml(walletName(payment.walletId))}</span>
-            `).join("")}
-          </div>
-        `;
+        return debtRenderer.paymentHistoryHtml(debt);
       }
 
       function renderMonthOptions() {
