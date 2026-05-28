@@ -162,7 +162,7 @@
               </div>
             </div>
 
-            <article class="stat-card total-balance-card">
+            <article class="stat-card total-balance-card clickable-card" data-view="wallets" role="button" tabindex="0" aria-label="Lihat detail dompet">
               <div class="stat-label">Total Saldo <button class="icon-button" id="toggleTotalBalanceVisibilityButton" type="button" aria-label="Tampilkan total saldo" title="Tampilkan/Sembunyikan nominal"><span data-lucide-icon="eye" data-icon-size="18"></span></button></div>
               <strong class="stat-value" id="totalBalance">Rp0</strong>
               <span class="stat-sub">Akumulasi semua dompet</span>
@@ -195,12 +195,6 @@
               <div class="table-wrap" id="dailyExpenseList"></div>
             </section>
 
-            <div class="shortcut-grid" aria-label="Menu shortcut">
-              <button class="shortcut-item" type="button" data-open-form="transaction"><span data-lucide-icon="circle-plus" data-icon-size="26" data-icon-class="shortcut-icon lucide-icon"></span><strong>Tambah Transaksi</strong></button>
-              <button class="shortcut-item" type="button" data-view="reports"><span data-lucide-icon="receipt-text" data-icon-size="26" data-icon-class="shortcut-icon lucide-icon"></span><strong>Lihat Transaksi</strong></button>
-              <button class="shortcut-item" type="button" data-view="wallets"><span data-lucide-icon="wallet" data-icon-size="26" data-icon-class="shortcut-icon lucide-icon"></span><strong>Dompet</strong></button>
-              <button class="shortcut-item" type="button" data-view="budgets"><span data-lucide-icon="chart-pie" data-icon-size="26" data-icon-class="shortcut-icon lucide-icon"></span><strong>Anggaran</strong></button>
-            </div>
           </section>
 
           <div class="dashboard-sections" id="dashboardSections">

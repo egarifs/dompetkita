@@ -616,6 +616,24 @@
         background: var(--surface-container);
       }
 
+      .clickable-card {
+        cursor: pointer;
+      }
+
+      .clickable-card:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow);
+      }
+
+      .clickable-card:active {
+        transform: translateY(0);
+      }
+
+      .clickable-card:focus-visible {
+        outline: 3px solid rgb(0 121 85 / 32%);
+        outline-offset: 3px;
+      }
+
       .total-balance-card::before {
         content: "";
         position: absolute;
