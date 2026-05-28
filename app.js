@@ -65,6 +65,7 @@
         withoutDeleted,
       } = window.AppState;
 
+      const appIcon = (name, size = 20, className = "lucide-icon") => window.AppIcons.icon(name, size, className);
 
       const translations = {
         id: {
@@ -454,7 +455,7 @@
           <div class="money-calculator-card" role="dialog" aria-modal="true" aria-labelledby="moneyCalculatorTitle">
             <div class="modal-header">
               <h3 id="moneyCalculatorTitle">Kalkulator Nominal</h3>
-              <button class="icon-button" type="button" data-money-cancel title="Tutup">×</button>
+              <button class="icon-button" type="button" data-money-cancel title="Tutup">${appIcon("x", 18)}</button>
             </div>
             <div class="money-calculator-body">
               <div class="money-calculator-display" aria-live="polite">
@@ -1397,15 +1398,7 @@
       }
 
       function trashIcon() {
-        return `
-          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 6h18"></path>
-            <path d="M8 6V4h8v2"></path>
-            <path d="M19 6l-1 14H6L5 6"></path>
-            <path d="M10 11v6"></path>
-            <path d="M14 11v6"></path>
-          </svg>
-        `;
+        return appIcon("trash-2", 18);
       }
 
       function randomizeTotalBalanceGradient() {
@@ -1557,12 +1550,7 @@
       }
 
       function editIcon() {
-        return `
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
-            <path d="M14 7l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
-        `;
+        return appIcon("pencil", 17);
       }
 
       function renderDashboardGreeting() {
@@ -1594,7 +1582,7 @@
         if (!target || !button) return;
         const visible = Boolean(state.settings.totalBalanceVisible);
         target.textContent = visible ? money(total) : maskedMoney();
-        button.textContent = visible ? "👁" : "🙈";
+        button.innerHTML = appIcon(visible ? "eye" : "eye-off", 18);
         button.setAttribute("aria-label", visible ? "Sembunyikan total saldo" : "Tampilkan total saldo");
       }
 
@@ -1704,9 +1692,7 @@
                       ${editIcon()}
                     </button>
                     <button class="icon-button" type="button" title="Hapus transaksi" data-delete-transaction="${item.id}">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M5 7h14M10 11v6M14 11v6M8 7l1-3h6l1 3M7 7l1 13h8l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                      </svg>
+                      ${trashIcon()}
                     </button>
                   </td>
                 </tr>
@@ -1939,8 +1925,8 @@
                         <span>${money(childSpent)} / ${money(childLimit)}</span>
                       </div>
                       <div class="row-actions">
-                        <button class="icon-button" type="button" title="Edit sub kategori" data-edit-budget="${child.id}">✎</button>
-                        <button class="icon-button danger" type="button" title="Hapus sub kategori" data-delete-budget="${child.id}">×</button>
+                        <button class="icon-button" type="button" title="Edit sub kategori" data-edit-budget="${child.id}">${editIcon()}</button>
+                        <button class="icon-button danger" type="button" title="Hapus sub kategori" data-delete-budget="${child.id}">${trashIcon()}</button>
                       </div>
                     </div>
                     <div class="progress ${childStatus}"><i style="width: ${childPercent}%"></i></div>
@@ -2573,9 +2559,7 @@
                 <button class="button" type="button" data-toggle-bill="${item.id}">${item.status === "paid" ? "Batal Lunas" : "Tandai Lunas"}</button>
                 <button class="icon-button" type="button" title="Edit tagihan" data-edit-bill="${item.id}">${editIcon()}</button>
                 <button class="icon-button" type="button" title="Hapus tagihan" data-delete-bill="${item.id}">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M5 7h14M10 11v6M14 11v6M8 7l1-3h6l1 3M7 7l1 13h8l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
+                  ${trashIcon()}
                 </button>
               </div>
             </article>
@@ -2611,14 +2595,10 @@
                 <span class="pill debt">Jatuh tempo ${escapeHtml(item.dueDate || "-")}</span>
                 <span class="pill ${item.status === "partial" ? "debt" : item.status === "paid" ? "income" : "expense"}">${item.status === "partial" ? "Sebagian" : item.status === "paid" ? "Lunas" : "Belum lunas"}</span>
                 <button class="icon-button" type="button" title="Ubah status" data-toggle-debt="${item.id}">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
+                  ${appIcon("check", 17)}
                 </button>
                 <button class="icon-button" type="button" title="Hapus hutang piutang" data-delete-debt="${item.id}">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M5 7h14M10 11v6M14 11v6M8 7l1-3h6l1 3M7 7l1 13h8l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
+                  ${trashIcon()}
                 </button>
               </div>
             </article>
@@ -2755,11 +2735,7 @@
                         return `
                           <div class="daily-expense-transaction">
                             <div class="daily-expense-icon" aria-hidden="true">
-                              <svg width="21" height="21" viewBox="0 0 24 24" fill="none">
-                                <path d="M3 7.5h18v9H3v-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
-                                <path d="M7 10.5h2.5M7 13.5h4M16 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-                                <path d="M5 6V5h16v9h-1M3 16.5V18h16v-1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-                              </svg>
+                              ${appIcon("receipt-text", 21)}
                             </div>
                             <div class="daily-expense-detail">
                               <strong>${escapeHtml(title)}</strong>
@@ -2800,9 +2776,7 @@
               <span class="pill">${item.frequency === "monthly" ? `Bulanan tanggal ${item.day}` : item.frequency}</span>
               <span class="pill ${item.active ? "income" : "expense"}">${item.active ? "Aktif" : "Nonaktif"}</span>
               <button class="icon-button" type="button" title="Hapus transaksi berulang" data-delete-recurring="${item.id}">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M5 7h14M10 11v6M14 11v6M8 7l1-3h6l1 3M7 7l1 13h8l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
+                ${trashIcon()}
               </button>
             </div>
           </article>
@@ -3327,14 +3301,10 @@
                     <span class="pill debt">Jatuh tempo ${escapeHtml(item.dueDate || "-")}</span>
                     <span class="pill income">Lunas</span>
                     <button class="icon-button" type="button" title="Kembalikan ke belum lunas" data-toggle-debt="${item.id}">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M3 12a9 9 0 1 0 3-6.7M3 4v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                      </svg>
+                      ${appIcon("rotate-ccw", 17)}
                     </button>
                     <button class="icon-button" type="button" title="Hapus hutang piutang" data-delete-debt="${item.id}">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M5 7h14M10 11v6M14 11v6M8 7l1-3h6l1 3M7 7l1 13h8l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                      </svg>
+                      ${trashIcon()}
                     </button>
                   </div>
                 </article>
@@ -3636,8 +3606,8 @@
                       <strong>${escapeHtml(dashboardSectionLabel(section))}</strong>
                     </div>
                     <div class="row-actions">
-                      <button class="button" type="button" data-menu-up="${section}" ${index === 0 ? "disabled" : ""}>↑</button>
-                      <button class="button" type="button" data-menu-down="${section}" ${index === order.length - 1 ? "disabled" : ""}>↓</button>
+                      <button class="button" type="button" data-menu-up="${section}" ${index === 0 ? "disabled" : ""}>${appIcon("chevron-up", 18)}</button>
+                      <button class="button" type="button" data-menu-down="${section}" ${index === order.length - 1 ? "disabled" : ""}>${appIcon("chevron-down", 18)}</button>
                     </div>
                   </article>
                 `).join("")}
@@ -3690,9 +3660,7 @@
                       <strong>${escapeHtml(category)}</strong>
                     </div>
                     <button class="icon-button" type="button" title="Hapus kategori" data-delete-category="${escapeHtml(category)}">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M5 7h14M10 11v6M14 11v6M8 7l1-3h6l1 3M7 7l1 13h8l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                      </svg>
+                      ${trashIcon()}
                     </button>
                   </article>
                 `).join("")}
@@ -4859,10 +4827,7 @@
               <div class="password-wrap">
                 <input id="newPassword" type="password" autocomplete="new-password" minlength="8" required />
                 <button class="password-toggle" type="button" data-toggle-password="newPassword" aria-label="Tampilkan password">
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
-                  </svg>
+                  ${appIcon("eye", 19)}
                 </button>
               </div>
             </div>
@@ -4871,10 +4836,7 @@
               <div class="password-wrap">
                 <input id="confirmNewPassword" type="password" autocomplete="new-password" minlength="8" required />
                 <button class="password-toggle" type="button" data-toggle-password="confirmNewPassword" aria-label="Tampilkan password">
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
-                  </svg>
+                  ${appIcon("eye", 19)}
                 </button>
               </div>
             </div>
@@ -4986,10 +4948,7 @@
               <div class="password-wrap">
                 <input id="registerPassword" type="password" autocomplete="new-password" minlength="6" required />
                 <button class="password-toggle" type="button" data-toggle-password="registerPassword" aria-label="Tampilkan password">
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
-                  </svg>
+                  ${appIcon("eye", 19)}
                 </button>
               </div>
             </div>
@@ -5089,6 +5048,7 @@
         month: "long",
         year: "numeric",
       }).format(new Date());
+      window.AppIcons.hydrate();
 
       document.querySelectorAll("[data-view]").forEach((button) => {
         button.addEventListener("click", () => openView(button.dataset.view));
@@ -5196,6 +5156,7 @@
           const visible = input.type === "text";
           input.type = visible ? "password" : "text";
           passwordToggle.setAttribute("aria-label", visible ? "Tampilkan password" : "Sembunyikan password");
+          passwordToggle.innerHTML = appIcon(visible ? "eye" : "eye-off", 19);
         }
 
         if (event.target.closest("[data-close-modal]")) closeModal();

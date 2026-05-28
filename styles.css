@@ -255,6 +255,12 @@
         box-shadow: var(--shadow);
       }
 
+      .lucide-icon {
+        display: inline-block;
+        flex: 0 0 auto;
+        stroke-width: 2;
+      }
+
       h1,
       h2,
       h3,
@@ -314,6 +320,10 @@
       .nav-button.active {
         background: var(--secondary-container);
         color: var(--on-secondary-container);
+      }
+
+      .nav-button.active svg {
+        color: var(--primary);
       }
 
       .nav-button svg,
@@ -779,6 +789,12 @@
         box-shadow: var(--shadow);
       }
 
+      .finance-menu-card > svg {
+        width: 28px;
+        height: 28px;
+        color: var(--primary);
+      }
+
       .finance-menu-card strong {
         font-size: 1rem;
         font-weight: 900;
@@ -828,6 +844,20 @@
         color: var(--on-primary-container);
         font-size: 1.1rem;
         font-weight: 950;
+      }
+
+      .shortcut-item span svg {
+        color: var(--on-primary-container);
+      }
+
+      .shortcut-icon {
+        box-sizing: content-box;
+        width: 26px;
+        height: 26px;
+        border-radius: 12px;
+        background: var(--primary-container);
+        color: var(--on-primary-container);
+        padding: 4px;
       }
 
       .shortcut-item strong {
@@ -1498,6 +1528,12 @@
         border-color: transparent;
       }
 
+      .icon-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
       .empty {
         display: grid;
         min-height: 180px;
@@ -1682,6 +1718,28 @@
         border-radius: var(--radius);
         background: var(--surface-container);
         padding: 14px;
+      }
+
+      .settings-icon {
+        width: 40px;
+        height: 40px;
+        display: grid !important;
+        flex: 0 0 40px;
+        place-items: center;
+        border-radius: 14px;
+        background: var(--primary-container);
+        color: var(--on-primary-container) !important;
+        margin-top: 0 !important;
+      }
+
+      .settings-icon.danger {
+        background: var(--error-container);
+        color: var(--expense) !important;
+      }
+
+      .settings-icon + div {
+        min-width: 0;
+        margin-right: auto;
       }
 
       .settings-item strong {
