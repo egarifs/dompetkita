@@ -745,6 +745,7 @@
           return false;
         }
         markDataChanged();
+        saveState();
         renderAll();
         const saved = await flushCloudSave();
         if (!saved && isCloudSyncAllowed()) alert(failedMessage);
@@ -5707,7 +5708,7 @@
       document.querySelector("#resetBudgetFormButton").addEventListener("click", () => resetBudgetForm());
       attachRupiahInput("#budgetLimit");
 
-      document.querySelector("#budgetForm").addEventListener("submit", (event) => {
+      document.querySelector("#budgetForm").addEventListener("submit", async (event) => {
         event.preventDefault();
         if (!requirePrimaryAccount()) return;
         const editingId = document.querySelector("#budgetId").value;
@@ -5756,7 +5757,7 @@
         }
         syncCategoriesFromBudgets();
         resetBudgetForm();
-        persistChanges("Anggaran tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
+        await persistChanges("Anggaran tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
       });
 
       document.querySelector("#searchInput").addEventListener("input", () => {
