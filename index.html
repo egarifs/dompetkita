@@ -760,55 +760,60 @@
         <section class="view" id="accountView">
           <div class="account-grid">
             <aside class="account-stack">
-              <section class="panel profile-card">
-                <div class="profile-main">
-                  <div class="profile-photo" id="profilePhoto">A</div>
-                  <div>
-                    <div class="profile-name" id="profileName">Admin</div>
-                    <div class="profile-email" id="profileEmail">admin@keuangan.local</div>
-                    <div class="compact-list">
-                      <span class="pill" id="profileRole">Admin</span>
-                      <span class="pill" id="profilePinStatus">PIN belum aktif</span>
-                      <span class="pill" id="profileSyncStatus">Lokal</span>
-                    </div>
+              <details class="panel account-accordion" open>
+                <summary class="panel-header accordion-summary">
+                  <div class="panel-title">
+                    <h3>Profil & Keluarga</h3>
+                    <p>Identitas akun, akses keluarga, dan keamanan perangkat.</p>
                   </div>
+                </summary>
+                <div class="settings-list">
+                  <section class="profile-card account-profile-card">
+                    <div class="profile-main">
+                      <div class="profile-photo" id="profilePhoto">A</div>
+                      <div>
+                        <div class="profile-name" id="profileName">Admin</div>
+                        <div class="profile-email" id="profileEmail">admin@keuangan.local</div>
+                        <div class="compact-list">
+                          <span class="pill" id="profileRole">Admin</span>
+                          <span class="pill" id="profilePinStatus">PIN belum aktif</span>
+                          <span class="pill" id="profileSyncStatus">Lokal</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="app-info">
+                      <span>Versi Aplikasi</span>
+                      <strong id="appVersionLabel">v1.0.0</strong>
+                    </div>
+                  </section>
+                  <div class="settings-item">
+                    <span class="settings-icon" data-lucide-icon="users-round" data-icon-size="22"></span>
+                    <div>
+                      <strong>Anggota Keluarga</strong>
+                      <span id="familySummary">Belum ada anggota keluarga.</span>
+                    </div>
+                    <button class="button" type="button" data-open-form="familyMember">Tambah Anggota</button>
+                  </div>
+                  <div class="settings-item">
+                    <span class="settings-icon" data-lucide-icon="shield" data-icon-size="22"></span>
+                    <div>
+                      <strong>PIN / Keamanan</strong>
+                      <span id="pinSummary">PIN belum aktif.</span>
+                    </div>
+                    <button class="button" type="button" data-open-form="pin">Atur</button>
+                  </div>
+                  <div class="debt-list" id="familyMemberList"></div>
                 </div>
-                <div class="app-info">
-                  <span>Versi Aplikasi</span>
-                  <strong id="appVersionLabel">v1.0.0</strong>
-                </div>
-              </section>
+              </details>
 
               <details class="panel account-accordion" open>
                 <summary class="panel-header accordion-summary">
                   <div class="panel-title">
-                    <h3 data-i18n="account.title">Akun</h3>
-                    <p data-i18n="account.subtitle">Profil, sinkronisasi, bahasa, dan tampilan aplikasi.</p>
+                    <h3>Preferensi Aplikasi</h3>
+                    <p>Bahasa, tampilan, pengingat, dan personalisasi dashboard.</p>
                   </div>
                 </summary>
                 <div class="settings-list">
-                  <div class="settings-item">
-                    <span class="settings-icon" data-lucide-icon="cloud-sync" data-icon-size="22"></span>
-                    <div>
-                      <strong data-i18n="account.cloudSync">Sinkronisasi Cloud</strong>
-                      <span id="syncStatus">Mode lokal aktif.</span>
-                    </div>
-                    <div class="row-actions">
-                      <label class="switch" aria-label="Aktifkan Sinkronisasi Cloud">
-                        <input id="cloudSyncToggle" type="checkbox" checked />
-                        <span></span>
-                      </label>
-                      <button class="button" id="syncNowButton" type="button">Sync</button>
-                    </div>
-                  </div>
-                  <div class="settings-item">
-                    <span class="settings-icon" data-lucide-icon="file-spreadsheet" data-icon-size="22"></span>
-                    <div>
-                      <strong data-i18n="account.exportExcel">Export data to Excel</strong>
-                      <span data-i18n="account.exportExcelDesc">Unduh transaksi, anggaran, hutang piutang, dan transaksi berulang.</span>
-                    </div>
-                    <button class="button" id="exportExcelButton" type="button">Export</button>
-                  </div>
                   <div class="settings-item">
                     <span class="settings-icon" data-lucide-icon="languages" data-icon-size="22"></span>
                     <div>
@@ -831,19 +836,6 @@
                       <span></span>
                     </label>
                   </div>
-                </div>
-              </details>
-            </aside>
-
-            <div class="account-stack">
-              <details class="panel account-accordion" open>
-                <summary class="panel-header accordion-summary">
-                  <div class="panel-title">
-                    <h3>Pengaturan Fitur</h3>
-                    <p>Pengingat harian, dompet, kategori, dan PIN.</p>
-                  </div>
-                </summary>
-                <div class="settings-list">
                   <div class="settings-item">
                     <span class="settings-icon" data-lucide-icon="bell-ring" data-icon-size="22"></span>
                     <div>
@@ -851,41 +843,6 @@
                       <span id="reminderStatus">Belum aktif</span>
                     </div>
                     <button class="button" type="button" data-open-form="reminder">Atur</button>
-                  </div>
-                  <div class="settings-item">
-                    <span class="settings-icon" data-lucide-icon="file-text" data-icon-size="22"></span>
-                    <div>
-                      <strong>Reminder Tagihan</strong>
-                      <span id="billReminderSummary">Belum ada tagihan.</span>
-                    </div>
-                    <button class="button" type="button" data-open-form="billReminder">Tambah</button>
-                  </div>
-                  <div class="settings-item">
-                    <span class="settings-icon" data-lucide-icon="chart-pie" data-icon-size="22"></span>
-                    <div>
-                      <strong>Anggaran</strong>
-                      <span>Atur batas pengeluaran bulanan.</span>
-                    </div>
-                    <button class="button primary" type="button" data-view="budgets">Buka</button>
-                  </div>
-                  <div class="settings-item">
-                    <span class="settings-icon" data-lucide-icon="wallet" data-icon-size="22"></span>
-                    <div>
-                      <strong>Dompet</strong>
-                      <span id="walletSummary">Tunai, Bank</span>
-                    </div>
-                    <div class="row-actions">
-                      <button class="button" type="button" data-open-form="wallet">Tambah</button>
-                      <button class="button primary" type="button" data-view="wallets">Kelola</button>
-                    </div>
-                  </div>
-                  <div class="settings-item">
-                    <span class="settings-icon" data-lucide-icon="settings" data-icon-size="22"></span>
-                    <div>
-                      <strong>Kategori</strong>
-                      <span id="categorySummary">Kategori default aktif.</span>
-                    </div>
-                    <button class="button" type="button" data-open-form="category">Kelola</button>
                   </div>
                   <div class="settings-item">
                     <span class="settings-icon" data-lucide-icon="layout-dashboard" data-icon-size="22"></span>
@@ -896,59 +853,67 @@
                     <button class="button" type="button" data-open-form="dashboardMenu">Kelola</button>
                   </div>
                   <div class="settings-item">
-                    <span class="settings-icon" data-lucide-icon="shield" data-icon-size="22"></span>
+                    <span class="settings-icon" data-lucide-icon="settings" data-icon-size="22"></span>
                     <div>
-                      <strong>PIN</strong>
-                      <span id="pinSummary">PIN belum aktif.</span>
+                      <strong>Kategori</strong>
+                      <span id="categorySummary">Kategori default aktif.</span>
                     </div>
-                    <button class="button" type="button" data-open-form="pin">Atur</button>
-                  </div>
-                  <div class="settings-item">
-                    <span class="settings-icon" data-lucide-icon="users-round" data-icon-size="22"></span>
-                    <div>
-                      <strong>Anggota Keluarga</strong>
-                      <span id="familySummary">Belum ada anggota keluarga.</span>
-                    </div>
-                    <button class="button" type="button" data-open-form="familyMember">Tambah Anggota</button>
+                    <button class="button" type="button" data-open-form="category">Kelola</button>
                   </div>
                 </div>
               </details>
+            </aside>
 
-              <section class="panel">
-                <div class="panel-header">
-                  <div class="panel-title">
-                    <h3>Anggota Keluarga</h3>
-                    <p>Berikan akses baca transaksi keluarga untuk akun child.</p>
-                  </div>
-                  <button class="button primary" type="button" data-open-form="familyMember">Tambah Anggota</button>
-                </div>
-                <div class="debt-list" id="familyMemberList"></div>
-              </section>
-
+            <div class="account-stack">
               <details class="panel account-accordion" open>
                 <summary class="panel-header accordion-summary">
                   <div class="panel-title">
-                    <h3>Lainnya</h3>
-                    <p>Kirim saran, hapus akun, atau keluar dari aplikasi.</p>
+                    <h3>Data & Sinkronisasi</h3>
+                    <p>Cloud sync, export data, dan pembersihan data bulanan.</p>
                   </div>
                 </summary>
                 <div class="settings-list">
                   <div class="settings-item">
-                    <span class="settings-icon" data-lucide-icon="message-square" data-icon-size="22"></span>
+                    <span class="settings-icon" data-lucide-icon="cloud-sync" data-icon-size="22"></span>
                     <div>
-                      <strong>Kirim Saran</strong>
-                      <span>Tulis masukan untuk pengembangan aplikasi.</span>
+                      <strong data-i18n="account.cloudSync">Sinkronisasi Cloud</strong>
+                      <span id="syncStatus">Mode lokal aktif.</span>
                     </div>
-                    <button class="button" type="button" data-open-form="feedback">Kirim</button>
+                    <div class="row-actions">
+                      <label class="switch" aria-label="Aktifkan Sinkronisasi Cloud">
+                        <input id="cloudSyncToggle" type="checkbox" checked />
+                        <span></span>
+                      </label>
+                      <button class="button" id="syncNowButton" type="button">Sync</button>
+                    </div>
                   </div>
                   <div class="settings-item">
-                    <span class="settings-icon" data-lucide-icon="heart-handshake" data-icon-size="22"></span>
+                    <span class="settings-icon" data-lucide-icon="file-spreadsheet" data-icon-size="22"></span>
                     <div>
-                      <strong>Thanks</strong>
-                      <span>Lihat rekening dukungan pengembangan aplikasi.</span>
+                      <strong data-i18n="account.exportExcel">Export Data ke Excel</strong>
+                      <span data-i18n="account.exportExcelDesc">Unduh transaksi, anggaran, hutang piutang, dan transaksi berulang.</span>
                     </div>
-                    <button class="button" type="button" data-open-form="thanks">Buka</button>
+                    <button class="button" id="exportExcelButton" type="button">Export</button>
                   </div>
+                  <div class="settings-item warning-item">
+                    <span class="settings-icon danger" data-lucide-icon="rotate-ccw" data-icon-size="22"></span>
+                    <div>
+                      <strong>Reset Data Bulanan</strong>
+                      <span>Hapus data berdasarkan bulan yang dipilih.</span>
+                    </div>
+                    <button class="button danger" type="button" data-open-form="monthlyReset">Reset</button>
+                  </div>
+                </div>
+              </details>
+
+              <details class="panel account-accordion" open>
+                <summary class="panel-header accordion-summary">
+                  <div class="panel-title">
+                    <h3>Informasi Aplikasi</h3>
+                    <p>Update aplikasi, berbagi, dukungan, dan masukan pengguna.</p>
+                  </div>
+                </summary>
+                <div class="settings-list">
                   <div class="settings-item">
                     <span class="settings-icon" data-lucide-icon="history" data-icon-size="22"></span>
                     <div>
@@ -966,21 +931,36 @@
                     <button class="button" id="shareAppButton" type="button">Bagikan</button>
                   </div>
                   <div class="settings-item">
-                    <span class="settings-icon" data-lucide-icon="rotate-ccw" data-icon-size="22"></span>
+                    <span class="settings-icon" data-lucide-icon="heart-handshake" data-icon-size="22"></span>
                     <div>
-                      <strong>Reset Data Bulanan</strong>
-                      <span>Hapus data berdasarkan bulan yang dipilih.</span>
+                      <strong>Thanks</strong>
+                      <span>Lihat rekening dukungan pengembangan aplikasi.</span>
                     </div>
-                    <button class="button danger" type="button" data-open-form="monthlyReset">Reset</button>
+                    <button class="button" type="button" data-open-form="thanks">Buka</button>
                   </div>
                   <div class="settings-item">
-                    <span class="settings-icon danger" data-lucide-icon="trash-2" data-icon-size="22"></span>
+                    <span class="settings-icon" data-lucide-icon="message-square" data-icon-size="22"></span>
                     <div>
-                      <strong>Hapus Akun</strong>
-                      <span>Hapus akun login yang sedang digunakan.</span>
+                      <strong>Kirim Saran</strong>
+                      <span>Tulis masukan untuk pengembangan aplikasi.</span>
                     </div>
-                    <button class="button danger" id="deleteAccountButton" type="button">Hapus</button>
+                    <button class="button" type="button" data-open-form="feedback">Kirim</button>
                   </div>
+                  <div class="app-copyright">
+                    <span>© 2026 Dompify. Built with open-source technologies.</span>
+                    <button class="auth-link icon-link" type="button" data-open-form="licenses"><span data-lucide-icon="code-2" data-icon-size="18"></span>Open Source Licenses</button>
+                  </div>
+                </div>
+              </details>
+
+              <details class="panel account-accordion" open>
+                <summary class="panel-header accordion-summary">
+                  <div class="panel-title">
+                    <h3>Aksi Akun</h3>
+                    <p>Keluar dari sesi atau hapus akun login.</p>
+                  </div>
+                </summary>
+                <div class="settings-list">
                   <div class="settings-item">
                     <span class="settings-icon" data-lucide-icon="log-out" data-icon-size="22"></span>
                     <div>
@@ -989,9 +969,13 @@
                     </div>
                     <button class="button" id="logoutButton" type="button">Logout</button>
                   </div>
-                  <div class="app-copyright">
-                    <span>© 2026 Dompify. Built with open-source technologies.</span>
-                    <button class="auth-link icon-link" type="button" data-open-form="licenses"><span data-lucide-icon="code-2" data-icon-size="18"></span>Open Source Licenses</button>
+                  <div class="settings-item danger-item">
+                    <span class="settings-icon danger" data-lucide-icon="trash-2" data-icon-size="22"></span>
+                    <div>
+                      <strong>Hapus Akun</strong>
+                      <span>Hapus akun login yang sedang digunakan.</span>
+                    </div>
+                    <button class="button danger" id="deleteAccountButton" type="button">Hapus</button>
                   </div>
                 </div>
               </details>

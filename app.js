@@ -81,7 +81,7 @@
           "account.title": "Akun",
           "account.subtitle": "Profil, sinkronisasi, bahasa, dan tampilan aplikasi.",
           "account.cloudSync": "Sinkronisasi Cloud",
-          "account.exportExcel": "Export data to Excel",
+          "account.exportExcel": "Export Data ke Excel",
           "account.exportExcelDesc": "Unduh transaksi, anggaran, hutang piutang, dan transaksi berulang.",
           "account.recurring": "Transaksi Berulang",
           "account.language": "Bahasa",
@@ -102,7 +102,7 @@
           "account.title": "Account",
           "account.subtitle": "Profile, sync, language, and app appearance.",
           "account.cloudSync": "Cloud Sync",
-          "account.exportExcel": "Export data to Excel",
+          "account.exportExcel": "Export Data to Excel",
           "account.exportExcelDesc": "Download transactions, budgets, debts, and recurring transactions.",
           "account.recurring": "Recurring Transactions",
           "account.language": "Language",
@@ -2544,9 +2544,12 @@
           return (a.dueDate || "").localeCompare(b.dueDate || "");
         });
         const visible = reminders.slice(0, 5);
-        document.querySelector("#billReminderSummary").textContent = reminders.length
-          ? `${reminders.filter((item) => item.status !== "paid").length} tagihan belum lunas.`
-          : "Belum ada tagihan.";
+        const billReminderSummary = document.querySelector("#billReminderSummary");
+        if (billReminderSummary) {
+          billReminderSummary.textContent = reminders.length
+            ? `${reminders.filter((item) => item.status !== "paid").length} tagihan belum lunas.`
+            : "Belum ada tagihan.";
+        }
         document.querySelector("#billReminderList").innerHTML = visible.length
           ? visible.map((item) => `
             <article class="debt-row">
@@ -2832,9 +2835,12 @@
         document.querySelector("#syncStatus").textContent = isGuest() ? "Mode tamu aktif. Login atau registrasi untuk menyimpan data." : syncStatusText();
         document.querySelector("#syncNowButton").disabled = isGuest() || !isCloudSyncAllowed() || cloudSync.isSaving;
         document.querySelector("#reminderStatus").textContent = state.settings.reminderEnabled ? `Aktif pukul ${state.settings.reminderTime}` : "Belum aktif";
-        document.querySelector("#walletSummary").textContent = state.wallets.length
-          ? `${state.wallets.length} dompet, total ${money(state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0))}`
-          : "Belum ada dompet";
+        const walletSummary = document.querySelector("#walletSummary");
+        if (walletSummary) {
+          walletSummary.textContent = state.wallets.length
+            ? `${state.wallets.length} dompet, total ${money(state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0))}`
+            : "Belum ada dompet";
+        }
         document.querySelector("#categorySummary").textContent = `${categories.length} kategori aktif`;
         document.querySelector("#dashboardMenuSummary").textContent = state.settings.homeSectionOrder.map(dashboardSectionLabel).join(", ");
         document.querySelector("#pinSummary").textContent = state.settings.pin ? "PIN sudah disimpan di perangkat ini." : "PIN belum aktif.";

@@ -1695,6 +1695,12 @@
         padding: 16px;
       }
 
+      .account-profile-card {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface-container);
+      }
+
       .profile-main {
         display: flex;
         align-items: center;
@@ -1757,6 +1763,12 @@
         border-radius: var(--radius);
         background: var(--surface-container);
         padding: 14px;
+      }
+
+      .settings-item.warning-item,
+      .settings-item.danger-item {
+        border-color: color-mix(in srgb, var(--expense) 26%, var(--line));
+        background: color-mix(in srgb, var(--error-container) 54%, var(--surface-container));
       }
 
       .settings-icon {
