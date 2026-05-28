@@ -97,6 +97,8 @@ const requiredFiles = [
   "js/features/debts/debt.render.js",
   "js/features/savings/savings.service.js",
   "js/features/savings/savings.render.js",
+  "js/features/account/account.service.js",
+  "js/features/account/account.render.js",
   "icons/icon.svg",
 ];
 
@@ -136,6 +138,8 @@ for (const file of [
   "js/features/debts/debt.render.js",
   "js/features/savings/savings.service.js",
   "js/features/savings/savings.render.js",
+  "js/features/account/account.service.js",
+  "js/features/account/account.render.js",
   "app.js",
   "app-meta.js",
   "sw.js",
