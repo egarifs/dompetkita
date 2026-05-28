@@ -1,7 +1,7 @@
 global.window = global;
 
-await import("../js/state.js");
-await import("../js/cloud.js");
+await import("../js/core/state.js");
+await import("../js/core/cloud.js");
 
 const { mergeDeletedIds, normalizeState } = window.AppState;
 const deletedIds = mergeDeletedIds(

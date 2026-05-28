@@ -20,11 +20,11 @@ function createStorage() {
 
 global.localStorage = createStorage();
 global.sessionStorage = createStorage();
-await import("../js/constants.js");
-await import("../js/state.js");
-await import("../js/storage.js");
-await import("../js/auth.js");
-await import("../js/cloud.js");
+await import("../js/core/constants.js");
+await import("../js/core/state.js");
+await import("../js/core/storage.js");
+await import("../js/core/auth.js");
+await import("../js/core/cloud.js");
 
 const { authStorageKey, sessionStorageKey, storageKey, defaultCategories } = window.AppConstants;
 const translations = { id: {}, en: {} };
