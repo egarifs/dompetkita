@@ -796,8 +796,10 @@
       .finance-menu-card {
         min-height: 112px;
         display: grid;
-        align-content: start;
-        gap: 8px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-content: center;
+        align-items: center;
+        gap: 6px 14px;
         border: 1px solid var(--line);
         border-radius: var(--radius);
         background: var(--surface-container-low);
@@ -808,17 +810,24 @@
       }
 
       .finance-menu-card > svg {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        justify-self: end;
         width: 28px;
         height: 28px;
-        color: var(--primary);
+        color: var(--violet);
       }
 
       .finance-menu-card strong {
+        grid-column: 1;
+        grid-row: 1;
         font-size: 1rem;
         font-weight: 900;
       }
 
       .finance-menu-card small {
+        grid-column: 1;
+        grid-row: 2;
         color: var(--muted);
         font-size: 0.82rem;
         line-height: 1.35;
@@ -1751,19 +1760,19 @@
       }
 
       .settings-icon {
-        width: 40px;
-        height: 40px;
+        width: 28px;
+        height: 28px;
         display: grid !important;
-        flex: 0 0 40px;
+        flex: 0 0 28px;
         place-items: center;
-        border-radius: 14px;
-        background: var(--primary-container);
-        color: var(--on-primary-container) !important;
+        border-radius: 0;
+        background: transparent;
+        color: var(--primary-strong) !important;
         margin-top: 0 !important;
       }
 
       .settings-icon.danger {
-        background: var(--error-container);
+        background: transparent;
         color: var(--expense) !important;
       }
 
