@@ -380,6 +380,35 @@
         totalBalanceUntil,
         transactionsByMonth,
       });
+      const walletService = window.AppWalletService.createService({
+        getState: () => state,
+        currentUserId,
+        escapeHtml,
+        id,
+        money,
+        normalizeWallet: window.AppState.normalizeWallet,
+      });
+      const walletRenderer = window.AppWalletRender.createRenderer({
+        clearSelectedWalletDetailId: () => {
+          selectedWalletDetailId = "";
+        },
+        escapeHtml,
+        getSelectedWalletDetailId: () => selectedWalletDetailId,
+        getState: () => state,
+        money,
+        monthLabel,
+        monthOf,
+        openView,
+        recalculateWalletBalances,
+        requireSignedIn,
+        setSelectedWalletDetailId: (walletId) => {
+          selectedWalletDetailId = walletId;
+        },
+        transactionDateLabel,
+        transactionTypeLabel,
+        editIcon,
+        trashIcon,
+      });
 
       function activeView() {
         return router.activeView();
@@ -906,54 +935,31 @@
       }
 
       function walletRecord(name, initialBalance = 0, type = "Cash") {
-        const timestamp = new Date().toISOString();
-        return window.AppState.normalizeWallet({
-          id: id(),
-          userId: currentUserId(),
-          name,
-          initialBalance,
-          currentBalance: initialBalance,
-          type,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        });
+        return walletService.record(name, initialBalance, type);
       }
 
       function walletName(walletId) {
-        return state.wallets.find((wallet) => wallet.id === walletId)?.name || "Tanpa dompet";
+        return walletService.name(walletId);
       }
 
       function walletInUse(walletId) {
-        return state.transactions.some((item) => item.walletId === walletId);
+        return walletService.inUse(walletId);
       }
 
       function walletOptions(selectedId = "") {
-        if (!state.wallets.length) return `<option value="">Belum ada dompet</option>`;
-        return state.wallets.map((wallet) => `<option value="${wallet.id}" ${wallet.id === selectedId ? "selected" : ""}>${escapeHtml(wallet.name)} - ${money(wallet.currentBalance || 0)}</option>`).join("");
+        return walletService.options(selectedId);
       }
 
       function defaultWalletId() {
-        return state.wallets[0]?.id || "";
+        return walletService.defaultId();
       }
 
       function ensureTransactionWallets() {
-        if (!state.wallets.length) return;
-        const defaultWalletId = state.wallets[0].id;
-        state.transactions.forEach((transaction) => {
-          if (!transaction.walletId) transaction.walletId = defaultWalletId;
-        });
+        walletService.ensureTransactionWallets();
       }
 
       function recalculateWalletBalances() {
-        state.wallets.forEach((wallet) => {
-          wallet.currentBalance = Number(wallet.initialBalance || 0);
-        });
-        state.transactions.forEach((transaction) => {
-          const wallet = state.wallets.find((item) => item.id === transaction.walletId);
-          if (!wallet) return;
-          const amount = Number(transaction.amount || 0);
-          wallet.currentBalance += transaction.type === "income" ? amount : -amount;
-        });
+        walletService.recalculateBalances();
       }
 
       function debtPaymentTransactionTypeForDebt(debt) {
@@ -1452,92 +1458,19 @@
       }
 
       function walletMutationRows(items) {
-        if (!items.length) {
-          return `<div class="empty"><p>Belum ada mutasi yang cocok dengan filter ini.</p></div>`;
-        }
-        const groups = [...items]
-          .sort((a, b) => b.date.localeCompare(a.date))
-          .reduce((result, item) => {
-            const month = monthOf(item) || "Tanpa bulan";
-            if (!result[month]) result[month] = [];
-            result[month].push(item);
-            return result;
-          }, {});
-
-        return Object.entries(groups).map(([month, rows]) => `
-          <section class="wallet-mutation-month">
-            <h4>${escapeHtml(month === "Tanpa bulan" ? month : monthLabel(month))}</h4>
-            <table class="transaction-table wallet-mutation-table">
-              <thead>
-                <tr>
-                  <th>Tanggal</th>
-                  <th>Kategori</th>
-                  <th>Tipe</th>
-                  <th>Nominal</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rows.map((item) => `
-                  <tr class="transaction-row ${item.type}" data-open-transaction-detail="${item.id}">
-                    <td>${escapeHtml(transactionDateLabel(item.date))}</td>
-                    <td><span class="pill">${escapeHtml(item.category || "Lainnya")}</span></td>
-                    <td><span class="pill ${item.type}">${escapeHtml(transactionTypeLabel(item))}</span></td>
-                    <td class="amount ${item.type}">${item.type === "income" ? "+" : "-"} ${money(item.amount)}</td>
-                  </tr>
-                `).join("")}
-              </tbody>
-            </table>
-          </section>
-        `).join("");
+        return walletRenderer.mutationRows(items);
       }
 
       function renderWalletMutationMonthOptions(walletId) {
-        const input = document.querySelector("#walletMutationMonth");
-        if (!input) return;
-        const months = [...new Set(state.transactions.filter((item) => item.walletId === walletId).map(monthOf).filter(Boolean))].sort().reverse();
-        if (!input.value && months.length) input.value = months[0];
+        walletRenderer.renderMutationMonthOptions(walletId);
       }
 
       function renderWalletDetail() {
-        const view = document.querySelector("#walletDetailView");
-        if (!view || !selectedWalletDetailId) return;
-        recalculateWalletBalances();
-        const wallet = state.wallets.find((item) => item.id === selectedWalletDetailId);
-        if (!wallet) {
-          selectedWalletDetailId = "";
-          openView("wallets", { replace: true });
-          return;
-        }
-        document.querySelector("#walletDetailType").textContent = wallet.type || "Dompet";
-        document.querySelector("#walletDetailName").textContent = wallet.name;
-        document.querySelector("#walletDetailInitial").textContent = `Saldo awal ${money(wallet.initialBalance || 0)}`;
-        document.querySelector("#walletDetailBalance").textContent = money(wallet.currentBalance || 0);
-        renderWalletMutationMonthOptions(wallet.id);
-
-        const query = document.querySelector("#walletMutationSearch")?.value.toLowerCase().trim() || "";
-        const month = document.querySelector("#walletMutationMonth")?.value || "";
-        const start = document.querySelector("#walletMutationStartDate")?.value || "";
-        const end = document.querySelector("#walletMutationEndDate")?.value || "";
-        const rows = state.transactions
-          .filter((item) => item.walletId === wallet.id)
-          .filter((item) => !month || monthOf(item) === month)
-          .filter((item) => !start || item.date >= start)
-          .filter((item) => !end || item.date <= end)
-          .filter((item) => `${item.category} ${item.type === "income" ? "credit pemasukan" : "debit pengeluaran"}`.toLowerCase().includes(query));
-
-        document.querySelector("#walletMutationList").innerHTML = walletMutationRows(rows);
+        walletRenderer.renderDetail();
       }
 
       function openWalletDetail(walletId) {
-        if (!requireSignedIn()) return;
-        if (!state.wallets.some((wallet) => wallet.id === walletId)) return;
-        selectedWalletDetailId = walletId;
-        ["#walletMutationSearch", "#walletMutationMonth", "#walletMutationStartDate", "#walletMutationEndDate"].forEach((selector) => {
-          const input = document.querySelector(selector);
-          if (input) input.value = "";
-        });
-        openView("walletDetail");
-        renderWalletDetail();
+        walletRenderer.openDetail(walletId);
       }
 
       function openTransactionDetail(transactionId) {
@@ -1822,47 +1755,11 @@
       }
 
       function walletCard(wallet, compact = false) {
-        const isMinus = Number(wallet.currentBalance || 0) < 0;
-        return `
-          <article class="wallet-card ${isMinus ? "negative" : ""}" data-open-wallet-detail="${wallet.id}" tabindex="0" role="button" aria-label="Buka detail dompet ${escapeHtml(wallet.name)}">
-            <div>
-              <span class="stat-label">${escapeHtml(wallet.type || "Dompet")}</span>
-              <strong>${escapeHtml(wallet.name)}</strong>
-              <span class="stat-sub">Saldo awal ${money(wallet.initialBalance || 0)}</span>
-            </div>
-            <div class="wallet-balance">
-              <strong>${money(wallet.currentBalance || 0)}</strong>
-              ${isMinus ? `<span class="pill expense">Minus</span>` : `<span class="pill income">Aktif</span>`}
-            </div>
-            ${compact ? "" : `
-              <div class="row-actions wallet-actions">
-                <button class="icon-button" type="button" data-edit-wallet="${wallet.id}" title="Edit dompet">${editIcon()}</button>
-                <button class="icon-button danger" type="button" data-delete-wallet="${wallet.id}" title="Hapus dompet">${trashIcon()}</button>
-              </div>
-            `}
-          </article>
-        `;
+        return walletRenderer.card(wallet, compact);
       }
 
       function renderWallets() {
-        recalculateWalletBalances();
-        const total = state.wallets.reduce((sum, wallet) => sum + Number(wallet.currentBalance || 0), 0);
-        const homeTarget = document.querySelector("#homeWalletList");
-        if (homeTarget) {
-          homeTarget.innerHTML = state.wallets.length
-            ? state.wallets.slice(0, 4).map((wallet) => walletCard(wallet, true)).join("")
-            : `<div class="empty"><p>Belum ada dompet.</p><button class="button primary" type="button" data-open-form="wallet">Tambah Dompet</button></div>`;
-        }
-        const walletTarget = document.querySelector("#walletList");
-        if (walletTarget) {
-          walletTarget.innerHTML = state.wallets.length
-            ? state.wallets.map((wallet) => walletCard(wallet)).join("")
-            : `<div class="empty"><p>Belum ada dompet.</p><button class="button primary" type="button" data-open-form="wallet">Tambah Dompet</button></div>`;
-        }
-        const totalLabel = document.querySelector("#walletTotalBalance");
-        if (totalLabel) totalLabel.textContent = money(total);
-        const countLabel = document.querySelector("#walletCount");
-        if (countLabel) countLabel.textContent = String(state.wallets.length);
+        walletRenderer.renderWallets();
       }
 
       function renderFamilyMembers() {

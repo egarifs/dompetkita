@@ -87,6 +87,8 @@ const requiredFiles = [
   "js/core/cloud.js",
   "js/core/router.js",
   "js/features/dashboard/dashboard.render.js",
+  "js/features/wallets/wallet.service.js",
+  "js/features/wallets/wallet.render.js",
   "icons/icon.svg",
 ];
 
@@ -116,6 +118,8 @@ for (const file of [
   "js/core/cloud.js",
   "js/core/router.js",
   "js/features/dashboard/dashboard.render.js",
+  "js/features/wallets/wallet.service.js",
+  "js/features/wallets/wallet.render.js",
   "app.js",
   "app-meta.js",
   "sw.js",
