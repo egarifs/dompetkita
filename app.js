@@ -158,7 +158,6 @@
       let quickTransactionRange = "month";
       let selectedCategoryFilter = "all";
       let showAllDailyExpenses = false;
-      let viewHistory = [];
       let selectedWalletDetailId = "";
       const idleTimeoutMs = IDLE_TIMEOUT_MINUTES * 60 * 1000;
       const idleWarningMs = WARNING_BEFORE_LOGOUT_MINUTES * 60 * 1000;
@@ -387,8 +386,10 @@
         return pageCopy[language]?.[view] || pageCopy.id[view];
       }
 
+      const router = window.AppRouter.createRouter({ currentPageCopy });
+
       function activeView() {
-        return document.querySelector(".view.active")?.id?.replace("View", "") || "home";
+        return router.activeView();
       }
 
       function applyLanguage() {
@@ -2900,39 +2901,19 @@
       }
 
       function updateBackButton(view) {
-        const backButton = document.querySelector("#backButton");
-        if (!backButton) return;
-        backButton.classList.toggle("hidden", view === "home");
+        router.updateBackButton(view);
       }
 
       function navViewFor(view) {
-        if (["finance", "wallets", "walletDetail", "budgets", "debts", "savings", "balanceSheet", "analytics"].includes(view)) return "finance";
-        if (["vehicles"].includes(view)) return "vehicles";
-        if (["reports"].includes(view)) return "reports";
-        return view;
+        return router.navViewFor(view);
       }
 
       function openView(view, options = {}) {
-        const targetView = document.querySelector(`#${view}View`);
-        if (!targetView) return;
-        const previousView = activeView();
-        if (!options.fromBack && !options.replace && previousView !== view) {
-          viewHistory.push(previousView);
-        }
-        document.querySelectorAll(".view").forEach((section) => section.classList.remove("active"));
-        targetView.classList.add("active");
-        const activeNav = navViewFor(view);
-        document.querySelectorAll(".nav-button[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === activeNav));
-        const copy = currentPageCopy(view);
-        document.querySelector("#pageHeading").textContent = copy[0];
-        document.querySelector("#pageSubtitle").textContent = copy[1];
-        updateBackButton(view);
-        document.querySelector("#addBlock").classList.remove("open");
+        router.openView(view, options);
       }
 
       function goBackView() {
-        const previousView = viewHistory.pop() || "home";
-        openView(previousView, { fromBack: true });
+        router.goBackView();
       }
 
       function openTransactionForm(transactionId = "", options = {}) {
@@ -5019,7 +5000,7 @@
         }
         currentUser = null;
         applyState(emptyState());
-        viewHistory = [];
+        router.clearHistory();
         openView("home", { replace: true });
         showLogin();
         if (logoutMessage) alert(logoutMessage);
