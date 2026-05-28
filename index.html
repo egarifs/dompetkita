@@ -116,11 +116,11 @@
           </button>
           <button class="nav-button" type="button" data-view="finance" aria-label="Keuangan" title="Keuangan">
             <span data-lucide-icon="wallet-cards" data-icon-size="24"></span>
-            <span>Keuangan</span>
+            <span>Uang</span>
           </button>
           <button class="nav-button" type="button" data-view="vehicles" aria-label="Kendaraan" title="Kendaraan">
             <span data-lucide-icon="car" data-icon-size="24"></span>
-            <span>Kendaraan</span>
+            <span>Mobil</span>
           </button>
           <button class="nav-button" type="button" data-view="account" aria-label="Akun" title="Akun">
             <span data-lucide-icon="user-round" data-icon-size="24"></span>
@@ -197,11 +197,9 @@
 
             <div class="shortcut-grid" aria-label="Menu shortcut">
               <button class="shortcut-item" type="button" data-open-form="transaction"><span data-lucide-icon="circle-plus" data-icon-size="26" data-icon-class="shortcut-icon lucide-icon"></span><strong>Tambah Transaksi</strong></button>
+              <button class="shortcut-item" type="button" data-view="reports"><span data-lucide-icon="receipt-text" data-icon-size="26" data-icon-class="shortcut-icon lucide-icon"></span><strong>Lihat Transaksi</strong></button>
               <button class="shortcut-item" type="button" data-view="wallets"><span data-lucide-icon="wallet" data-icon-size="26" data-icon-class="shortcut-icon lucide-icon"></span><strong>Dompet</strong></button>
               <button class="shortcut-item" type="button" data-view="budgets"><span data-lucide-icon="chart-pie" data-icon-size="26" data-icon-class="shortcut-icon lucide-icon"></span><strong>Anggaran</strong></button>
-              <button class="shortcut-item" type="button" data-view="budgets"><span data-lucide-icon="arrow-left-right" data-icon-size="26" data-icon-class="shortcut-icon lucide-icon"></span><strong>Hutang/Piutang</strong></button>
-              <button class="shortcut-item" type="button" data-view="balanceSheet"><span data-lucide-icon="scale" data-icon-size="26" data-icon-class="shortcut-icon lucide-icon"></span><strong>Neraca</strong></button>
-              <button class="shortcut-item" type="button" data-view="analytics"><span data-lucide-icon="chart-no-axes-combined" data-icon-size="26" data-icon-class="shortcut-icon lucide-icon"></span><strong>Laporan</strong></button>
             </div>
           </section>
 
@@ -404,7 +402,7 @@
 
         <section class="view" id="vehiclesView">
           <div class="vehicle-layout">
-            <section class="panel">
+            <section class="panel active" data-vehicle-section="summary">
               <div class="panel-header">
                 <div class="panel-title">
                   <h3>Dashboard Kendaraan</h3>
@@ -418,7 +416,15 @@
               <div class="vehicle-dashboard" id="vehicleDashboard"></div>
             </section>
 
-            <section class="panel">
+            <div class="segmented-tabs vehicle-tabs" aria-label="Bagian kendaraan">
+              <button class="segment active" type="button" data-vehicle-tab="summary">Ringkasan</button>
+              <button class="segment" type="button" data-vehicle-tab="vehicles">Kendaraan</button>
+              <button class="segment" type="button" data-vehicle-tab="maintenance">Perawatan</button>
+              <button class="segment" type="button" data-vehicle-tab="tax">Pajak</button>
+              <button class="segment" type="button" data-vehicle-tab="costs">Biaya</button>
+            </div>
+
+            <section class="panel" data-vehicle-section="vehicles">
               <div class="panel-header">
                 <div class="panel-title">
                   <h3>Data Kendaraan</h3>
@@ -428,7 +434,7 @@
               <div class="debt-list" id="vehicleList"></div>
             </section>
 
-            <section class="panel">
+            <section class="panel" data-vehicle-section="maintenance">
               <div class="panel-header">
                 <div class="panel-title">
                   <h3>Riwayat Service</h3>
@@ -439,7 +445,7 @@
               <div class="debt-list" id="vehicleServiceList"></div>
             </section>
 
-            <section class="panel">
+            <section class="panel" data-vehicle-section="maintenance">
               <div class="panel-header">
                 <div class="panel-title">
                   <h3>Jadwal Perawatan</h3>
@@ -450,7 +456,7 @@
               <div class="debt-list" id="vehicleOilList"></div>
             </section>
 
-            <section class="panel">
+            <section class="panel" data-vehicle-section="maintenance">
               <div class="panel-header">
                 <div class="panel-title">
                   <h3>Penggantian Part</h3>
@@ -461,7 +467,7 @@
               <div class="debt-list" id="vehiclePartList"></div>
             </section>
 
-            <section class="panel">
+            <section class="panel" data-vehicle-section="tax">
               <div class="panel-header">
                 <div class="panel-title">
                   <h3>Pajak Kendaraan</h3>
@@ -472,7 +478,7 @@
               <div class="debt-list" id="vehicleTaxList"></div>
             </section>
 
-            <section class="panel">
+            <section class="panel" data-vehicle-section="costs">
               <div class="panel-header">
                 <div class="panel-title">
                   <h3>Pengeluaran Kendaraan</h3>
@@ -530,13 +536,7 @@
               <select id="walletFilter" aria-label="Filter dompet">
                 <option value="all">Semua dompet</option>
               </select>
-              <select id="typeFilter" aria-label="Filter tipe">
-                <option value="all">Semua tipe</option>
-                <option value="expense">Pengeluaran</option>
-                <option value="income">Pemasukan</option>
-                <option value="debt_payment">Bayar Hutang</option>
-                <option value="receivable_payment">Terima Piutang</option>
-              </select>
+              <input id="typeFilter" type="hidden" value="all" />
             </div>
             <div class="filter-strip" aria-label="Filter cepat tanggal">
               <button class="filter-chip active" type="button" data-quick-range="month">Bulan ini</button>
@@ -595,7 +595,7 @@
                 </div>
               </summary>
               <div class="finance-card-grid">
-                <button class="finance-menu-card" type="button" data-view="budgets"><span data-lucide-icon="arrow-left-right" data-icon-size="26"></span><strong>Hutang & Piutang</strong><small>Bayar, terima, dan cek riwayat.</small></button>
+                <button class="finance-menu-card" type="button" data-view="debts"><span data-lucide-icon="arrow-left-right" data-icon-size="26"></span><strong>Hutang & Piutang</strong><small>Bayar, terima, dan cek riwayat.</small></button>
                 <button class="finance-menu-card" type="button" data-open-form="billReminder"><span data-lucide-icon="bell-ring" data-icon-size="26"></span><strong>Reminder Tagihan</strong><small>Tambah pengingat jatuh tempo.</small></button>
               </div>
             </details>
@@ -745,7 +745,10 @@
             </section>
           </div>
 
-          <section class="panel" style="margin-top: 14px">
+        </section>
+
+        <section class="view" id="debtsView">
+          <section class="panel">
             <div class="panel-header">
               <div class="panel-title">
                 <h3>Hutang dan Piutang</h3>
@@ -867,7 +870,7 @@
                     <span class="settings-icon" data-lucide-icon="chart-pie" data-icon-size="22"></span>
                     <div>
                       <strong>Anggaran</strong>
-                      <span>Atur batas pengeluaran, hutang, dan piutang.</span>
+                      <span>Atur batas pengeluaran bulanan.</span>
                     </div>
                     <button class="button primary" type="button" data-view="budgets">Buka</button>
                   </div>

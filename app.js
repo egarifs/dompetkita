@@ -118,7 +118,8 @@
           reports: ["Transaksi", "Lihat dan filter seluruh catatan pemasukan maupun pengeluaran."],
           finance: ["Keuangan", "Kelola dompet, anggaran, tabungan, hutang piutang, dan laporan."],
           analytics: ["Analitik", "Pantau pola pengeluaran per kategori dan per hari."],
-          budgets: ["Anggaran", "Atur batas pengeluaran dan pantau hutang piutang."],
+          budgets: ["Anggaran", "Atur batas pengeluaran bulanan per kategori."],
+          debts: ["Hutang & Piutang", "Pantau kewajiban, piutang, pembayaran, dan riwayat pelunasan."],
           wallets: ["Dompet", "Kelola saldo Cash, Bank, E-Wallet, dan sumber uang lainnya."],
           walletDetail: ["Detail Dompet", "Lihat saldo dan mutasi transaksi pada dompet yang dipilih."],
           balanceSheet: ["Neraca Keuangan", "Lihat total aset, kewajiban, dan kekayaan bersih keluarga."],
@@ -132,7 +133,8 @@
           reports: ["Transactions", "View and filter all income and expense records."],
           finance: ["Finance", "Manage wallets, budgets, savings, debts, and reports."],
           analytics: ["Analytics", "Monitor spending patterns by category and by day."],
-          budgets: ["Budget", "Set spending limits and monitor debts."],
+          budgets: ["Budget", "Set monthly spending limits by category."],
+          debts: ["Debts & Receivables", "Track obligations, receivables, payments, and settlement history."],
           wallets: ["Wallets", "Manage Cash, Bank, E-Wallet, and other money sources."],
           walletDetail: ["Wallet Detail", "Review balance and transaction mutations for the selected wallet."],
           balanceSheet: ["Balance Sheet", "Review total assets, liabilities, and family net worth."],
@@ -2898,7 +2900,7 @@
       }
 
       function navViewFor(view) {
-        if (["finance", "wallets", "walletDetail", "budgets", "savings", "balanceSheet", "analytics"].includes(view)) return "finance";
+        if (["finance", "wallets", "walletDetail", "budgets", "debts", "savings", "balanceSheet", "analytics"].includes(view)) return "finance";
         if (["vehicles"].includes(view)) return "vehicles";
         if (["reports"].includes(view)) return "reports";
         return view;
@@ -3271,7 +3273,7 @@
           syncDebtPaymentState();
           closeModal();
           await persistChanges("Hutang/piutang tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-          openView("budgets");
+          openView("debts");
         });
       }
 
@@ -5176,6 +5178,18 @@
           if (select) select.value = typeTab.dataset.transactionTypeTab;
           document.querySelectorAll("[data-transaction-type-tab]").forEach((button) => button.classList.toggle("active", button === typeTab));
           renderTransactions();
+          return;
+        }
+
+        const vehicleTab = event.target.closest("[data-vehicle-tab]");
+        if (vehicleTab) {
+          const targetSection = vehicleTab.dataset.vehicleTab;
+          document.querySelectorAll("[data-vehicle-tab]").forEach((button) => {
+            button.classList.toggle("active", button === vehicleTab);
+          });
+          document.querySelectorAll("[data-vehicle-section]").forEach((section) => {
+            section.classList.toggle("active", section.dataset.vehicleSection === targetSection);
+          });
           return;
         }
 

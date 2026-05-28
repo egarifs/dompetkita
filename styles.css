@@ -304,7 +304,7 @@
       .btm-nav button {
         width: 100%;
         min-height: 48px;
-        justify-content: center;
+        justify-content: flex-start;
         padding: 0 12px;
         background: transparent;
         color: var(--on-surface-variant);
@@ -313,7 +313,7 @@
       }
 
       .nav-button span {
-        display: none;
+        display: inline-flex;
       }
 
       .nav-button:hover,
@@ -758,7 +758,7 @@
 
       .shortcut-grid {
         display: grid;
-        grid-template-columns: repeat(6, minmax(76px, 1fr));
+        grid-template-columns: repeat(4, minmax(96px, 1fr));
         gap: 10px;
         overflow: visible;
         padding: 2px;
@@ -1569,6 +1569,18 @@
         gap: 14px;
       }
 
+      .vehicle-tabs {
+        padding: 4px;
+      }
+
+      #vehiclesView [data-vehicle-section] {
+        display: none;
+      }
+
+      #vehiclesView [data-vehicle-section].active {
+        display: block;
+      }
+
       .vehicle-dashboard {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -2283,6 +2295,8 @@
         .nav-button {
           min-height: 58px;
           justify-content: center;
+          flex-direction: column;
+          gap: 4px;
           padding: 6px 4px;
           text-align: center;
         }
@@ -2290,6 +2304,11 @@
         .nav-button svg {
           width: 23px;
           height: 23px;
+        }
+
+        .nav-button span:not([data-lucide-icon]) {
+          font-size: 0.68rem;
+          line-height: 1;
         }
 
         .add-choice {
@@ -2430,7 +2449,7 @@
         }
 
         .shortcut-grid {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
         .summary-card {
