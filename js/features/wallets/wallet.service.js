@@ -34,8 +34,6 @@ window.AppWalletService = {
     }
 
     function deleteBlockReason(walletId) {
-      const state = getState();
-      if (state.wallets.length <= 1) return "Minimal harus ada satu dompet aktif.";
       if (inUse(walletId)) return "Dompet tidak bisa dihapus karena sudah digunakan pada transaksi.";
       return "";
     }

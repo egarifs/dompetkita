@@ -135,7 +135,7 @@ const walletGuardService = window.AppWalletService.createService({
   money: (value) => String(value),
   normalizeWallet: window.AppState.normalizeWallet,
 });
-assert(walletGuardService.deleteBlockReason("wallet-single") === "Minimal harus ada satu dompet aktif.", "Dompet terakhir tidak boleh bisa dihapus dari halaman Dompet.");
+assert(walletGuardService.deleteBlockReason("wallet-single") === "", "Dompet terakhir tetap boleh dihapus jika belum dipakai transaksi.");
 const emptyWalletState = normalizeState({ wallets: [], deleted: { wallets: ["wallet-cash", "wallet-bank"] } });
 assert(emptyWalletState.wallets.length === 0, "State dompet kosong eksplisit tidak boleh memunculkan dompet default setelah refresh.");
 
