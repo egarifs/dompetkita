@@ -48,6 +48,7 @@ const transactionMetadata = normalizeState(
 const manualTransaction = transactionMetadata.find((item) => item.id === "manual");
 const vehicleTransaction = transactionMetadata.find((item) => item.id === "vehicle");
 const recurringTransaction = transactionMetadata.find((item) => item.id === "recurring");
+const { loadCloudState, saveCloudState } = window.AppCloud;
 
 if (
   manualTransaction.sourceModule !== "manual" ||
@@ -67,10 +68,113 @@ if (recurringTransaction.sourceModule !== "recurring" || recurringTransaction.so
   throw new Error("Recurring transaction relation metadata was not normalized.");
 }
 
+function mergeWalletState(cloudData, localData) {
+  const cloud = normalizeState(cloudData || {}, { defaultCategories: ["Lainnya"], translations: { id: {} } });
+  const local = normalizeState(localData || {}, { defaultCategories: ["Lainnya"], translations: { id: {} } });
+  const deleted = {
+    wallets: mergeDeletedIds(cloud, local, "wallets"),
+  };
+  return normalizeState({
+    ...cloud,
+    wallets: window.AppState.withoutDeleted(window.AppState.mergeById(cloud.wallets, local.wallets), deleted.wallets),
+    deleted: { ...cloud.deleted, ...local.deleted, ...deleted },
+    localChangedAt: local.localChangedAt || cloud.localChangedAt,
+    syncStatus: local.syncStatus === "pending" || local.syncStatus === "failed" ? local.syncStatus : cloud.syncStatus,
+  }, { defaultCategories: ["Lainnya"], translations: { id: {} } });
+}
+
+function cloudSelectClient(remotePayload, remoteAt) {
+  return {
+    auth: {
+      async getSession() {
+        return { data: { session: { user: { id: "user-1" } } }, error: null };
+      },
+    },
+    from() {
+      return {
+        select() {
+          return this;
+        },
+        eq() {
+          return this;
+        },
+        order() {
+          return this;
+        },
+        limit() {
+          return this;
+        },
+        async maybeSingle() {
+          return { data: { payload: remotePayload, updated_at: remoteAt }, error: null };
+        },
+      };
+    },
+  };
+}
+
+{
+  let savedNewerLocal = false;
+  const localWalletState = normalizeState({
+    wallets: [{ id: "wallet-local-newer", name: "Dompet Local", initialBalance: 100000, type: "Cash" }],
+    localChangedAt: "2026-05-25T10:00:00.000Z",
+    syncStatus: "synced",
+  }, { defaultCategories: ["Lainnya"], translations: { id: {} } });
+  const ctx = {
+    cloudSync: { enabled: true, loadedUsers: new Set(), isSaving: false, pendingSave: false, lastError: "" },
+    setupCloudClient: () => cloudSelectClient({ wallets: [], localChangedAt: "2026-05-24T10:00:00.000Z" }, "2026-05-24T10:00:00.000Z"),
+    cloudConfig: { table: "finance_snapshots" },
+    cloudUserKey: () => "user-1",
+    replaceState(nextState) {
+      Object.assign(localWalletState, nextState);
+    },
+    mergeStateData: mergeWalletState,
+    emptyState: () => normalizeState({}, { defaultCategories: ["Lainnya"], translations: { id: {} } }),
+    state: localWalletState,
+    saveAfterLoad: false,
+    hasPendingLocalChanges: () => false,
+    async saveCloudState() {
+      savedNewerLocal = true;
+      return true;
+    },
+  };
+  await loadCloudState(ctx);
+  if (!savedNewerLocal || !localWalletState.wallets.some((wallet) => wallet.id === "wallet-local-newer")) {
+    throw new Error("Newer local wallet state must survive older cloud payload and be uploaded.");
+  }
+}
+
+{
+  const localWalletState = normalizeState({
+    wallets: [{ id: "wallet-local-old", name: "Dompet Lama", initialBalance: 100000, type: "Cash" }],
+    localChangedAt: "2026-05-24T10:00:00.000Z",
+    syncStatus: "synced",
+  }, { defaultCategories: ["Lainnya"], translations: { id: {} } });
+  const ctx = {
+    cloudSync: { enabled: true, loadedUsers: new Set(), isSaving: false, pendingSave: false, lastError: "" },
+    setupCloudClient: () => cloudSelectClient({ wallets: [], localChangedAt: "2026-05-25T10:00:00.000Z" }, "2026-05-25T10:00:00.000Z"),
+    cloudConfig: { table: "finance_snapshots" },
+    cloudUserKey: () => "user-1",
+    replaceState(nextState) {
+      Object.assign(localWalletState, nextState);
+    },
+    mergeStateData: mergeWalletState,
+    emptyState: () => normalizeState({}, { defaultCategories: ["Lainnya"], translations: { id: {} } }),
+    state: localWalletState,
+    saveAfterLoad: false,
+    hasPendingLocalChanges: () => false,
+    async saveCloudState() {
+      throw new Error("Older local wallet state should not be uploaded over newer cloud payload.");
+    },
+  };
+  await loadCloudState(ctx);
+  if (localWalletState.wallets.some((wallet) => wallet.id === "wallet-local-old")) {
+    throw new Error("Newer cloud payload must be allowed to replace older local wallet state.");
+  }
+}
+
 let selected = false;
 let saved = false;
 let savedPayload = null;
-const { loadCloudState, saveCloudState } = window.AppCloud;
 const cloudSync = {
   enabled: true,
   loadedUsers: new Set(),

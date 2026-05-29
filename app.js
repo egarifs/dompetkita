@@ -933,6 +933,7 @@
 
       function applyCloudPayload(payload, updatedAt) {
         if (isGuest() || !payload || !isCloudSyncAllowed()) return;
+        if (!hasUnsyncedChanges && window.AppCloud.isTimestampAfter(state.localChangedAt, updatedAt)) return;
         if (hasUnsyncedChanges) markCloudConflict(updatedAt || new Date().toISOString());
         replaceState(mergeStateData(payload, state));
         cloudSync.lastSyncedAt = updatedAt || new Date().toISOString();
@@ -3351,7 +3352,6 @@
         document.querySelector("#appShell").classList.remove("hidden");
         if (!isGuest() && isCloudSyncAllowed()) {
           const shouldUploadLocal = !isChildUser() && hasUnsyncedChanges;
-          if (!shouldUploadLocal) applyState(emptyState());
           await loadCloudState({ saveAfterLoad: shouldUploadLocal });
           if (isChildUser()) {
             hasUnsyncedChanges = false;

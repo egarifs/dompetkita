@@ -30,6 +30,16 @@ window.AppCloud = {
     );
   },
 
+  isTimestampAfter(value, compareTo) {
+    if (!value) return false;
+    if (!compareTo) return true;
+    const valueTime = new Date(value).getTime();
+    const compareTime = new Date(compareTo).getTime();
+    if (Number.isNaN(valueTime)) return false;
+    if (Number.isNaN(compareTime)) return true;
+    return valueTime > compareTime;
+  },
+
   async ensureCloudSession(client) {
     const { data, error } = await client.auth.getSession();
     if (error) throw error;
@@ -92,15 +102,18 @@ window.AppCloud = {
       cloudSync.loadedUsers.add(userKey);
       if (data?.payload) {
         const remoteAt = data.updated_at || new Date().toISOString();
-        if (hasPendingLocalChanges?.() && (!cloudSync.lastSyncedAt || new Date(remoteAt) > new Date(cloudSync.lastSyncedAt))) {
+        const hasLocalPendingChanges = Boolean(hasPendingLocalChanges?.()) || state?.syncStatus === "pending" || state?.syncStatus === "failed";
+        const hasNewerLocalChanges = window.AppCloud.isTimestampAfter(state?.localChangedAt, remoteAt);
+        const shouldPreserveLocal = hasLocalPendingChanges || hasNewerLocalChanges;
+        if (hasLocalPendingChanges && (!cloudSync.lastSyncedAt || new Date(remoteAt) > new Date(cloudSync.lastSyncedAt))) {
           markConflict?.(remoteAt);
         }
-        replaceState(mergeStateData(data.payload, state));
+        replaceState(mergeStateData(data.payload, shouldPreserveLocal ? state : typeof emptyState === "function" ? emptyState() : {}));
         cloudSync.lastSyncedAt = remoteAt;
-        if (saveAfterLoad) await saveCloudState();
+        if (saveAfterLoad || hasLocalPendingChanges || hasNewerLocalChanges) await saveCloudState();
       } else {
         if (!window.AppCloud.hasStateData(state) && typeof emptyState === "function") replaceState(emptyState());
-        if (saveAfterLoad) await saveCloudState();
+        if (saveAfterLoad || window.AppCloud.hasStateData(state)) await saveCloudState();
       }
       cloudSync.lastError = "";
     } catch (error) {
