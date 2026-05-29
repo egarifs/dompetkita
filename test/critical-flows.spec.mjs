@@ -121,9 +121,10 @@ assert(window.AppAuth.loadSessionUser(sessionStorageKey, window.AppAuth.loadUser
 out.push("registrasi/login:ok");
 
 const state = normalizeState({});
-const cashWallet = state.wallets[0];
-const bankWallet = state.wallets[1];
-assert(cashWallet?.id && bankWallet?.id, "Dompet default tidak tersedia.");
+assert(state.wallets.length === 0, "User baru tidak boleh mendapat default dompet.");
+const cashWallet = window.AppState.normalizeWallet({ id: "wallet-cash-manual", name: "Cash Manual", initialBalance: 500000, type: "Cash" });
+const bankWallet = window.AppState.normalizeWallet({ id: "wallet-bank-manual", name: "Bank Manual", initialBalance: 2000000, type: "Bank" });
+state.wallets.push(cashWallet, bankWallet);
 const optionalBalanceWallet = window.AppState.normalizeWallet({ id: "wallet-optional", name: "Dompet Opsional", initialBalance: "" });
 assert(optionalBalanceWallet.initialBalance === 0 && optionalBalanceWallet.currentBalance === 0, "Saldo awal kosong harus dianggap 0.");
 const walletGuardState = normalizeState({ wallets: [{ id: "wallet-single", name: "Dompet Utama", initialBalance: 0, currentBalance: 0, type: "Cash" }] });

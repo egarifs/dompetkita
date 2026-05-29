@@ -306,7 +306,7 @@ window.AppState = {
       savings: window.AppState.withoutDeleted(Array.isArray(data.savings) ? data.savings : [], deleted.savings).map(window.AppState.normalizeSavingsGoal),
       billReminders: window.AppState.withoutDeleted(Array.isArray(data.billReminders) ? data.billReminders : [], deleted.billReminders),
       recurring: window.AppState.withoutDeleted(Array.isArray(data.recurring) ? data.recurring : [], deleted.recurring),
-      wallets: window.AppState.withoutDeleted(Array.isArray(data.wallets) ? data.wallets : ["Cash", "Bank"], deleted.wallets).map(window.AppState.normalizeWallet),
+      wallets: window.AppState.withoutDeleted(Array.isArray(data.wallets) ? data.wallets : [], deleted.wallets).map(window.AppState.normalizeWallet),
       vehicles: window.AppState.withoutDeleted(Array.isArray(data.vehicles) ? data.vehicles : [], deleted.vehicles),
       vehicleServices: window.AppState.withoutDeleted(Array.isArray(data.vehicleServices) ? data.vehicleServices : [], deleted.vehicleServices),
       vehicleOilChanges: window.AppState.withoutDeleted(Array.isArray(data.vehicleOilChanges) ? data.vehicleOilChanges : [], deleted.vehicleOilChanges),
