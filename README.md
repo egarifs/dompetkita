@@ -43,6 +43,20 @@ Dompify adalah aplikasi pencatatan keuangan personal/keluarga berbasis web stati
 
 ## Struktur Data Aplikasi
 
+Catatan struktur saat ini: logic utama sudah dipisah ke `js/core`, `js/utils`, `js/components`, dan `js/features`. File `app.js` masih menjadi compat layer dan glue code untuk event/form yang belum diekstrak penuh, sedangkan bootstrap aplikasi ada di `js/main.js`.
+
+Modul fitur yang sudah tersedia:
+
+- `js/features/dashboard/`
+- `js/features/wallets/`
+- `js/features/transactions/`
+- `js/features/budgets/`
+- `js/features/debts/`
+- `js/features/savings/`
+- `js/features/account/`
+- `js/features/analytics/`
+- `js/features/vehicles/` masih placeholder untuk ekstraksi berikutnya.
+
 Data utama aplikasi disimpan sebagai satu snapshot JSON per user. Di sisi aplikasi, struktur besar state berisi:
 
 - `transactions`: transaksi pemasukan/pengeluaran.
@@ -289,7 +303,7 @@ Script penting:
 
 ## Catatan Arsitektur untuk Developer Berikutnya
 
-1. **Jangan langsung edit banyak logic di `app.js` tanpa mencari helper yang sudah ada.** Beberapa logic sudah dipisah ke folder `js/`, terutama state, auth, storage, cloud, dan utils.
+1. **Jangan langsung edit banyak logic di `app.js` tanpa mencari module yang sudah ada.** Banyak logic sudah dipisah ke `js/core`, `js/utils`, `js/components`, dan `js/features`. Tambahkan logic baru di module domain yang sesuai bila memungkinkan.
 
 2. **Selalu normalisasi state lewat `window.AppState.normalizeState`.** Ini penting agar data lama tetap kompatibel setelah fitur baru ditambahkan.
 

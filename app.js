@@ -1015,10 +1015,6 @@
         return accountService.familyMemberRecord({ childName, childEmail, phone, childUserId, status });
       }
 
-      function familyMemberCloudPayload(member) {
-        return accountService.familyMemberCloudPayload(member);
-      }
-
       async function upsertFamilyMemberAccess(member) {
         return accountService.upsertFamilyMemberAccess(member);
       }
@@ -1363,10 +1359,6 @@
         return appIcon("trash-2", 18);
       }
 
-      function randomizeTotalBalanceGradient() {
-        dashboardFeature.randomizeTotalBalanceGradient();
-      }
-
       function renderStats() {
         dashboardFeature.renderStats();
       }
@@ -1377,10 +1369,6 @@
 
       function editIcon() {
         return appIcon("pencil", 17);
-      }
-
-      function renderDashboardGreeting() {
-        dashboardFeature.renderGreeting();
       }
 
       function updateTotalBalanceVisibility(total) {
@@ -1420,26 +1408,6 @@
 
       function quickRangeMatch(item, range) {
         return dashboardFeature.quickRangeMatch(item, range);
-      }
-
-      function renderCategoryChips() {
-        transactionRenderer.renderCategoryChips();
-      }
-
-      function renderWalletFilterOptions() {
-        transactionRenderer.renderWalletFilterOptions();
-      }
-
-      function transactionRows(items, limit = null) {
-        return transactionRenderer.rows(items, limit);
-      }
-
-      function walletMutationRows(items) {
-        return walletRenderer.mutationRows(items);
-      }
-
-      function renderWalletMutationMonthOptions(walletId) {
-        walletRenderer.renderMutationMonthOptions(walletId);
       }
 
       function renderWalletDetail() {
@@ -1537,10 +1505,6 @@
         renderVehicleTaxes();
         renderVehicleExpenseFilters();
         renderVehicleExpenses();
-      }
-
-      function walletCard(wallet, compact = false) {
-        return walletRenderer.card(wallet, compact);
       }
 
       function renderWallets() {
@@ -1712,26 +1676,6 @@
 
       function renderInsights() {
         analyticsRenderer.renderInsights();
-      }
-
-      function transactionsSince(days) {
-        return analyticsRenderer.transactionsSince(days);
-      }
-
-      function categoryGrowthActions(month = currentMonthKey()) {
-        return analyticsRenderer.categoryGrowthActions(month);
-      }
-
-      function budgetSuggestionAction(month = currentMonthKey()) {
-        return analyticsRenderer.budgetSuggestionAction(month);
-      }
-
-      function upcomingBillAction() {
-        return analyticsRenderer.upcomingBillAction();
-      }
-
-      function vehicleAttentionAction() {
-        return analyticsRenderer.vehicleAttentionAction();
       }
 
       function renderActionSummary() {
