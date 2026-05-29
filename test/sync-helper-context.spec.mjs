@@ -4,6 +4,14 @@ await import("../js/core/state.js");
 await import("../js/core/cloud.js");
 
 const { mergeDeletedIds, normalizeState } = window.AppState;
+if (!window.AppCloud.hasStateData({ wallets: [{ id: "wallet-cloud", name: "Cloud Wallet" }] })) {
+  throw new Error("Wallet-only state must be treated as syncable cloud data.");
+}
+
+if (!window.AppCloud.hasStateData({ wallets: [], deleted: { wallets: ["wallet-cash"] } })) {
+  throw new Error("Deleted wallet markers must be treated as syncable cloud data.");
+}
+
 const deletedIds = mergeDeletedIds(
   { deleted: { transactions: ["cloud-delete"] } },
   { deleted: { transactions: ["local-delete"] } },

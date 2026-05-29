@@ -14,6 +14,7 @@ window.AppCloud = {
   hasStateData(state) {
     return Boolean(
       state?.transactions?.length ||
+        state?.wallets?.length ||
         state?.budgets?.length ||
         state?.debts?.length ||
         state?.savings?.length ||
@@ -23,7 +24,9 @@ window.AppCloud = {
         state?.vehicleServices?.length ||
         state?.vehicleOilChanges?.length ||
         state?.vehicleParts?.length ||
-        state?.vehicleTaxes?.length,
+        state?.vehicleTaxes?.length ||
+        state?.familyMembers?.length ||
+        Object.values(state?.deleted || {}).some((items) => Array.isArray(items) && items.length),
     );
   },
 

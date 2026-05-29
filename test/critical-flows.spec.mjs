@@ -294,6 +294,7 @@ assert(saved, "Sync cloud mock gagal.");
 assert(upsertPayload?.user_id === "cloud-user-1", "Sync cloud tidak mengirim user_id.");
 assert(upsertPayload?.payload?.syncStatus === "synced", "Sync cloud tidak menandai payload synced.");
 assert(upsertPayload?.payload?.transactions.some((item) => item.category === "Kendaraan"), "Sync cloud tidak membawa data transaksi.");
+assert(upsertPayload?.payload?.wallets.some((item) => item.id === cashWallet.id), "Sync cloud tidak membawa data dompet.");
 out.push("sync cloud:ok");
 
 upsertPayload = null;
