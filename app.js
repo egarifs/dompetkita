@@ -385,6 +385,7 @@
         currentUserId,
         escapeHtml,
         id,
+        markDeleted,
         money,
         normalizeWallet: window.AppState.normalizeWallet,
       });
@@ -1052,10 +1053,6 @@
         return accountService.deleteFamilyMemberAccess(member);
       }
 
-      function walletRecord(name, initialBalance = 0, type = "Cash") {
-        return walletService.record(name, initialBalance, type);
-      }
-
       function walletName(walletId) {
         return walletService.name(walletId);
       }
@@ -1064,8 +1061,24 @@
         return walletService.inUse(walletId);
       }
 
+      function walletHasDuplicateName(name, editingId = "") {
+        return walletService.hasDuplicateName(name, editingId);
+      }
+
+      function createWallet(values) {
+        return walletService.createWallet(values);
+      }
+
+      function updateWallet(walletId, values) {
+        return walletService.updateWallet(walletId, values);
+      }
+
       function walletDeleteBlockReason(walletId) {
         return walletService.deleteBlockReason(walletId);
+      }
+
+      function deleteWallet(walletId) {
+        return walletService.deleteWallet(walletId);
       }
 
       function walletOptions(selectedId = "") {
@@ -2322,12 +2335,11 @@
           const type = document.querySelector("#walletType").value;
           if (!name) return alert("Nama dompet wajib diisi.");
           if (Number.isNaN(initialBalance) || initialBalance < 0) return alert("Saldo awal harus angka valid dan tidak boleh negatif jika diisi.");
-          const duplicate = state.wallets.some((wallet) => wallet.id !== editing?.id && wallet.name.toLowerCase() === name.toLowerCase());
-          if (duplicate) return alert("Nama dompet sudah digunakan.");
+          if (walletHasDuplicateName(name, editing?.id || "")) return alert("Nama dompet sudah digunakan.");
           if (editing) {
-            Object.assign(editing, { name, initialBalance, type, userId: editing.userId || currentUserId(), updatedAt: new Date().toISOString() });
+            updateWallet(editing.id, { name, initialBalance, type });
           } else {
-            state.wallets.push(walletRecord(name, initialBalance, type));
+            createWallet({ name, initialBalance, type });
           }
           closeModal();
           await persistChanges(editing ? "Dompet diperbarui di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun." : "Dompet dibuat di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
@@ -4091,8 +4103,7 @@
             deleteMessage: "Dompet dihapus.",
             failedMessage: "Dompet sudah dihapus di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.",
             deleteFn: () => {
-              markDeleted("wallets", target.id);
-              state.wallets = state.wallets.filter((wallet) => wallet.id !== target.id);
+              deleteWallet(target.id);
             },
             undoFn: () => restoreItems("wallets", snapshot),
           });

@@ -138,6 +138,25 @@ const walletGuardService = window.AppWalletService.createService({
 assert(walletGuardService.deleteBlockReason("wallet-single") === "", "Dompet terakhir tetap boleh dihapus jika belum dipakai transaksi.");
 const emptyWalletState = normalizeState({ wallets: [], deleted: { wallets: ["wallet-cash", "wallet-bank"] } });
 assert(emptyWalletState.wallets.length === 0, "State dompet kosong eksplisit tidak boleh memunculkan dompet default setelah refresh.");
+const walletCrudState = normalizeState({ wallets: [] });
+const walletCrudService = window.AppWalletService.createService({
+  getState: () => walletCrudState,
+  currentUserId: () => "user-test",
+  escapeHtml: (value) => String(value ?? ""),
+  id: () => "wallet-crud",
+  markDeleted: (collection, itemId) => markDeleted(walletCrudState, collection, itemId),
+  money: (value) => String(value),
+  normalizeWallet: window.AppState.normalizeWallet,
+});
+walletCrudService.createWallet({ name: "Operasional", initialBalance: 100000, type: "Cash" });
+assert(walletCrudState.wallets.some((wallet) => wallet.id === "wallet-crud" && wallet.name === "Operasional"), "Tambah dompet tidak mengubah state.wallets.");
+walletCrudService.updateWallet("wallet-crud", { name: "Operasional Edit", initialBalance: 150000, type: "Bank" });
+assert(walletCrudState.wallets.some((wallet) => wallet.name === "Operasional Edit" && wallet.initialBalance === 150000), "Edit dompet tidak mengubah state.wallets.");
+assert(walletCrudService.deleteWallet("wallet-crud").ok, "Hapus dompet yang belum dipakai transaksi harus berhasil.");
+assert(!walletCrudState.wallets.some((wallet) => wallet.id === "wallet-crud") && walletCrudState.deleted.wallets.includes("wallet-crud"), "Hapus dompet tidak memperbarui state.wallets atau deleted wallet marker.");
+window.AppStorage.saveState(storageKey, walletCrudState);
+const storedWalletCrudState = window.AppStorage.loadState(storageKey, normalizeState, () => normalizeState({}));
+assert(!storedWalletCrudState.wallets.some((wallet) => wallet.id === "wallet-crud") && storedWalletCrudState.deleted.wallets.includes("wallet-crud"), "Snapshot hapus dompet tidak tersimpan setelah reload storage.");
 
 const familyMember = window.AppState.familyMember("family-1", "parent-user-1", "child@dompify.local", "Anak Test", "0812", "active");
 state.familyMembers.push(familyMember);

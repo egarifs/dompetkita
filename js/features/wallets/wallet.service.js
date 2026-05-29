@@ -5,6 +5,7 @@ window.AppWalletService = {
       currentUserId,
       escapeHtml,
       id,
+      markDeleted,
       money,
       normalizeWallet,
     } = deps;
@@ -33,9 +34,48 @@ window.AppWalletService = {
       return state.transactions.some((item) => item.walletId === walletId);
     }
 
+    function hasDuplicateName(name, editingId = "") {
+      const state = getState();
+      const normalizedName = String(name || "").trim().toLowerCase();
+      return state.wallets.some((wallet) => wallet.id !== editingId && wallet.name.toLowerCase() === normalizedName);
+    }
+
+    function createWallet({ name, initialBalance = 0, type = "Cash" }) {
+      const state = getState();
+      const wallet = record(name, initialBalance, type);
+      state.wallets.push(wallet);
+      return wallet;
+    }
+
+    function updateWallet(walletId, { name, initialBalance = 0, type = "Cash" }) {
+      const state = getState();
+      const wallet = state.wallets.find((item) => item.id === walletId);
+      if (!wallet) return null;
+      Object.assign(wallet, normalizeWallet({
+        ...wallet,
+        name,
+        initialBalance,
+        type,
+        userId: wallet.userId || currentUserId(),
+        updatedAt: new Date().toISOString(),
+      }));
+      return wallet;
+    }
+
     function deleteBlockReason(walletId) {
       if (inUse(walletId)) return "Dompet tidak bisa dihapus karena sudah digunakan pada transaksi.";
       return "";
+    }
+
+    function deleteWallet(walletId) {
+      const state = getState();
+      const blockedReason = deleteBlockReason(walletId);
+      if (blockedReason) return { ok: false, message: blockedReason, wallet: null };
+      const wallet = state.wallets.find((item) => item.id === walletId);
+      if (!wallet) return { ok: false, message: "Dompet tidak ditemukan.", wallet: null };
+      if (typeof markDeleted === "function") markDeleted("wallets", walletId);
+      state.wallets = state.wallets.filter((item) => item.id !== walletId);
+      return { ok: true, message: "", wallet };
     }
 
     function options(selectedId = "") {
@@ -72,14 +112,18 @@ window.AppWalletService = {
     }
 
     return {
+      createWallet,
       defaultId,
       deleteBlockReason,
+      deleteWallet,
       ensureTransactionWallets,
+      hasDuplicateName,
       inUse,
       name,
       options,
       recalculateBalances,
       record,
+      updateWallet,
     };
   },
 };
