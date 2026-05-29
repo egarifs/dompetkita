@@ -5186,50 +5186,23 @@
         }
       });
 
-      window.addEventListener("beforeinstallprompt", (event) => {
-        event.preventDefault();
-        deferredInstallPrompt = event;
-        document.querySelector("#installAppButton").classList.remove("hidden");
-      });
-
-      document.querySelector("#installAppButton").addEventListener("click", async () => {
-        if (!deferredInstallPrompt) return;
-        deferredInstallPrompt.prompt();
-        const choice = await deferredInstallPrompt.userChoice;
-        if (choice.outcome === "accepted") {
-          document.querySelector("#installAppButton").classList.add("hidden");
-        }
-        deferredInstallPrompt = null;
-      });
-
-      window.addEventListener("appinstalled", () => {
-        document.querySelector("#installAppButton").classList.add("hidden");
-        deferredInstallPrompt = null;
-      });
-
-      if ("serviceWorker" in navigator && location.protocol !== "file:") {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker.register("./sw.js").catch(() => {});
-        });
-      }
-
-      loadUsers();
-      applyDarkMode();
-      if (cloudSync.enabled) {
-        setupCloudClient()?.auth.onAuthStateChange((event) => {
-          if (event === "PASSWORD_RECOVERY") openNewPasswordForm();
-        });
-      }
-      async function bootstrap() {
-        if (await handlePasswordRecoveryLink()) return;
-        if (cloudSync.enabled) {
-          currentUser = await loadCloudSessionUser();
-        }
-        if (currentUser) {
-          await showApp();
-        } else {
-          const rememberedLoggedIn = await autoLoginRememberedUser();
-          if (!rememberedLoggedIn) showSplash();
-        }
-      }
-      bootstrap();
+      window.AppMain.createBootstrap({
+        applyDarkMode,
+        autoLoginRememberedUser,
+        cloudSync,
+        currentUser: () => currentUser,
+        getDeferredInstallPrompt: () => deferredInstallPrompt,
+        handlePasswordRecoveryLink,
+        loadCloudSessionUser,
+        loadUsers,
+        openNewPasswordForm,
+        setCurrentUser: (user) => {
+          currentUser = user;
+        },
+        setDeferredInstallPrompt: (prompt) => {
+          deferredInstallPrompt = prompt;
+        },
+        setupCloudClient,
+        showApp,
+        showSplash,
+      }).start();
