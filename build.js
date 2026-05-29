@@ -100,6 +100,8 @@ const requiredFiles = [
   "js/features/savings/savings.render.js",
   "js/features/account/account.service.js",
   "js/features/account/account.render.js",
+  "js/features/vehicles/vehicle.service.js",
+  "js/features/vehicles/vehicle.render.js",
   "js/main.js",
   "icons/icon.svg",
 ];
@@ -143,6 +145,8 @@ for (const file of [
   "js/features/savings/savings.render.js",
   "js/features/account/account.service.js",
   "js/features/account/account.render.js",
+  "js/features/vehicles/vehicle.service.js",
+  "js/features/vehicles/vehicle.render.js",
   "js/main.js",
   "app.js",
   "app-meta.js",

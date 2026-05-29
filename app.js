@@ -504,6 +504,35 @@
         money,
         syncStatusText,
       });
+      const vehicleService = window.AppVehicleService.createService({
+        defaultWalletId,
+        escapeHtml,
+        getState: () => state,
+        markDeleted,
+        setCategories: (nextCategories) => {
+          categories = nextCategories;
+        },
+        todayDate,
+        transactionRecord,
+        updateTransactionRecord,
+      });
+      const vehicleRenderer = window.AppVehicleRender.createRenderer({
+        addMonths,
+        appIcon,
+        currentMonthKey,
+        editIcon,
+        escapeHtml,
+        formatNumber,
+        getState: () => state,
+        money,
+        monthOf,
+        todayDate,
+        trashIcon,
+        vehicleName,
+        vehicleOptions,
+        vehicleStatusBySchedule,
+        vehicleTransactions,
+      });
       const analyticsRenderer = window.AppAnalyticsRender.createRenderer({
         activeBudgets,
         appIcon,
@@ -1080,15 +1109,11 @@
       }
 
       function vehicleName(vehicleId) {
-        const vehicle = state.vehicles.find((item) => item.id === vehicleId);
-        return vehicle ? vehicle.name : "Kendaraan";
+        return vehicleService.vehicleName(vehicleId);
       }
 
       function ensureVehicleCategory() {
-        if (!state.categories.includes("Kendaraan")) {
-          state.categories.push("Kendaraan");
-          categories = state.categories;
-        }
+        vehicleService.ensureVehicleCategory();
       }
 
       function ensureDebtCategory() {
@@ -1099,69 +1124,31 @@
       }
 
       function addMonths(dateValue, months) {
-        if (!dateValue) return "";
-        const date = new Date(`${dateValue}T00:00:00`);
-        if (Number.isNaN(date.getTime())) return "";
-        date.setMonth(date.getMonth() + Number(months || 0));
-        return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        return vehicleService.addMonths(dateValue, months);
       }
 
       function daysUntil(dateValue) {
-        if (!dateValue) return Infinity;
-        const today = new Date(`${todayDate()}T00:00:00`);
-        const target = new Date(`${dateValue}T00:00:00`);
-        return Math.ceil((target - today) / 86400000);
+        return vehicleService.daysUntil(dateValue);
       }
 
       function vehicleStatusBySchedule(dateValue, kmLeft = Infinity) {
-        const days = daysUntil(dateValue);
-        if (days < 0 || kmLeft < 0) return { label: "Sudah lewat", className: "danger" };
-        if (days <= 30 || kmLeft <= 500) return { label: "Mendekati jadwal", className: "warn" };
-        return { label: "Aman", className: "income" };
+        return vehicleService.vehicleStatusBySchedule(dateValue, kmLeft);
       }
 
       function vehicleOptions(selectedId = "") {
-        if (!state.vehicles.length) return `<option value="">Belum ada kendaraan</option>`;
-        return state.vehicles.map((vehicle) => `<option value="${vehicle.id}" ${vehicle.id === selectedId ? "selected" : ""}>${escapeHtml(vehicle.name)} - ${escapeHtml(vehicle.plate)}</option>`).join("");
+        return vehicleService.vehicleOptions(selectedId);
       }
 
       function vehicleTransactions() {
-        return state.transactions.filter((item) => item.category === "Kendaraan" || item.vehicleId || item.sourceModule === "vehicles");
+        return vehicleService.vehicleTransactions();
       }
 
       function upsertVehicleTransaction(record, subcategory, amount, date, description) {
-        const value = Number(amount || 0);
-        if (value <= 0) return "";
-        ensureVehicleCategory();
-        const existing = record.transactionId ? state.transactions.find((item) => item.id === record.transactionId) : null;
-        const payload = {
-          type: "expense",
-          date,
-          category: "Kendaraan",
-          subcategory,
-          amount: value,
-          description,
-          sourceModule: "vehicles",
-          sourceId: record.id,
-          walletId: record.walletId || defaultWalletId(),
-          vehicleId: record.vehicleId,
-          vehicleRecordId: record.id,
-          vehicleRecordType: subcategory,
-          updatedAt: new Date().toISOString(),
-        };
-        if (existing) {
-          updateTransactionRecord(existing, payload);
-          return existing.id;
-        }
-        const transaction = transactionRecord("expense", date, "Kendaraan", description, value, payload);
-        state.transactions.push(transaction);
-        return transaction.id;
+        return vehicleService.upsertVehicleTransaction(record, subcategory, amount, date, description);
       }
 
       function removeVehicleTransaction(record) {
-        if (!record?.transactionId) return;
-        markDeleted("transactions", record.transactionId);
-        state.transactions = state.transactions.filter((item) => item.id !== record.transactionId);
+        vehicleService.removeVehicleTransaction(record);
       }
 
       function monthOf(item) {
@@ -1447,64 +1434,51 @@
       }
 
       function latestVehicleOil(vehicleId) {
-        return [...state.vehicleOilChanges].filter((item) => item.vehicleId === vehicleId).sort((a, b) => (b.lastOilDate || "").localeCompare(a.lastOilDate || ""))[0];
+        return vehicleRenderer.latestVehicleOil(vehicleId);
       }
 
       function nearestVehiclePart(vehicleId) {
-        return [...state.vehicleParts].filter((item) => item.vehicleId === vehicleId).sort((a, b) => (partNextDate(a) || "9999").localeCompare(partNextDate(b) || "9999"))[0];
+        return vehicleRenderer.nearestVehiclePart(vehicleId);
       }
 
       function nearestVehicleService(vehicleId) {
-        return [...state.vehicleServices].filter((item) => item.vehicleId === vehicleId).sort((a, b) => (b.serviceDate || "").localeCompare(a.serviceDate || ""))[0];
+        return vehicleRenderer.nearestVehicleService(vehicleId);
       }
 
       function vehicleTax(vehicleId) {
-        return [...state.vehicleTaxes].filter((item) => item.vehicleId === vehicleId).sort((a, b) => (a.annualDueDate || "").localeCompare(b.annualDueDate || ""))[0];
+        return vehicleRenderer.vehicleTax(vehicleId);
       }
 
       function oilNextDate(item) {
-        return addMonths(item.lastOilDate, item.intervalMonths);
+        return vehicleRenderer.oilNextDate(item);
       }
 
       function oilNextKm(item) {
-        return Number(item.lastOilKm || 0) + Number(item.intervalKm || 0);
+        return vehicleRenderer.oilNextKm(item);
       }
 
       function partNextDate(item) {
-        return addMonths(item.replacementDate, item.lifeMonths);
+        return vehicleRenderer.partNextDate(item);
       }
 
       function partNextKm(item) {
-        return Number(item.replacementKm || 0) + Number(item.lifeKm || 0);
+        return vehicleRenderer.partNextKm(item);
       }
 
       function vehicleMonthlyTotal(vehicleId = "", month = currentMonthKey()) {
-        return vehicleTransactions()
-          .filter((item) => (!vehicleId || item.vehicleId === vehicleId) && monthOf(item) === month)
-          .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        return vehicleRenderer.vehicleMonthlyTotal(vehicleId, month);
       }
 
       function vehicleYearTotal(vehicleId = "", year = todayDate().slice(0, 4)) {
-        return vehicleTransactions()
-          .filter((item) => (!vehicleId || item.vehicleId === vehicleId) && item.date?.startsWith(year))
-          .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        return vehicleRenderer.vehicleYearTotal(vehicleId, year);
       }
 
       function vehicleBadge(status) {
-        return `<span class="pill ${status.className}">${status.label}</span>`;
+        return vehicleRenderer.vehicleBadge(status);
       }
 
       function renderVehicles() {
-        const view = document.querySelector("#vehiclesView");
-        if (!view) return;
-        renderVehicleDashboard();
-        renderVehicleList();
-        renderVehicleServices();
-        renderVehicleOilChanges();
-        renderVehicleParts();
-        renderVehicleTaxes();
-        renderVehicleExpenseFilters();
-        renderVehicleExpenses();
+        vehicleRenderer.renderVehicles();
       }
 
       function renderWallets() {
@@ -1516,162 +1490,35 @@
       }
 
       function renderVehicleDashboard() {
-        const targets = [document.querySelector("#vehicleDashboard"), document.querySelector("#homeVehicleDashboard")].filter(Boolean);
-        if (!targets.length) return;
-        if (!state.vehicles.length) {
-          const empty = `<div class="empty"><p>Belum ada kendaraan.</p><button class="button primary" type="button" data-open-form="vehicle">Tambah Kendaraan</button></div>`;
-          targets.forEach((target) => {
-            target.innerHTML = empty;
-          });
-          return;
-        }
-        const rows = state.vehicles.map((vehicle) => {
-          const oil = latestVehicleOil(vehicle.id);
-          const part = nearestVehiclePart(vehicle.id);
-          const service = nearestVehicleService(vehicle.id);
-          const tax = vehicleTax(vehicle.id);
-          const oilStatus = oil ? vehicleStatusBySchedule(oilNextDate(oil), oilNextKm(oil) - Number(vehicle.currentKm || 0)) : { label: "Belum ada oli", className: "debt" };
-          const partStatus = part ? vehicleStatusBySchedule(partNextDate(part), partNextKm(part) - Number(vehicle.currentKm || 0)) : { label: "Belum ada part", className: "debt" };
-          const taxStatus = tax ? vehicleStatusBySchedule(tax.annualDueDate) : { label: "Belum ada pajak", className: "debt" };
-          return `
-            <article class="stat-card vehicle-card">
-              <div class="stat-label">${escapeHtml(vehicle.type || "Kendaraan")} ${vehicleBadge(taxStatus)}</div>
-              <strong class="stat-value">${escapeHtml(vehicle.name)}</strong>
-              <span class="stat-sub">${formatNumber(vehicle.currentKm || 0)} km - ${escapeHtml(vehicle.plate)}</span>
-              <div class="compact-list">
-                <span class="pill">Service: ${service ? escapeHtml(service.serviceDate) : "-"}</span>
-                ${vehicleBadge(oilStatus)}
-                ${vehicleBadge(partStatus)}
-                <span class="pill">Pajak: ${tax?.annualDueDate || "-"}</span>
-              </div>
-              <div class="vehicle-costs">
-                <span>Bulan ini <strong>${money(vehicleMonthlyTotal(vehicle.id))}</strong></span>
-                <span>Tahun ini <strong>${money(vehicleYearTotal(vehicle.id))}</strong></span>
-              </div>
-            </article>
-          `;
-        }).join("");
-        targets.forEach((target) => {
-          target.innerHTML = rows;
-        });
+        vehicleRenderer.renderVehicleDashboard();
       }
 
       function renderVehicleList() {
-        const target = document.querySelector("#vehicleList");
-        if (!target) return;
-        target.innerHTML = state.vehicles.length ? state.vehicles.map((vehicle) => `
-          <article class="debt-row">
-            <div class="debt-row-top">
-              <div>
-                <strong>${escapeHtml(vehicle.name)}</strong>
-                <span>${escapeHtml(vehicle.brand || "-")} ${escapeHtml(vehicle.model || "")} - ${escapeHtml(vehicle.plate)}</span>
-              </div>
-              <div class="row-actions">
-                <button class="icon-button" type="button" data-edit-vehicle="${vehicle.id}" title="Edit kendaraan">${editIcon()}</button>
-                <button class="icon-button danger" type="button" data-delete-vehicle="${vehicle.id}" title="Hapus kendaraan">${trashIcon()}</button>
-              </div>
-            </div>
-            <div class="compact-list">
-              <span class="pill">${escapeHtml(vehicle.type || "-")}</span>
-              <span class="pill">${escapeHtml(vehicle.transmission || "-")}</span>
-              <span class="pill">${formatNumber(vehicle.currentKm || 0)} km</span>
-              <span class="pill">Tahun ${escapeHtml(vehicle.year || "-")}</span>
-            </div>
-          </article>
-        `).join("") : `<div class="empty"><p>Belum ada data kendaraan.</p></div>`;
+        vehicleRenderer.renderVehicleList();
       }
 
       function renderVehicleServices() {
-        const target = document.querySelector("#vehicleServiceList");
-        if (!target) return;
-        target.innerHTML = state.vehicleServices.length ? [...state.vehicleServices].sort((a, b) => b.serviceDate.localeCompare(a.serviceDate)).map((item) => `
-          <article class="debt-row">
-            <div class="debt-row-top"><div><strong>${escapeHtml(item.serviceType)}</strong><span>${escapeHtml(vehicleName(item.vehicleId))} - ${escapeHtml(item.workshop || "-")}</span></div><span>${money(item.cost || 0)}</span></div>
-            <div class="compact-list"><span class="pill">${escapeHtml(item.serviceDate)}</span><span class="pill">${formatNumber(item.serviceKm || 0)} km</span><button class="icon-button" type="button" data-edit-vehicle-record="vehicleServices" data-record-id="${item.id}" title="Edit service">${editIcon()}</button><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleServices" data-record-id="${item.id}" title="Hapus service">${trashIcon()}</button></div>
-          </article>
-        `).join("") : `<div class="empty"><p>Belum ada riwayat service.</p></div>`;
+        vehicleRenderer.renderVehicleServices();
       }
 
       function renderVehicleOilChanges() {
-        const target = document.querySelector("#vehicleOilList");
-        if (!target) return;
-        target.innerHTML = state.vehicleOilChanges.length ? [...state.vehicleOilChanges].sort((a, b) => oilNextDate(a).localeCompare(oilNextDate(b))).map((item) => {
-          const vehicle = state.vehicles.find((entry) => entry.id === item.vehicleId);
-          const status = vehicleStatusBySchedule(oilNextDate(item), oilNextKm(item) - Number(vehicle?.currentKm || 0));
-          return `
-            <article class="debt-row">
-              <div class="debt-row-top"><div><strong>Ganti Oli ${escapeHtml(item.oilBrand || "")}</strong><span>${escapeHtml(vehicleName(item.vehicleId))}</span></div>${vehicleBadge(status)}</div>
-              <div class="compact-list"><span class="pill">Berikutnya ${oilNextDate(item) || "-"}</span><span class="pill">${formatNumber(oilNextKm(item))} km</span><span class="pill">${money(item.cost || 0)}</span><button class="icon-button" type="button" data-edit-vehicle-record="vehicleOilChanges" data-record-id="${item.id}" title="Edit oli">${editIcon()}</button><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleOilChanges" data-record-id="${item.id}" title="Hapus oli">${trashIcon()}</button></div>
-            </article>
-          `;
-        }).join("") : `<div class="empty"><p>Belum ada jadwal ganti oli.</p></div>`;
+        vehicleRenderer.renderVehicleOilChanges();
       }
 
       function renderVehicleParts() {
-        const target = document.querySelector("#vehiclePartList");
-        if (!target) return;
-        target.innerHTML = state.vehicleParts.length ? [...state.vehicleParts].sort((a, b) => partNextDate(a).localeCompare(partNextDate(b))).map((item) => {
-          const vehicle = state.vehicles.find((entry) => entry.id === item.vehicleId);
-          const status = vehicleStatusBySchedule(partNextDate(item), partNextKm(item) - Number(vehicle?.currentKm || 0));
-          return `
-            <article class="debt-row">
-              <div class="debt-row-top"><div><strong>${escapeHtml(item.partName)}</strong><span>${escapeHtml(vehicleName(item.vehicleId))}</span></div>${vehicleBadge(status)}</div>
-              <div class="compact-list"><span class="pill">Berikutnya ${partNextDate(item) || "-"}</span><span class="pill">${formatNumber(partNextKm(item))} km</span><span class="pill">${money(item.cost || 0)}</span><button class="icon-button" type="button" data-edit-vehicle-record="vehicleParts" data-record-id="${item.id}" title="Edit part">${editIcon()}</button><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleParts" data-record-id="${item.id}" title="Hapus part">${trashIcon()}</button></div>
-            </article>
-          `;
-        }).join("") : `<div class="empty"><p>Belum ada penggantian part.</p></div>`;
+        vehicleRenderer.renderVehicleParts();
       }
 
       function renderVehicleTaxes() {
-        const target = document.querySelector("#vehicleTaxList");
-        if (!target) return;
-        target.innerHTML = state.vehicleTaxes.length ? [...state.vehicleTaxes].sort((a, b) => a.annualDueDate.localeCompare(b.annualDueDate)).map((item) => {
-          const status = vehicleStatusBySchedule(item.annualDueDate);
-          return `
-            <article class="debt-row">
-              <div class="debt-row-top"><div><strong>Pajak ${escapeHtml(vehicleName(item.vehicleId))}</strong><span>Tahunan ${escapeHtml(item.annualDueDate)} - 5 tahunan ${escapeHtml(item.fiveYearDueDate || "-")}</span></div>${vehicleBadge(status)}</div>
-              <div class="compact-list"><span class="pill">${item.status === "paid" ? "Sudah dibayar" : "Belum dibayar"}</span><span class="pill">${money(item.estimatedCost || 0)}</span><button class="icon-button" type="button" data-edit-vehicle-record="vehicleTaxes" data-record-id="${item.id}" title="Edit pajak">${editIcon()}</button><button class="icon-button danger" type="button" data-delete-vehicle-record="vehicleTaxes" data-record-id="${item.id}" title="Hapus pajak">${trashIcon()}</button></div>
-            </article>
-          `;
-        }).join("") : `<div class="empty"><p>Belum ada data pajak kendaraan.</p></div>`;
+        vehicleRenderer.renderVehicleTaxes();
       }
 
       function renderVehicleExpenseFilters() {
-        const vehicleFilter = document.querySelector("#vehicleExpenseVehicleFilter");
-        const monthFilter = document.querySelector("#vehicleExpenseMonthFilter");
-        if (!vehicleFilter || !monthFilter) return;
-        const currentVehicle = vehicleFilter.value;
-        vehicleFilter.innerHTML = `<option value="">Semua Kendaraan</option>${vehicleOptions(currentVehicle)}`;
-        vehicleFilter.value = currentVehicle;
-        if (!monthFilter.value) monthFilter.value = currentMonthKey();
+        vehicleRenderer.renderVehicleExpenseFilters();
       }
 
       function renderVehicleExpenses() {
-        const vehicleId = document.querySelector("#vehicleExpenseVehicleFilter")?.value || "";
-        const month = document.querySelector("#vehicleExpenseMonthFilter")?.value || currentMonthKey();
-        const type = document.querySelector("#vehicleExpenseTypeFilter")?.value || "";
-        const year = month.slice(0, 4);
-        const rows = vehicleTransactions().filter((item) => {
-          return (!vehicleId || item.vehicleId === vehicleId)
-            && (!type || item.subcategory === type)
-            && (!month || monthOf(item) === month);
-        });
-        const yearRows = vehicleTransactions().filter((item) => (!vehicleId || item.vehicleId === vehicleId) && item.date?.startsWith(year));
-        const yearTotal = yearRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-        const monthTotal = rows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-        const maxCost = yearRows.reduce((max, item) => Math.max(max, Number(item.amount || 0)), 0);
-        document.querySelector("#vehicleMonthTotal").textContent = money(monthTotal);
-        document.querySelector("#vehicleYearTotal").textContent = money(yearTotal);
-        document.querySelector("#vehicleAverageTotal").textContent = money(Math.round(yearTotal / 12));
-        document.querySelector("#vehicleMaxTotal").textContent = money(maxCost);
-        document.querySelector("#vehicleExpenseList").innerHTML = rows.length ? `
-          <table>
-            <thead><tr><th>Tanggal</th><th>Kendaraan</th><th>Jenis</th><th>Catatan</th><th>Nominal</th></tr></thead>
-            <tbody>${rows.sort((a, b) => b.date.localeCompare(a.date)).map((item) => `
-              <tr><td>${escapeHtml(item.date)}</td><td>${escapeHtml(vehicleName(item.vehicleId))}</td><td>${escapeHtml(item.subcategory || "Lainnya")}</td><td>${escapeHtml(item.description || "-")}</td><td>${money(item.amount)}</td></tr>
-            `).join("")}</tbody>
-          </table>
-        ` : `<div class="empty"><p>Belum ada pengeluaran kendaraan pada filter ini.</p></div>`;
+        vehicleRenderer.renderVehicleExpenses();
       }
 
       function renderInsights() {
