@@ -136,6 +136,8 @@ const walletGuardService = window.AppWalletService.createService({
   normalizeWallet: window.AppState.normalizeWallet,
 });
 assert(walletGuardService.deleteBlockReason("wallet-single") === "Minimal harus ada satu dompet aktif.", "Dompet terakhir tidak boleh bisa dihapus dari halaman Dompet.");
+const emptyWalletState = normalizeState({ wallets: [], deleted: { wallets: ["wallet-cash", "wallet-bank"] } });
+assert(emptyWalletState.wallets.length === 0, "State dompet kosong eksplisit tidak boleh memunculkan dompet default setelah refresh.");
 
 const familyMember = window.AppState.familyMember("family-1", "parent-user-1", "child@dompify.local", "Anak Test", "0812", "active");
 state.familyMembers.push(familyMember);
