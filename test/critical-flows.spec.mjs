@@ -25,6 +25,7 @@ await import("../js/core/state.js");
 await import("../js/core/storage.js");
 await import("../js/core/auth.js");
 await import("../js/core/cloud.js");
+await import("../js/features/wallets/wallet.service.js");
 
 const { authStorageKey, sessionStorageKey, storageKey, defaultCategories } = window.AppConstants;
 const translations = { id: {}, en: {} };
@@ -125,6 +126,16 @@ const bankWallet = state.wallets[1];
 assert(cashWallet?.id && bankWallet?.id, "Dompet default tidak tersedia.");
 const optionalBalanceWallet = window.AppState.normalizeWallet({ id: "wallet-optional", name: "Dompet Opsional", initialBalance: "" });
 assert(optionalBalanceWallet.initialBalance === 0 && optionalBalanceWallet.currentBalance === 0, "Saldo awal kosong harus dianggap 0.");
+const walletGuardState = normalizeState({ wallets: [{ id: "wallet-single", name: "Dompet Utama", initialBalance: 0, currentBalance: 0, type: "Cash" }] });
+const walletGuardService = window.AppWalletService.createService({
+  getState: () => walletGuardState,
+  currentUserId: () => "user-test",
+  escapeHtml: (value) => String(value ?? ""),
+  id: () => "wallet-new",
+  money: (value) => String(value),
+  normalizeWallet: window.AppState.normalizeWallet,
+});
+assert(walletGuardService.deleteBlockReason("wallet-single") === "Minimal harus ada satu dompet aktif.", "Dompet terakhir tidak boleh bisa dihapus dari halaman Dompet.");
 
 const familyMember = window.AppState.familyMember("family-1", "parent-user-1", "child@dompify.local", "Anak Test", "0812", "active");
 state.familyMembers.push(familyMember);

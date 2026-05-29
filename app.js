@@ -1064,6 +1064,10 @@
         return walletService.inUse(walletId);
       }
 
+      function walletDeleteBlockReason(walletId) {
+        return walletService.deleteBlockReason(walletId);
+      }
+
       function walletOptions(selectedId = "") {
         return walletService.options(selectedId);
       }
@@ -4076,8 +4080,9 @@
           if (!requirePrimaryAccount()) return;
           const target = state.wallets.find((wallet) => wallet.id === walletDeleteButton.dataset.deleteWallet);
           if (!target) return;
-          if (walletInUse(target.id)) {
-            alert("Dompet tidak bisa dihapus karena sudah digunakan pada transaksi.");
+          const blockedReason = walletDeleteBlockReason(target.id);
+          if (blockedReason) {
+            alert(blockedReason);
             return;
           }
           const snapshot = cloneData(target);

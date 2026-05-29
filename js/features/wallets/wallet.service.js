@@ -33,6 +33,13 @@ window.AppWalletService = {
       return state.transactions.some((item) => item.walletId === walletId);
     }
 
+    function deleteBlockReason(walletId) {
+      const state = getState();
+      if (state.wallets.length <= 1) return "Minimal harus ada satu dompet aktif.";
+      if (inUse(walletId)) return "Dompet tidak bisa dihapus karena sudah digunakan pada transaksi.";
+      return "";
+    }
+
     function options(selectedId = "") {
       const state = getState();
       if (!state.wallets.length) return `<option value="">Belum ada dompet</option>`;
@@ -68,6 +75,7 @@ window.AppWalletService = {
 
     return {
       defaultId,
+      deleteBlockReason,
       ensureTransactionWallets,
       inUse,
       name,
