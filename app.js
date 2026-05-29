@@ -669,6 +669,13 @@
         window.AppStorage.saveState(storageKey, state);
       }
 
+      function hydrateStoredStateForCurrentUser() {
+        if (isGuest() || isChildUser()) return;
+        const stored = loadState();
+        applyState(stored);
+        hasUnsyncedChanges = stored.syncStatus === "pending" || stored.syncStatus === "failed";
+      }
+
       function markDeleted(collection, itemId) {
         if (!itemId) return;
         if (!state.deleted) state.deleted = {};
@@ -3350,6 +3357,7 @@
         document.querySelector("#splashScreen").classList.add("hidden");
         document.querySelector("#authScreen").classList.add("hidden");
         document.querySelector("#appShell").classList.remove("hidden");
+        hydrateStoredStateForCurrentUser();
         if (!isGuest() && isCloudSyncAllowed()) {
           const shouldUploadLocal = !isChildUser() && hasUnsyncedChanges;
           await loadCloudState({ saveAfterLoad: shouldUploadLocal });
