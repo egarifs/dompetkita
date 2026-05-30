@@ -955,7 +955,7 @@
         if (isGuest() || !payload || !isCloudSyncAllowed()) return;
         if (!hasUnsyncedChanges && window.AppCloud.isTimestampAfter(state.localChangedAt, updatedAt)) return;
         if (hasUnsyncedChanges) markCloudConflict(updatedAt || new Date().toISOString());
-        replaceState(mergeStateData(payload, state));
+        replaceState(hasUnsyncedChanges ? mergeStateData(payload, state) : payload);
         cloudSync.lastSyncedAt = updatedAt || new Date().toISOString();
         cloudSync.lastError = "";
         renderAll();

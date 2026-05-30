@@ -2,7 +2,18 @@ window.AppState = {
   mergeById(primary = [], secondary = []) {
     const map = new Map();
     primary.forEach((item) => map.set(item.id, item));
-    secondary.forEach((item) => map.set(item.id, item));
+    secondary.forEach((item) => {
+      const existing = map.get(item.id);
+      if (!existing) {
+        map.set(item.id, item);
+        return;
+      }
+      const existingTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
+      const itemTime = new Date(item.updatedAt || item.createdAt || 0).getTime();
+      if (!Number.isFinite(existingTime) || !Number.isFinite(itemTime) || itemTime >= existingTime) {
+        map.set(item.id, item);
+      }
+    });
     return [...map.values()];
   },
 
