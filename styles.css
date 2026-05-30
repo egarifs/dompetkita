@@ -285,7 +285,6 @@
       }
 
       .nav-button,
-      .add-choice,
       .button,
       .icon-button {
         display: inline-flex;
@@ -335,36 +334,6 @@
       .nav-button svg {
         width: 24px;
         height: 24px;
-      }
-
-      .add-block {
-        position: relative;
-      }
-
-      .add-menu {
-        display: none;
-        gap: 8px;
-        margin: 8px 0 3px 38px;
-      }
-
-      .add-block.open .add-menu {
-        display: grid;
-      }
-
-      .add-choice {
-        min-height: 42px;
-        justify-content: flex-start;
-        border: 1px solid var(--border);
-        background: var(--surface-container);
-        color: var(--on-surface);
-        padding: 0 14px;
-        font-size: 0.88rem;
-        font-weight: 800;
-      }
-
-      .add-choice:hover {
-        border-color: var(--outline);
-        transform: translateY(-1px);
       }
 
       .sidebar-footer {
@@ -2352,32 +2321,6 @@
         line-height: 1;
       }
 
-      .quick-add-block {
-        position: fixed;
-        right: 18px;
-        bottom: calc(94px + env(safe-area-inset-bottom));
-        z-index: 12;
-      }
-
-      .quick-add-block .mobile-fab {
-        position: static;
-        display: grid;
-        place-items: center;
-      }
-
-      .quick-add-menu {
-        position: absolute;
-        right: 0;
-        bottom: 70px;
-        width: min(280px, calc(100vw - 32px));
-        margin: 0;
-        padding: 8px;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        background: var(--surface-container-low);
-        box-shadow: var(--shadow-2);
-      }
-
       .hidden {
         display: none !important;
       }
@@ -2448,10 +2391,6 @@
           line-height: 1;
         }
 
-        .add-choice {
-          min-height: 44px;
-        }
-
         .main {
           padding: 18px 18px calc(110px + env(safe-area-inset-bottom));
         }
@@ -2476,11 +2415,6 @@
 
         .top-actions .button {
           flex: 1 1 150px;
-        }
-
-        .quick-add-block {
-          right: 18px;
-          bottom: calc(94px + env(safe-area-inset-bottom));
         }
 
         .stats-grid {

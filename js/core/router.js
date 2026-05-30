@@ -34,7 +34,6 @@ window.AppRouter = {
       document.querySelector("#pageHeading").textContent = copy[0];
       document.querySelector("#pageSubtitle").textContent = copy[1];
       updateBackButton(view);
-      document.querySelector("#addBlock").classList.remove("open");
     }
 
     function goBackView() {

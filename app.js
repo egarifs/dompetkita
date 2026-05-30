@@ -3968,10 +3968,6 @@
 
       document.querySelector("#backButton").addEventListener("click", goBackView);
 
-      document.querySelector("#addMenuButton").addEventListener("click", () => {
-        document.querySelector("#addBlock").classList.toggle("open");
-      });
-
       document.body.addEventListener("pointerdown", (event) => {
         const moneyCalculatorTrigger = event.target.closest("[data-open-money-calculator]");
         if (!moneyCalculatorTrigger) return;
@@ -4038,7 +4034,6 @@
         }
 
         const opener = event.target.closest("[data-open-form]");
-        if (opener) document.querySelector("#addBlock")?.classList.remove("open");
         if (opener?.dataset.openForm === "transaction") openTransactionForm("", { presetType: opener.dataset.transactionPreset || "" });
         if (opener?.dataset.openForm === "debt") openDebtForm();
         if (opener?.dataset.openForm === "recurring") openRecurringForm();
