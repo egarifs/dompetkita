@@ -796,7 +796,7 @@
       .finance-menu-card {
         min-height: 112px;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: auto minmax(0, 1fr);
         align-content: center;
         align-items: center;
         gap: 6px 14px;
@@ -810,23 +810,23 @@
       }
 
       .finance-menu-card > svg {
-        grid-column: 2;
+        grid-column: 1;
         grid-row: 1 / span 2;
-        justify-self: end;
+        justify-self: start;
         width: 28px;
         height: 28px;
         color: var(--violet);
       }
 
       .finance-menu-card strong {
-        grid-column: 1;
+        grid-column: 2;
         grid-row: 1;
         font-size: 1rem;
         font-weight: 900;
       }
 
       .finance-menu-card small {
-        grid-column: 1;
+        grid-column: 2;
         grid-row: 2;
         color: var(--muted);
         font-size: 0.82rem;

@@ -63,7 +63,8 @@ window.AppBudgetRender = {
         `;
       }).join("");
 
-      document.querySelector("#homeBudgetList").innerHTML = rows || `<div class="empty"><p>Belum ada anggaran.</p></div>`;
+      const analyticsList = document.querySelector("#homeBudgetList");
+      if (analyticsList) analyticsList.innerHTML = rows || `<div class="empty"><p>Belum ada anggaran.</p></div>`;
       document.querySelector("#budgetPageList").innerHTML = rows || `<div class="empty"><p>Belum ada anggaran.</p></div>`;
     }
 
