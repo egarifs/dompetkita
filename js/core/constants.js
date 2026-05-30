@@ -4,6 +4,7 @@ window.AppConstants = {
   sessionStorageKey: "finance-tracker-session-v1",
   rememberedLoginKey: "finance-tracker-remembered-login-v1",
   failedLoginKey: "finance-tracker-failed-login-v1",
+  deletedAccountsKey: "finance-tracker-deleted-accounts-v1",
   IDLE_TIMEOUT_MINUTES: 15,
   WARNING_BEFORE_LOGOUT_MINUTES: 1,
   splashReadDelay: 5000,

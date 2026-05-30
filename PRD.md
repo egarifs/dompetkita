@@ -553,6 +553,13 @@ Mitigasi: App tetap local-first, tampilkan status cloud jelas, dokumentasikan se
 - Simulasikan gagal sync dan pastikan data lokal tetap ada.
 - Hapus data lalu sync dan pastikan tidak muncul kembali.
 
+### Hapus Akun Permanen
+
+- Hapus akun lokal dan pastikan snapshot, sesi, remembered login, serta kredensial lokal terhapus.
+- Pastikan akun lokal yang sudah dihapus tidak bisa login kembali.
+- Hapus akun cloud dan pastikan RPC `delete_current_user()` menghapus relasi keluarga, snapshot cloud, dan user Supabase Auth.
+- Pastikan kegagalan RPC cloud tidak menghapus data lokal atau mengeluarkan user sebelum penghapusan cloud berhasil.
+
 ## 16. Dependencies
 
 - Browser modern dengan LocalStorage.

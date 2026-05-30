@@ -3,6 +3,7 @@ window.AppAccountService = {
     const {
       dataOwnerId,
       familyMember,
+      getCurrentUser,
       id,
       isGuest,
       setupCloudClient,
@@ -45,7 +46,24 @@ window.AppAccountService = {
       return error ? { ok: false, message: error.message || "Akses anggota keluarga belum terhapus dari Supabase." } : { ok: true };
     }
 
+    async function deleteCurrentAccountPermanently() {
+      const currentUser = getCurrentUser();
+      if (!currentUser) return { ok: false, message: "Sesi akun tidak ditemukan." };
+      if (!currentUser.cloudId) return { ok: true, mode: "local" };
+      const client = setupCloudClient();
+      if (!client) return { ok: false, message: "Koneksi cloud belum aktif. Akun belum dihapus." };
+      const { error } = await client.rpc("delete_current_user");
+      if (error) {
+        return {
+          ok: false,
+          message: `${error.message || "Akun cloud belum berhasil dihapus."}\n\nJalankan ulang supabase-schema.sql agar RPC delete_current_user tersedia.`,
+        };
+      }
+      return { ok: true, mode: "cloud" };
+    }
+
     return {
+      deleteCurrentAccountPermanently,
       deleteFamilyMemberAccess,
       familyMemberCloudPayload,
       familyMemberRecord,

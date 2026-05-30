@@ -26,6 +26,7 @@ await import("../js/core/storage.js");
 await import("../js/core/auth.js");
 await import("../js/core/cloud.js");
 await import("../js/utils/categoryUtils.js");
+await import("../js/features/account/account.service.js");
 await import("../js/features/wallets/wallet.service.js");
 
 const { authStorageKey, sessionStorageKey, storageKey, defaultCategories } = window.AppConstants;
@@ -143,6 +144,63 @@ assert(registration.ok, "Registrasi lokal gagal.");
 assert(loginLocal("test@dompify.local", "Password123")?.email === "test@dompify.local", "Login lokal gagal setelah registrasi.");
 assert(window.AppAuth.loadSessionUser(sessionStorageKey, window.AppAuth.loadUsers(authStorageKey))?.email === "test@dompify.local", "Session user tidak tersimpan.");
 out.push("registrasi/login:ok");
+
+const deletedLocalAuthKey = "test-deleted-local-users";
+const deletedLocalAccountsKey = "test-deleted-local-tombstones";
+const deletedLocalSessionKey = "test-deleted-local-session";
+const deletedLocalRememberedKey = "test-deleted-local-remembered";
+const deletedLocalSnapshotKey = "test-deleted-local-snapshot";
+localStorage.setItem(deletedLocalAuthKey, JSON.stringify([{ username: "user@keuangan.local", password: "user123", role: "user" }]));
+localStorage.setItem(deletedLocalSessionKey, JSON.stringify({ username: "user@keuangan.local" }));
+localStorage.setItem(deletedLocalRememberedKey, JSON.stringify({ email: "user@keuangan.local", password: "user123" }));
+localStorage.setItem(deletedLocalSnapshotKey, JSON.stringify({ wallets: [{ id: "wallet-delete-test" }] }));
+window.AppAuth.deleteLocalAccountData({
+  authStorageKey: deletedLocalAuthKey,
+  deletedAccountsKey: deletedLocalAccountsKey,
+  rememberedLoginKey: deletedLocalRememberedKey,
+  sessionStorageKey: deletedLocalSessionKey,
+  storageKey: deletedLocalSnapshotKey,
+  username: "user@keuangan.local",
+});
+assert(window.AppAuth.isAccountDeleted(deletedLocalAccountsKey, "user@keuangan.local"), "Tombstone akun lokal yang dihapus tidak tersimpan.");
+assert(window.AppAuth.loadUsers(deletedLocalAuthKey, deletedLocalAccountsKey).length === 0, "Akun lokal yang dihapus masih tersedia untuk login.");
+localStorage.removeItem(deletedLocalAuthKey);
+assert(!window.AppAuth.loadUsers(deletedLocalAuthKey, deletedLocalAccountsKey).some((user) => user.username === "user@keuangan.local"), "Akun bawaan lokal yang sudah dihapus muncul kembali.");
+assert(localStorage.getItem(deletedLocalSnapshotKey) === null, "Snapshot lokal akun yang dihapus masih tersimpan.");
+assert(localStorage.getItem(deletedLocalSessionKey) === null, "Sesi akun lokal yang dihapus masih tersimpan.");
+assert(localStorage.getItem(deletedLocalRememberedKey) === null, "Remembered login akun yang dihapus masih tersimpan.");
+
+let deletedAccountRpc = "";
+const accountService = window.AppAccountService.createService({
+  dataOwnerId: () => "cloud-user-delete",
+  familyMember: window.AppState.familyMember,
+  getCurrentUser: () => ({ cloudId: "cloud-user-delete", username: "cloud-delete@dompify.local" }),
+  id: () => "family-delete-test",
+  isGuest: () => false,
+  setupCloudClient: () => ({
+    async rpc(name) {
+      deletedAccountRpc = name;
+      return { error: null };
+    },
+  }),
+});
+const deletedCloudAccount = await accountService.deleteCurrentAccountPermanently();
+assert(deletedCloudAccount.ok && deletedCloudAccount.mode === "cloud", "Service hapus akun cloud tidak berhasil.");
+assert(deletedAccountRpc === "delete_current_user", "Service hapus akun cloud tidak memanggil RPC delete_current_user.");
+const failedCloudAccountDelete = await window.AppAccountService.createService({
+  dataOwnerId: () => "cloud-user-delete",
+  familyMember: window.AppState.familyMember,
+  getCurrentUser: () => ({ cloudId: "cloud-user-delete", username: "cloud-delete@dompify.local" }),
+  id: () => "family-delete-test",
+  isGuest: () => false,
+  setupCloudClient: () => ({
+    async rpc() {
+      return { error: { message: "RPC belum tersedia" } };
+    },
+  }),
+}).deleteCurrentAccountPermanently();
+assert(!failedCloudAccountDelete.ok && failedCloudAccountDelete.message.includes("supabase-schema.sql"), "Kegagalan RPC hapus akun cloud tidak dijelaskan dengan aman.");
+out.push("hapus akun permanen:ok");
 
 const state = normalizeState({});
 assert(state.wallets.length === 0, "User baru tidak boleh mendapat default dompet.");

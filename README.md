@@ -132,6 +132,13 @@ Realtime:
 - Tabel `finance_snapshots` dimasukkan ke publication `supabase_realtime`.
 - Ini dipakai agar perubahan dari web bisa masuk ke app, dan sebaliknya.
 
+Penghapusan akun:
+
+- Tombol **Hapus Akun** menghapus snapshot lokal, sesi lokal, remembered login, dan kredensial lokal.
+- Pada mode cloud, aplikasi memanggil RPC `delete_current_user()` dari [supabase-schema.sql](./supabase-schema.sql).
+- RPC menghapus relasi keluarga, snapshot cloud, dan user Supabase Auth secara permanen.
+- Jalankan ulang `supabase-schema.sql` pada project Supabase lama agar RPC penghapusan akun tersedia.
+
 ## Setup Supabase
 
 1. Buat project di Supabase.

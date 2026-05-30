@@ -4,6 +4,7 @@
         sessionStorageKey,
         rememberedLoginKey,
         failedLoginKey,
+        deletedAccountsKey,
         IDLE_TIMEOUT_MINUTES,
         WARNING_BEFORE_LOGOUT_MINUTES,
         splashReadDelay,
@@ -150,7 +151,7 @@
       let categories = state.categories?.length ? state.categories : [...defaultCategories];
       state.categories = categories;
       state.settings.homeSectionOrder = normalizeHomeSectionOrder(state.settings?.homeSectionOrder);
-      let users = window.AppAuth.loadUsers(authStorageKey);
+      let users = window.AppAuth.loadUsers(authStorageKey, deletedAccountsKey);
       let currentUser = loadSessionUser();
       let guestTransactionAdds = 0;
       let hasUnsyncedChanges = state.syncStatus === "pending" || state.syncStatus === "failed";
@@ -169,7 +170,7 @@
 
 
       function loadUsers() {
-        return window.AppAuth.loadUsers(authStorageKey);
+        return window.AppAuth.loadUsers(authStorageKey, deletedAccountsKey);
       }
 
       function saveUsers(nextUsers) {
@@ -485,6 +486,7 @@
       const accountService = window.AppAccountService.createService({
         dataOwnerId,
         familyMember: window.AppState.familyMember,
+        getCurrentUser: () => currentUser,
         id,
         isGuest,
         setupCloudClient,
@@ -3583,6 +3585,9 @@
 
       function registerLocal({ name, phone, email, password }) {
         const users = loadUsers();
+        if (window.AppAuth.isAccountDeleted(deletedAccountsKey, email)) {
+          return { ok: false, message: "Akun ini sudah dihapus permanen dan tidak dapat digunakan kembali." };
+        }
         if (users.some((user) => user.username.toLowerCase() === email.toLowerCase())) {
           return { ok: false, message: "Email sudah terdaftar." };
         }
@@ -3883,17 +3888,39 @@
         return true;
       }
 
-      function deleteCurrentAccount() {
+      async function deleteCurrentAccount() {
         if (!requirePrimaryAccount()) return;
-        const users = loadUsers();
-        const remainingAdmins = users.filter((user) => user.role === "admin" && user.username !== currentUser.username);
-        if (currentUser.role === "admin" && !remainingAdmins.length) {
+        const deletingUser = currentUser;
+        const storedUsers = loadUsers();
+        const remainingAdmins = storedUsers.filter((user) => user.role === "admin" && user.username !== deletingUser.username);
+        if (!deletingUser.cloudId && deletingUser.role === "admin" && !remainingAdmins.length) {
           alert("Tidak bisa menghapus admin terakhir.");
           return;
         }
-        if (!confirm(`Hapus akun ${currentUser.username}?`)) return;
-        saveUsers(users.filter((user) => user.username !== currentUser.username));
-        logout();
+        if (!confirm(`Hapus akun ${deletingUser.username} secara permanen?\n\nSemua data lokal dan cloud akun ini akan dihapus. Akun tidak dapat digunakan untuk login kembali.`)) return;
+        const deleteButton = document.querySelector("#deleteAccountButton");
+        deleteButton.disabled = true;
+        deleteButton.textContent = "Menghapus...";
+        clearTimeout(cloudSync.saveTimer);
+        cloudSync.saveTimer = null;
+        clearSyncRetry();
+        const result = await accountService.deleteCurrentAccountPermanently();
+        if (!result.ok) {
+          deleteButton.disabled = false;
+          deleteButton.textContent = "Hapus";
+          alert(result.message);
+          return;
+        }
+        users = window.AppAuth.deleteLocalAccountData({
+          authStorageKey,
+          deletedAccountsKey,
+          rememberedLoginKey,
+          sessionStorageKey,
+          storageKey,
+          username: deletingUser.username,
+        });
+        hasUnsyncedChanges = false;
+        await logout("Akun dan seluruh data terkait berhasil dihapus permanen.");
       }
 
       document.querySelector("#todayText").textContent = new Intl.DateTimeFormat("id-ID", {

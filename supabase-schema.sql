@@ -126,6 +126,37 @@ for delete
 to authenticated
 using ((select auth.uid()) = parent_user_id);
 
+create or replace function public.delete_current_user()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  current_user_id uuid := auth.uid();
+  current_user_email text := lower(coalesce(auth.jwt() ->> 'email', ''));
+begin
+  if current_user_id is null then
+    raise exception 'Sesi login cloud tidak aktif.';
+  end if;
+
+  delete from public.family_members
+  where parent_user_id = current_user_id
+    or child_user_id = current_user_id
+    or (current_user_email <> '' and child_email = current_user_email);
+
+  delete from public.finance_snapshots
+  where user_id = current_user_id;
+
+  delete from auth.users
+  where id = current_user_id;
+end;
+$$;
+
+revoke all on function public.delete_current_user() from public;
+revoke all on function public.delete_current_user() from anon;
+grant execute on function public.delete_current_user() to authenticated;
+
 do $$
 begin
   if not exists (

@@ -14,6 +14,7 @@ Rekomendasi paling simpel:
 1. Buat project Supabase.
 2. Buka SQL Editor.
 3. Jalankan isi file `supabase-schema.sql`.
+   Jalankan ulang file ini pada project lama agar RPC `delete_current_user()` untuk penghapusan akun permanen tersedia.
 4. Buka Authentication > Providers, lalu pastikan Email aktif agar user bisa registrasi dari halaman login.
 5. Buka Project Settings, lalu API.
 6. Salin Project URL dan anon public key.

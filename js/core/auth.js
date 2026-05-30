@@ -6,14 +6,44 @@ window.AppAuth = {
     ];
   },
 
-  loadUsers(authStorageKey) {
+  normalizeUsername(username) {
+    return String(username || "").trim().toLowerCase();
+  },
+
+  loadDeletedAccounts(deletedAccountsKey) {
+    if (!deletedAccountsKey) return [];
+    try {
+      const accounts = JSON.parse(localStorage.getItem(deletedAccountsKey));
+      return Array.isArray(accounts) ? accounts.map(window.AppAuth.normalizeUsername).filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  isAccountDeleted(deletedAccountsKey, username) {
+    const normalizedUsername = window.AppAuth.normalizeUsername(username);
+    return Boolean(normalizedUsername && window.AppAuth.loadDeletedAccounts(deletedAccountsKey).includes(normalizedUsername));
+  },
+
+  markAccountDeleted(deletedAccountsKey, username) {
+    if (!deletedAccountsKey) return;
+    const normalizedUsername = window.AppAuth.normalizeUsername(username);
+    if (!normalizedUsername) return;
+    const accounts = new Set(window.AppAuth.loadDeletedAccounts(deletedAccountsKey));
+    accounts.add(normalizedUsername);
+    localStorage.setItem(deletedAccountsKey, JSON.stringify([...accounts]));
+  },
+
+  loadUsers(authStorageKey, deletedAccountsKey = "") {
+    const deletedAccounts = new Set(window.AppAuth.loadDeletedAccounts(deletedAccountsKey));
+    const withoutDeletedAccounts = (users) => users.filter((user) => !deletedAccounts.has(window.AppAuth.normalizeUsername(user.username)));
     try {
       const users = JSON.parse(localStorage.getItem(authStorageKey));
-      if (Array.isArray(users) && users.length) return users;
+      if (Array.isArray(users)) return withoutDeletedAccounts(users);
     } catch {
-      return window.AppAuth.defaultUsers();
+      return withoutDeletedAccounts(window.AppAuth.defaultUsers());
     }
-    const users = window.AppAuth.defaultUsers();
+    const users = withoutDeletedAccounts(window.AppAuth.defaultUsers());
     localStorage.setItem(authStorageKey, JSON.stringify(users));
     return users;
   },
@@ -38,6 +68,25 @@ window.AppAuth = {
 
   clearRememberedLogin(rememberedLoginKey) {
     localStorage.removeItem(rememberedLoginKey);
+  },
+
+  deleteLocalAccountData({
+    authStorageKey,
+    deletedAccountsKey,
+    rememberedLoginKey,
+    sessionStorageKey,
+    storageKey,
+    username,
+  }) {
+    const normalizedUsername = window.AppAuth.normalizeUsername(username);
+    window.AppAuth.markAccountDeleted(deletedAccountsKey, normalizedUsername);
+    const users = window.AppAuth.loadUsers(authStorageKey, deletedAccountsKey)
+      .filter((user) => window.AppAuth.normalizeUsername(user.username) !== normalizedUsername);
+    window.AppAuth.saveUsers(authStorageKey, users);
+    localStorage.removeItem(storageKey);
+    localStorage.removeItem(sessionStorageKey);
+    localStorage.removeItem(rememberedLoginKey);
+    return users;
   },
 
   failedLoginCount(failedLoginKey) {
