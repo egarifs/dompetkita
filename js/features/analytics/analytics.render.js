@@ -4,6 +4,7 @@ window.AppAnalyticsRender = {
       activeBudgets,
       analyticsService,
       appIcon,
+      budgetTypeLabel,
       budgetUsedAmount,
       currentMonthKey,
       escapeHtml,
@@ -414,7 +415,7 @@ window.AppAnalyticsRender = {
               <div class="budget-progress-row-top">
                 <div>
                   <strong>${escapeHtml(row.name)}</strong>
-                  <span>${row.budget.type === "income" ? "Pemasukan" : "Pengeluaran"} - ${escapeHtml(row.budget.period || "monthly")}</span>
+                  <span>${escapeHtml(budgetTypeLabel(row.budget.type))} - ${escapeHtml(row.budget.period || "monthly")}</span>
                 </div>
                 <span class="pill ${row.status.className}">${row.status.label}</span>
               </div>

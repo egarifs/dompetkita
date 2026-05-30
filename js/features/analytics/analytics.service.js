@@ -4,6 +4,7 @@ window.AppAnalyticsService = {
       budgetDisplayName,
       getState,
       transactionMatchesBudget,
+      transactionTypeMatchesBudget,
     } = deps;
 
     function budgetStatus(percent) {
@@ -36,7 +37,7 @@ window.AppAnalyticsService = {
     function directTransactions(budget, selectedPeriod) {
       return getState().transactions
         .filter((transaction) => String(transaction.date || "").slice(0, 7) === selectedPeriod)
-        .filter((transaction) => transaction.type === budget.type)
+        .filter((transaction) => transactionTypeMatchesBudget(transaction, budget))
         .filter((transaction) => transactionMatchesBudget(transaction, budget));
     }
 

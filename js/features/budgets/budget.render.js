@@ -3,6 +3,7 @@ window.AppBudgetRender = {
     const {
       activeBudgets,
       budgetRemainingAmount,
+      budgetTypeLabel,
       budgetUsedAmount,
       childBudgets,
       currentMonthKey,
@@ -26,7 +27,7 @@ window.AppBudgetRender = {
             <summary class="budget-row-top">
               <div>
                 <strong>${escapeHtml(budget.name)}</strong>
-                <span>${budget.type === "income" ? "Pemasukan" : "Pengeluaran"} - ${escapeHtml(budget.period || "monthly")}</span>
+                <span>${escapeHtml(budgetTypeLabel(budget.type))} - ${escapeHtml(budget.period || "monthly")}</span>
               </div>
               <span>${money(spent)} / ${money(limit)}</span>
             </summary>

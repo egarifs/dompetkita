@@ -154,7 +154,7 @@ window.AppState = {
       userId: item.userId || "",
       name,
       category: item.category || name,
-      type: item.type === "income" ? "income" : "expense",
+      type: ["expense", "income", "debt_payment", "receivable_payment"].includes(item.type) ? item.type : "expense",
       parentId: item.parentId || null,
       budgetLimit,
       limit: budgetLimit,

@@ -28,6 +28,18 @@ window.AppBudgetService = {
       return parent ? `${parent.name} - ${budget.name}` : budget?.name || budget?.category || "";
     }
 
+    function typeLabel(type) {
+      if (type === "income") return "Pemasukan";
+      if (type === "debt_payment") return "Bayar Hutang";
+      if (type === "receivable_payment") return "Terima Piutang";
+      return "Pengeluaran";
+    }
+
+    function transactionTypeMatches(transaction, budget) {
+      const transactionType = transaction.transactionType || transaction.debtPaymentType || transaction.type;
+      return transactionType === budget.type;
+    }
+
     function transactionMatches(transaction, budget) {
       if (!budget) return false;
       return transaction.budgetId === budget.id || (!transaction.budgetId && transaction.category === (budget.category || budget.name));
@@ -36,7 +48,7 @@ window.AppBudgetService = {
     function usedAmount(budget, month = currentMonthKey()) {
       const childItems = children(budget.id);
       const selfUsed = transactionsByMonth(month)
-        .filter((item) => item.type === budget.type)
+        .filter((item) => transactionTypeMatches(item, budget))
         .filter((item) => transactionMatches(item, budget))
         .reduce((sum, item) => sum + Number(item.amount || 0), 0);
       const childUsed = childItems.reduce((sum, child) => sum + usedAmount(child, month), 0);
@@ -107,6 +119,8 @@ window.AppBudgetService = {
       syncCategoriesFromBudgets,
       syncUsageState,
       transactionMatches,
+      transactionTypeMatches,
+      typeLabel,
       usedAmount,
       validateSubLimit,
     };

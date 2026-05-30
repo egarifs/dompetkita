@@ -447,6 +447,7 @@
       const budgetRenderer = window.AppBudgetRender.createRenderer({
         activeBudgets,
         budgetRemainingAmount,
+        budgetTypeLabel,
         budgetUsedAmount,
         childBudgets,
         currentMonthKey,
@@ -540,11 +541,13 @@
         budgetDisplayName,
         getState: () => state,
         transactionMatchesBudget,
+        transactionTypeMatchesBudget,
       });
       const analyticsRenderer = window.AppAnalyticsRender.createRenderer({
         activeBudgets,
         analyticsService,
         appIcon,
+        budgetTypeLabel,
         budgetUsedAmount,
         currentMonthKey,
         escapeHtml,
@@ -1232,8 +1235,16 @@
         return budgetService.displayName(budget);
       }
 
+      function budgetTypeLabel(type) {
+        return budgetService.typeLabel(type);
+      }
+
       function transactionMatchesBudget(transaction, budget) {
         return budgetService.transactionMatches(transaction, budget);
+      }
+
+      function transactionTypeMatchesBudget(transaction, budget) {
+        return budgetService.transactionTypeMatches(transaction, budget);
       }
 
       function budgetUsedAmount(budget, month = currentMonthKey()) {
@@ -1935,7 +1946,7 @@
           const selected = typeInput.value;
           const isDebtPayment = selected === "debt_payment";
           const isReceivablePayment = selected === "receivable_payment";
-          const budgetType = isReceivablePayment || selected === "income" ? "income" : "expense";
+          const budgetType = isDebtPayment || isReceivablePayment ? selected : selected === "income" ? "income" : "expense";
           budgetInput.innerHTML = `<option value="">Tidak terkait anggaran</option>${budgetOptions(budgetType, budgetInput.value || selectedBudgetId)}`;
           document.querySelector("#debtPaymentField").classList.toggle("hidden", !isDebtPayment);
           document.querySelector("#receivablePaymentField").classList.toggle("hidden", !isReceivablePayment);
