@@ -1345,12 +1345,94 @@
         background: var(--amber);
       }
 
+      .progress.watch > i {
+        background: var(--violet);
+      }
+
       .progress.success > i {
         background: var(--income);
       }
 
       .progress.danger > i {
         background: var(--expense);
+      }
+
+      .budget-progress-header {
+        align-items: flex-end;
+      }
+
+      .budget-progress-filters {
+        display: grid;
+        grid-template-columns: minmax(132px, 1fr) minmax(102px, 0.7fr);
+        gap: 8px;
+        width: min(310px, 100%);
+      }
+
+      .budget-progress-summary {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .budget-progress-list {
+        display: grid;
+        gap: 10px;
+        padding: 0 16px 16px;
+      }
+
+      .budget-progress-row {
+        display: grid;
+        gap: 8px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface-container);
+        color: var(--on-surface);
+        padding: 14px;
+        text-align: left;
+      }
+
+      .budget-progress-row:hover,
+      .budget-progress-row:focus-visible {
+        border-color: var(--primary);
+        background: var(--surface-container-high);
+      }
+
+      .budget-progress-row-top,
+      .budget-progress-values {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .budget-progress-row-top span,
+      .budget-progress-values span {
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-weight: 750;
+      }
+
+      .budget-progress-row-top strong,
+      .budget-progress-values strong {
+        color: var(--on-surface);
+      }
+
+      .budget-progress-counts {
+        font-size: 1.2rem;
+      }
+
+      .budget-progress-empty {
+        margin: 0 16px 16px;
+      }
+
+      .budget-progress-detail-summary {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        background: var(--surface-container);
+        padding: 12px;
+      }
+
+      .budget-progress-transactions {
+        padding: 0;
       }
 
       .table-tools {
@@ -2550,6 +2632,12 @@
         .table-tools,
         .form {
           padding: 12px;
+        }
+
+        .budget-progress-filters,
+        .budget-progress-summary {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          width: 100%;
         }
 
         .chart-box {

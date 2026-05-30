@@ -2,6 +2,7 @@ window.AppAnalyticsRender = {
   createRenderer(deps) {
     const {
       activeBudgets,
+      analyticsService,
       appIcon,
       budgetUsedAmount,
       currentMonthKey,
@@ -25,6 +26,8 @@ window.AppAnalyticsRender = {
       transactionsByMonth,
       vehicleStatusBySchedule,
       vehicleTax,
+      walletName,
+      showModal,
     } = deps;
 
     function renderInsights() {
@@ -362,14 +365,115 @@ window.AppAnalyticsRender = {
         : `<div class="empty"><p>${showAllDailyExpenses ? "Belum ada pengeluaran untuk ditampilkan." : "Belum ada transaksi hari ini."}</p></div>`;
     }
 
+    function budgetProgressPeriod() {
+      const current = currentMonthKey();
+      return {
+        month: document.querySelector("#budgetProgressMonth")?.value || current.slice(5, 7),
+        year: document.querySelector("#budgetProgressYear")?.value || current.slice(0, 4),
+      };
+    }
+
+    function renderBudgetProgressOptions() {
+      const state = getState();
+      const monthInput = document.querySelector("#budgetProgressMonth");
+      const yearInput = document.querySelector("#budgetProgressYear");
+      if (!monthInput || !yearInput) return;
+      const current = currentMonthKey();
+      const selectedMonth = monthInput.value || current.slice(5, 7);
+      const selectedYear = yearInput.value || current.slice(0, 4);
+      const months = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0"));
+      const years = [...new Set([
+        current.slice(0, 4),
+        ...state.transactions.map((transaction) => String(transaction.date || "").slice(0, 4)),
+      ].filter(Boolean))].sort().reverse();
+      monthInput.innerHTML = months.map((month) => `<option value="${month}">${monthLabel(`2026-${month}`).replace(/\s+2026$/, "")}</option>`).join("");
+      yearInput.innerHTML = years.map((year) => `<option value="${year}">${year}</option>`).join("");
+      monthInput.value = months.includes(selectedMonth) ? selectedMonth : current.slice(5, 7);
+      yearInput.value = years.includes(selectedYear) ? selectedYear : current.slice(0, 4);
+    }
+
+    function renderBudgetProgress() {
+      renderBudgetProgressOptions();
+      const { month, year } = budgetProgressPeriod();
+      const rows = analyticsService.progressRows(year, month);
+      const summary = analyticsService.summary(rows);
+      const summaryTarget = document.querySelector("#budgetProgressSummary");
+      const listTarget = document.querySelector("#budgetProgressList");
+      if (!summaryTarget || !listTarget) return;
+      summaryTarget.innerHTML = `
+        <article class="stat-card"><span class="stat-label">Total Rencana</span><strong class="stat-value">${money(summary.totalPlan)}</strong></article>
+        <article class="stat-card"><span class="stat-label">Total Aktual</span><strong class="stat-value">${money(summary.totalActual)}</strong></article>
+        <article class="stat-card"><span class="stat-label">${summary.totalRemaining >= 0 ? "Total Sisa" : "Lebih Budget"}</span><strong class="stat-value ${summary.totalRemaining < 0 ? "expense-text" : ""}">${money(Math.abs(summary.totalRemaining))}</strong></article>
+        <article class="stat-card"><span class="stat-label">Status Kategori</span><strong class="stat-value budget-progress-counts">${summary.counts.safe} aman</strong><span class="stat-sub">${summary.counts.watch} dipantau, ${summary.counts.nearly} hampir habis, ${summary.counts.over} melebihi budget</span></article>
+      `;
+      listTarget.innerHTML = rows.length
+        ? rows.map((row) => {
+          const width = Math.min(100, Math.max(0, row.percent));
+          return `
+            <button class="budget-progress-row" type="button" data-budget-progress-id="${row.budget.id}">
+              <div class="budget-progress-row-top">
+                <div>
+                  <strong>${escapeHtml(row.name)}</strong>
+                  <span>${row.budget.type === "income" ? "Pemasukan" : "Pengeluaran"} - ${escapeHtml(row.budget.period || "monthly")}</span>
+                </div>
+                <span class="pill ${row.status.className}">${row.status.label}</span>
+              </div>
+              <div class="progress ${row.status.className}"><i style="width: ${width}%"></i></div>
+              <div class="budget-progress-values">
+                <span>Rencana <strong>${money(row.limit)}</strong></span>
+                <span>Aktual <strong>${money(row.actual)}</strong></span>
+                <span>${row.remaining >= 0 ? "Sisa" : "Lebih"} <strong>${money(Math.abs(row.remaining))}</strong></span>
+                <span>Progress <strong>${row.percent}%</strong></span>
+              </div>
+            </button>
+          `;
+        }).join("")
+        : `<div class="empty budget-progress-empty"><p>Belum ada anggaran untuk dibandingkan.</p><button class="button primary" type="button" data-budget-progress-create>Buat Anggaran</button></div>`;
+    }
+
+    function openBudgetProgressDetail(budgetId) {
+      const budget = analyticsService.budgetById(budgetId);
+      if (!budget) return;
+      const { month, year } = budgetProgressPeriod();
+      const period = analyticsService.periodKey(year, month);
+      const row = analyticsService.progressForBudget(budget, period);
+      document.querySelector("#modalTitle").textContent = `Detail ${row.name}`;
+      document.querySelector("#modalBody").innerHTML = `
+        <div class="form">
+          <div class="budget-progress-values budget-progress-detail-summary">
+            <span>Rencana <strong>${money(row.limit)}</strong></span>
+            <span>Aktual <strong>${money(row.actual)}</strong></span>
+            <span>${row.remaining >= 0 ? "Sisa" : "Lebih"} <strong>${money(Math.abs(row.remaining))}</strong></span>
+            <span>Status <strong>${row.status.label}</strong></span>
+          </div>
+          <div class="debt-list budget-progress-transactions">
+            ${row.transactions.length ? row.transactions.map((transaction) => `
+              <article class="debt-row">
+                <div class="debt-row-top">
+                  <div>
+                    <strong>${escapeHtml(transaction.description || transaction.category || "Transaksi")}</strong>
+                    <span>${escapeHtml(transaction.date || "")} - ${escapeHtml(walletName(transaction.walletId))}</span>
+                  </div>
+                  <strong>${money(transaction.amount)}</strong>
+                </div>
+              </article>
+            `).join("") : `<div class="empty"><p>Belum ada transaksi yang masuk ke anggaran ini pada ${escapeHtml(period)}.</p></div>`}
+          </div>
+        </div>
+      `;
+      showModal();
+    }
+
     return {
       budgetSuggestionAction,
       categoryGrowthActions,
       renderActionSummary,
       renderCategoryBreakdown,
       renderDailyExpenses,
+      renderBudgetProgress,
       renderInsights,
       renderMonthOptions,
+      openBudgetProgressDetail,
       transactionsSince,
       upcomingBillAction,
       vehicleAttentionAction,

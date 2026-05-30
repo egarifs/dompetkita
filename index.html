@@ -659,6 +659,21 @@
             <div class="budget-list" id="homeBudgetList"></div>
           </section>
 
+          <section class="panel" style="margin-top: 14px">
+            <div class="panel-header budget-progress-header">
+              <div class="panel-title">
+                <h3>Progress Anggaran</h3>
+                <p>Bandingkan rencana dan aktual pemakaian anggaran pada periode terpilih.</p>
+              </div>
+              <div class="budget-progress-filters">
+                <select id="budgetProgressMonth" aria-label="Bulan progress anggaran"></select>
+                <select id="budgetProgressYear" aria-label="Tahun progress anggaran"></select>
+              </div>
+            </div>
+            <div class="compact-stats budget-progress-summary" id="budgetProgressSummary"></div>
+            <div class="budget-progress-list" id="budgetProgressList"></div>
+          </section>
+
           <div class="report-grid" style="margin-top: 14px">
             <section class="panel">
               <div class="panel-header">
@@ -1049,6 +1064,7 @@
     <script src="./js/core/cloud.js"></script>
     <script src="./js/core/router.js"></script>
     <script src="./js/features/dashboard/dashboard.render.js"></script>
+    <script src="./js/features/analytics/analytics.service.js"></script>
     <script src="./js/features/analytics/analytics.render.js"></script>
     <script src="./js/features/wallets/wallet.service.js"></script>
     <script src="./js/features/wallets/wallet.render.js"></script>

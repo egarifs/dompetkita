@@ -27,6 +27,7 @@ await import("../js/core/auth.js");
 await import("../js/core/cloud.js");
 await import("../js/utils/categoryUtils.js");
 await import("../js/features/account/account.service.js");
+await import("../js/features/analytics/analytics.service.js");
 await import("../js/features/wallets/wallet.service.js");
 
 const { authStorageKey, sessionStorageKey, storageKey, defaultCategories } = window.AppConstants;
@@ -133,6 +134,31 @@ const categoryTreeFromParentId = window.AppCategoryUtils.buildCategoryTree({
 const flattenedCategoryObjects = window.AppCategoryUtils.flattenCategoryTreeForSelect(categoryTreeFromParentId);
 assert(flattenedCategoryObjects.map((item) => `${item.depth}:${item.name}`).join("|") === "0:Tagihan|1:Kosan", "Field parentId kategori object tidak terbaca.");
 out.push("hierarki kategori:ok");
+
+const analyticsState = {
+  budgets: [
+    { id: "budget-progress-tagihan", name: "Tagihan", category: "Tagihan", type: "expense", parentId: null, budgetLimit: 1000000, isActive: true },
+    { id: "budget-progress-internet", name: "Internet", category: "Internet", type: "expense", parentId: "budget-progress-tagihan", budgetLimit: 300000, isActive: true },
+  ],
+  transactions: [
+    { id: "transaction-progress-tagihan", date: "2026-05-10", type: "expense", category: "Tagihan", amount: 600000 },
+    { id: "transaction-progress-internet", date: "2026-05-11", type: "expense", category: "Internet", budgetId: "budget-progress-internet", amount: 350000 },
+    { id: "transaction-progress-old", date: "2026-04-11", type: "expense", category: "Internet", budgetId: "budget-progress-internet", amount: 100000 },
+  ],
+};
+const analyticsService = window.AppAnalyticsService.createService({
+  budgetDisplayName: (budget) => budget.name,
+  getState: () => analyticsState,
+  transactionMatchesBudget: (transaction, budget) => transaction.budgetId === budget.id || (!transaction.budgetId && transaction.category === budget.category),
+});
+const budgetProgressRows = analyticsService.progressRows("2026", "05");
+assert(budgetProgressRows.length === 1, "Progress anggaran summary harus memakai parent budget agar tidak double count.");
+assert(budgetProgressRows[0].actual === 950000 && budgetProgressRows[0].percent === 95, "Actual progress budget tidak menjumlahkan transaksi parent dan child sesuai periode.");
+assert(budgetProgressRows[0].status.label === "Hampir Habis", "Status progress budget 91-100% tidak sesuai.");
+assert(analyticsService.budgetStatus(70).label === "Aman", "Status progress budget 0-70% tidak sesuai.");
+assert(analyticsService.budgetStatus(71).label === "Perlu Dipantau", "Status progress budget 71-90% tidak sesuai.");
+assert(analyticsService.budgetStatus(101).label === "Melebihi Budget", "Status progress budget >100% tidak sesuai.");
+out.push("progress anggaran:ok");
 
 const registration = registerLocal({
   name: "User Test",

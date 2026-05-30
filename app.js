@@ -536,8 +536,14 @@
         vehicleStatusBySchedule,
         vehicleTransactions,
       });
+      const analyticsService = window.AppAnalyticsService.createService({
+        budgetDisplayName,
+        getState: () => state,
+        transactionMatchesBudget,
+      });
       const analyticsRenderer = window.AppAnalyticsRender.createRenderer({
         activeBudgets,
+        analyticsService,
         appIcon,
         budgetUsedAmount,
         currentMonthKey,
@@ -561,6 +567,8 @@
         transactionsByMonth,
         vehicleStatusBySchedule,
         vehicleTax,
+        walletName,
+        showModal,
       });
 
       function activeView() {
@@ -1691,6 +1699,10 @@
         analyticsRenderer.renderDailyExpenses();
       }
 
+      function renderBudgetProgress() {
+        analyticsRenderer.renderBudgetProgress();
+      }
+
       function renderRecurring() {
         const list = document.querySelector("#recurringList");
         const summary = document.querySelector("#recurringSummary");
@@ -1771,6 +1783,7 @@
         renderBillReminders();
         renderDebts();
         renderCategoryBreakdown();
+        renderBudgetProgress();
         renderDailyExpenses();
         renderRecurring();
         renderAccount();
@@ -4108,6 +4121,18 @@
           return;
         }
 
+        const budgetProgressButton = event.target.closest("[data-budget-progress-id]");
+        if (budgetProgressButton) {
+          analyticsRenderer.openBudgetProgressDetail(budgetProgressButton.dataset.budgetProgressId);
+          return;
+        }
+
+        if (event.target.closest("[data-budget-progress-create]")) {
+          openView("budgets");
+          document.querySelector("#budgetName")?.focus();
+          return;
+        }
+
         const familyToggleButton = event.target.closest("[data-toggle-family-member]");
         if (familyToggleButton) {
           if (!requirePrimaryAccount()) return;
@@ -4670,6 +4695,8 @@
         renderCategoryBreakdown();
         renderDailyExpenses();
       });
+      document.querySelector("#budgetProgressMonth").addEventListener("change", renderBudgetProgress);
+      document.querySelector("#budgetProgressYear").addEventListener("change", renderBudgetProgress);
       document.querySelector("#typeFilter").addEventListener("change", (event) => {
         document.querySelectorAll("[data-transaction-type-tab]").forEach((button) => button.classList.toggle("active", button.dataset.transactionTypeTab === event.target.value));
         renderTransactions();

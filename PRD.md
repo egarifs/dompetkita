@@ -303,12 +303,16 @@ Fitur:
 - Pengeluaran harian.
 - Summary pemasukan, pengeluaran, sisa anggaran, hutang/piutang.
 - Net worth atau neraca keuangan.
+- Progress Anggaran untuk membandingkan rencana dan aktual per kategori pada bulan/tahun terpilih.
+- Drill-down transaksi saat kategori budget diklik.
 
 Acceptance criteria:
 
 - Laporan menghitung data dari transaksi, dompet, hutang/piutang, dan tabungan terbaru.
 - Net worth memperhitungkan aset dan kewajiban.
 - Angka laporan memakai format Rupiah.
+- Progress Anggaran dihitung otomatis dari budget dan transaksi existing tanpa menyimpan derived data baru ke snapshot.
+- Status progress mengikuti rentang Aman, Perlu Dipantau, Hampir Habis, dan Melebihi Budget.
 
 ### 8.13 Sinkronisasi Cloud
 
