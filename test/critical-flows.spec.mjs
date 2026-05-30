@@ -25,6 +25,7 @@ await import("../js/core/state.js");
 await import("../js/core/storage.js");
 await import("../js/core/auth.js");
 await import("../js/core/cloud.js");
+await import("../js/utils/categoryUtils.js");
 await import("../js/features/wallets/wallet.service.js");
 
 const { authStorageKey, sessionStorageKey, storageKey, defaultCategories } = window.AppConstants;
@@ -108,6 +109,29 @@ function syncDebtPaymentState(state) {
 }
 
 const out = [];
+
+const categoryTree = window.AppCategoryUtils.buildCategoryTree({
+  categories: ["Tagihan", "Internet", "Kendaraan", "Bensin Motor", "Makanan"],
+  budgets: [
+    { id: "budget-tagihan", name: "Tagihan", category: "Tagihan", parentId: null, isActive: true },
+    { id: "budget-internet", name: "Internet", category: "Internet", parentId: "budget-tagihan", isActive: true },
+    { id: "budget-kendaraan", name: "Kendaraan", category: "Kendaraan", parentId: null, isActive: true },
+    { id: "budget-bensin", name: "Bensin Motor", category: "Bensin Motor", parentId: "budget-kendaraan", isActive: true },
+  ],
+});
+const flattenedCategories = window.AppCategoryUtils.flattenCategoryTreeForSelect(categoryTree);
+assert(flattenedCategories.map((item) => `${item.depth}:${item.name}`).join("|") === "0:Kendaraan|1:Bensin Motor|0:Tagihan|1:Internet|0:Makanan", "Kategori parent-child dari budget tidak tersusun benar.");
+assert(flattenedCategories.filter((item) => item.name === "Internet").length === 1, "Subkategori budget tampil terpisah dari parent.");
+
+const categoryTreeFromParentId = window.AppCategoryUtils.buildCategoryTree({
+  categories: [
+    { id: "category-tagihan", name: "Tagihan" },
+    { id: "category-kosan", name: "Kosan", parentId: "category-tagihan" },
+  ],
+});
+const flattenedCategoryObjects = window.AppCategoryUtils.flattenCategoryTreeForSelect(categoryTreeFromParentId);
+assert(flattenedCategoryObjects.map((item) => `${item.depth}:${item.name}`).join("|") === "0:Tagihan|1:Kosan", "Field parentId kategori object tidak terbaca.");
+out.push("hierarki kategori:ok");
 
 const registration = registerLocal({
   name: "User Test",

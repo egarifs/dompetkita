@@ -1046,6 +1046,22 @@
         padding: 16px;
       }
 
+      .category-tree-item {
+        margin-left: calc(var(--category-depth, 0) * 18px);
+      }
+
+      .category-tree-child {
+        border-left: 3px solid var(--primary-container);
+        background: var(--surface-container-low);
+      }
+
+      .category-tree-item span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.78rem;
+        margin-top: 3px;
+      }
+
       .wallet-card {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto auto;

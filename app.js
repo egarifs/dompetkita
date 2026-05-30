@@ -1612,6 +1612,41 @@
         }
       }
 
+      function categoryTree() {
+        return window.AppCategoryUtils.buildCategoryTree({
+          categories,
+          budgets: state.budgets,
+        });
+      }
+
+      function categorySelectOptions(selectedCategory = "") {
+        const options = window.AppCategoryUtils.flattenCategoryTreeForSelect(categoryTree())
+          .map((item) => {
+            const prefix = item.depth > 0 ? `${"&mdash; ".repeat(item.depth)}` : "";
+            return `<option value="${escapeHtml(item.value)}" ${item.value === selectedCategory ? "selected" : ""}>${prefix}${escapeHtml(item.name)}</option>`;
+          })
+          .join("");
+        return options || `<option value="Lainnya" ${selectedCategory === "Lainnya" ? "selected" : ""}>Lainnya</option>`;
+      }
+
+      function categoryTreeRows() {
+        function row(item, depth = 0, parentName = "") {
+          return `
+            <article class="debt-item category-tree-item ${depth > 0 ? "category-tree-child" : "category-tree-parent"}" style="--category-depth:${depth}">
+              <div>
+                <strong>${depth > 0 ? "&mdash; " : ""}${escapeHtml(item.name)}</strong>
+                ${depth > 0 ? `<span>Subkategori dari ${escapeHtml(parentName || "kategori utama")}</span>` : `<span>Kategori utama</span>`}
+              </div>
+              <button class="icon-button" type="button" title="Hapus kategori" data-delete-category="${escapeHtml(item.value)}">
+                ${trashIcon()}
+              </button>
+            </article>
+            ${(item.children || []).map((child) => row(child, depth + 1, item.name)).join("")}
+          `;
+        }
+        return categoryTree().map((item) => row(item)).join("");
+      }
+
       function resetBudgetForm(parentId = "") {
         const form = document.querySelector("#budgetForm");
         if (!form) return;
@@ -1814,7 +1849,7 @@
             <div class="form-grid">
               <div class="field">
                 <label for="transactionCategory">Kategori</label>
-                <select id="transactionCategory">${categories.map((category) => `<option value="${category}" ${category === selectedCategory ? "selected" : ""}>${category}</option>`).join("")}</select>
+                <select id="transactionCategory">${categorySelectOptions(selectedCategory)}</select>
               </div>
               <div class="field">
                 <label for="transactionBudget">Anggaran</label>
@@ -2160,7 +2195,7 @@
               </div>
               <div class="field">
                 <label for="recurringCategory">Kategori</label>
-                <select id="recurringCategory">${categories.map((category) => `<option value="${category}">${category}</option>`).join("")}</select>
+                <select id="recurringCategory">${categorySelectOptions()}</select>
               </div>
             </div>
             <div class="form-grid">
@@ -2265,7 +2300,7 @@
             <div class="field">
               <label for="billCategory">Kategori</label>
               <select id="billCategory">
-                ${categories.map((category) => `<option value="${category}" ${category === editing?.category ? "selected" : ""}>${category}</option>`).join("")}
+                ${categorySelectOptions(editing?.category || "")}
               </select>
             </div>
             <div class="field">
@@ -2481,17 +2516,8 @@
           <form class="form" id="categoryForm">
             <div class="field">
               <label>Kategori saat ini</label>
-              <div class="debt-list">
-                ${categories.map((category) => `
-                  <article class="debt-item">
-                    <div>
-                      <strong>${escapeHtml(category)}</strong>
-                    </div>
-                    <button class="icon-button" type="button" title="Hapus kategori" data-delete-category="${escapeHtml(category)}">
-                      ${trashIcon()}
-                    </button>
-                  </article>
-                `).join("")}
+              <div class="debt-list category-tree">
+                ${categoryTreeRows() || `<div class="empty">Belum ada kategori.</div>`}
               </div>
             </div>
             <div class="field">
