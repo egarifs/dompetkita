@@ -1,4 +1,4 @@
-﻿      const {
+      const {
         storageKey,
         authStorageKey,
         sessionStorageKey,
@@ -2166,56 +2166,25 @@
         });
       }
 
-      function openWalletForm(walletId = "") {
-        if (!requirePrimaryAccount()) return;
-        const editing = walletId ? state.wallets.find((wallet) => wallet.id === walletId) : null;
-        document.querySelector("#modalTitle").textContent = editing ? "Edit Dompet" : "Tambah Dompet";
-        document.querySelector("#modalBody").innerHTML = `
-          <form class="form" id="walletForm">
-            <div class="form-grid">
-              <div class="field">
-                <label for="walletName">Nama dompet</label>
-                <input id="walletName" type="text" value="${escapeHtml(editing?.name || "")}" placeholder="Contoh: Cash, Bank BCA, Dana" required />
-              </div>
-              <div class="field">
-                <label for="walletType">Tipe dompet</label>
-                <select id="walletType" required>
-                  ${["Cash", "Bank", "E-Wallet", "Savings"].map((type) => `<option value="${type}" ${editing?.type === type ? "selected" : ""}>${type}</option>`).join("")}
-                </select>
-              </div>
-            </div>
-            <div class="field">
-              <label for="walletInitialBalance">Saldo awal</label>
-              ${rupiahInputHtml("walletInitialBalance", editing?.initialBalance ?? "")}
-            </div>
-            <div class="row-actions">
-              <button class="button" type="button" data-close-modal>Batal</button>
-              <button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Tambah Dompet"}</button>
-            </div>
-          </form>
-        `;
-        showModal();
-        attachRupiahInput("#walletInitialBalance");
-        document.querySelector("#walletForm").addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const name = document.querySelector("#walletName").value.trim();
-          const initialBalanceValue = document.querySelector("#walletInitialBalance").value.trim();
-          const initialBalance = initialBalanceValue ? parseFormattedNumber(initialBalanceValue) : 0;
-          const type = document.querySelector("#walletType").value;
-          if (!name) return alert("Nama dompet wajib diisi.");
-          if (Number.isNaN(initialBalance) || initialBalance < 0) return alert("Saldo awal harus angka valid dan tidak boleh negatif jika diisi.");
-          if (walletHasDuplicateName(name, editing?.id || "")) return alert("Nama dompet sudah digunakan.");
-          if (editing) {
-            updateWallet(editing.id, { name, initialBalance, type });
-          } else {
-            createWallet({ name, initialBalance, type });
-          }
-          closeModal();
-          await persistChanges(editing ? "Dompet diperbarui di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun." : "Dompet dibuat di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-          showSnackbar(editing ? "Dompet berhasil diperbarui." : "Dompet berhasil dibuat.");
-        });
-      }
+      const walletFormController = window.AppWalletForm.createController({
+        attachRupiahInput,
+        closeModal,
+        createWallet,
+        escapeHtml,
+        parseFormattedNumber,
+        persistChanges,
+        requirePrimaryAccount,
+        rupiahInputHtml,
+        showModal,
+        showSnackbar,
+        state,
+        updateWallet,
+        walletHasDuplicateName,
+      });
 
+      function openWalletForm(walletId = "") {
+        walletFormController.openWalletForm(walletId);
+      }
       function openFamilyMemberForm() {
         if (!requirePrimaryAccount()) return;
         document.querySelector("#modalTitle").textContent = "Tambah Anggota Keluarga";
@@ -2386,80 +2355,29 @@
         });
       }
 
-      function targetDateFromShortcut(months) {
-        const date = new Date();
-        date.setMonth(date.getMonth() + months);
-        return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-      }
+      const savingsFormController = window.AppSavingsForm.createController({
+        attachRupiahInput,
+        closeModal,
+        openSavingsDetail: (goalId) => openSavingsDetail(goalId),
+        openView,
+        parseFormattedNumber,
+        persistChanges,
+        requirePrimaryAccount,
+        rupiahInputHtml,
+        saveState,
+        savingCategories,
+        savingsEntry,
+        savingsGoal,
+        showModal,
+        showSnackbar,
+        state,
+        todayDate,
+        touchSavingsGoal,
+      });
 
       function openSavingsGoalForm(goalId = "") {
-        if (!requirePrimaryAccount()) return;
-        const editing = goalId ? state.savings.find((item) => item.id === goalId) : null;
-        document.querySelector("#modalTitle").textContent = editing ? "Edit Tujuan Tabungan" : "Tambah Tujuan Tabungan";
-        document.querySelector("#modalBody").innerHTML = `
-          <form class="form" id="savingsGoalForm">
-            <div class="field">
-              <label for="savingsCategory">Kategori</label>
-              <select id="savingsCategory" required>
-                ${savingCategories.map((category) => `<option value="${category}" ${category === editing?.category ? "selected" : ""}>${category}</option>`).join("")}
-              </select>
-            </div>
-            <div class="field">
-              <label for="savingsTarget">Nominal Target</label>
-              ${rupiahInputHtml("savingsTarget", editing?.target ?? "", "required")}
-            </div>
-            <div class="field">
-              <label for="savingsTargetDate">Kapan ingin dicapai</label>
-              <input id="savingsTargetDate" type="date" value="${editing?.targetDate || targetDateFromShortcut(12)}" required />
-            </div>
-            <div class="compact-list">
-              <button class="button" type="button" data-target-months="6">6 Bulan</button>
-              <button class="button" type="button" data-target-months="12">1 Tahun</button>
-              <button class="button" type="button" data-target-months="24">2 Tahun</button>
-              <button class="button" type="button" data-target-months="60">5 Tahun</button>
-            </div>
-            <div class="row-actions">
-              <button class="button" type="button" data-close-modal>Batal</button>
-              <button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan"}</button>
-            </div>
-          </form>
-        `;
-        showModal();
-        attachRupiahInput("#savingsTarget");
-        document.querySelectorAll("[data-target-months]").forEach((button) => {
-          button.addEventListener("click", () => {
-            document.querySelector("#savingsTargetDate").value = targetDateFromShortcut(Number(button.dataset.targetMonths));
-          });
-        });
-        document.querySelector("#savingsGoalForm").addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const submitButton = event.submitter || document.querySelector("#savingsGoalForm .button.primary");
-          submitButton.disabled = true;
-          submitButton.textContent = "Menyimpan...";
-          const category = document.querySelector("#savingsCategory").value;
-          const targetAmount = parseFormattedNumber(document.querySelector("#savingsTarget").value);
-          if (targetAmount <= 0) {
-            submitButton.disabled = false;
-            submitButton.textContent = editing ? "Simpan Perubahan" : "Simpan";
-            return alert("Nominal target tabungan wajib lebih dari 0.");
-          }
-          if (editing) {
-            editing.title = category;
-            editing.category = category;
-            editing.target = targetAmount;
-            editing.targetDate = document.querySelector("#savingsTargetDate").value;
-            touchSavingsGoal(editing);
-          } else {
-            state.savings.push(savingsGoal(category, targetAmount, document.querySelector("#savingsTargetDate").value));
-          }
-          saveState();
-          closeModal();
-          await persistChanges("Tujuan tabungan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-          openView("savings");
-          showSnackbar(editing ? "Tujuan tabungan berhasil diperbarui." : "Tujuan tabungan berhasil disimpan.");
-        });
+        savingsFormController.openSavingsGoalForm(goalId);
       }
-
       function openSavingsHistory() {
         document.querySelector("#modalTitle").textContent = "Riwayat Tabungan";
         document.querySelector("#modalBody").innerHTML = `
@@ -2515,304 +2433,52 @@
       }
 
       function openSavingsEntryForm(goalId, type) {
-        if (!requirePrimaryAccount()) return;
-        const goal = state.savings.find((item) => item.id === goalId);
-        if (!goal) return;
-        document.querySelector("#modalTitle").textContent = type === "withdraw" ? "Tarik Tabungan" : "Tambah Tabungan";
-        document.querySelector("#modalBody").innerHTML = `
-          <form class="form" id="savingsEntryForm">
-            <div class="field">
-              <label for="savingsEntryAmount">Nominal</label>
-              ${rupiahInputHtml("savingsEntryAmount", "", "required")}
-            </div>
-            <div class="field">
-              <label for="savingsEntryNote">Keterangan</label>
-              <input id="savingsEntryNote" type="text" placeholder="Contoh: Setoran gaji" required />
-            </div>
-            <div class="field">
-              <label for="savingsEntryDate">Tanggal</label>
-              <input id="savingsEntryDate" type="date" value="${todayDate()}" required />
-            </div>
-            <div class="row-actions">
-              <button class="button" type="button" data-close-modal>Batal</button>
-              <button class="button primary" type="submit">Simpan</button>
-            </div>
-          </form>
-        `;
-        showModal();
-        attachRupiahInput("#savingsEntryAmount");
-        document.querySelector("#savingsEntryForm").addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const submitButton = event.submitter || document.querySelector("#savingsEntryForm .button.primary");
-          submitButton.disabled = true;
-          submitButton.textContent = "Menyimpan...";
-          const amount = parseFormattedNumber(document.querySelector("#savingsEntryAmount").value);
-          if (amount <= 0) {
-            submitButton.disabled = false;
-            submitButton.textContent = "Simpan";
-            return alert("Nominal tabungan wajib lebih dari 0.");
-          }
-          goal.entries = goal.entries || [];
-          goal.entries.push(savingsEntry(type, document.querySelector("#savingsEntryDate").value, amount, document.querySelector("#savingsEntryNote").value.trim()));
-          touchSavingsGoal(goal);
-          saveState();
-          closeModal();
-          await persistChanges("Perubahan tabungan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-          openSavingsDetail(goal.id);
-          showSnackbar("Perubahan tabungan berhasil disimpan.");
-        });
+        savingsFormController.openSavingsEntryForm(goalId, type);
       }
+      const vehicleFormController = window.AppVehicleForm.createController({
+        addMonths,
+        attachRupiahInput,
+        closeModal,
+        defaultWalletId,
+        escapeHtml,
+        id,
+        openView,
+        parseFormattedNumber,
+        persistChanges,
+        removeVehicleTransaction,
+        requirePrimaryAccount,
+        rupiahInputHtml,
+        showModal,
+        state,
+        todayDate,
+        upsertVehicleTransaction,
+        vehicleOptions,
+        walletOptions,
+      });
 
       function openVehicleForm(vehicleId = "") {
-        if (!requirePrimaryAccount()) return;
-        const editing = vehicleId ? state.vehicles.find((item) => item.id === vehicleId) : null;
-        document.querySelector("#modalTitle").textContent = editing ? "Edit Kendaraan" : "Tambah Kendaraan";
-        document.querySelector("#modalBody").innerHTML = `
-          <form class="form" id="vehicleForm">
-            <details class="form-step" open>
-              <summary>1. Identitas kendaraan</summary>
-              <div class="form-grid">
-                <div class="field"><label for="vehicleName">Nama kendaraan</label><input id="vehicleName" required value="${escapeHtml(editing?.name || "")}" placeholder="Contoh: Avanza Putih" /></div>
-                <div class="field"><label for="vehiclePlate">Nomor plat</label><input id="vehiclePlate" required value="${escapeHtml(editing?.plate || "")}" placeholder="B 1234 ABC" /></div>
-              </div>
-            </details>
-            <details class="form-step">
-              <summary>2. Detail kendaraan</summary>
-              <div class="form-grid">
-                <div class="field"><label for="vehicleBrand">Merk</label><input id="vehicleBrand" value="${escapeHtml(editing?.brand || "")}" placeholder="Toyota" /></div>
-                <div class="field"><label for="vehicleModel">Model</label><input id="vehicleModel" value="${escapeHtml(editing?.model || "")}" placeholder="Avanza" /></div>
-              </div>
-              <div class="form-grid">
-                <div class="field"><label for="vehicleYear">Tahun</label><input id="vehicleYear" type="number" min="1900" max="2100" value="${escapeHtml(editing?.year || "")}" placeholder="2020" /></div>
-                <div class="field"><label for="vehicleType">Jenis kendaraan</label><select id="vehicleType"><option ${editing?.type === "Mobil" ? "selected" : ""}>Mobil</option><option ${editing?.type === "Motor" ? "selected" : ""}>Motor</option></select></div>
-              </div>
-            </details>
-            <details class="form-step">
-              <summary>3. Kilometer dan catatan</summary>
-              <div class="form-grid">
-                <div class="field"><label for="vehicleTransmission">Transmisi</label><input id="vehicleTransmission" value="${escapeHtml(editing?.transmission || "")}" placeholder="Manual / Matic" /></div>
-                <div class="field"><label for="vehicleCurrentKm">Kilometer saat ini</label><input id="vehicleCurrentKm" type="number" min="0" value="${editing?.currentKm ?? 0}" required /></div>
-              </div>
-              <div class="field"><label for="vehiclePurchaseDate">Tanggal pembelian</label><input id="vehiclePurchaseDate" type="date" value="${editing?.purchaseDate || ""}" /></div>
-              <div class="field"><label for="vehicleNote">Catatan tambahan</label><textarea id="vehicleNote" placeholder="Catatan tambahan">${escapeHtml(editing?.note || "")}</textarea></div>
-            </details>
-            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Kendaraan"}</button></div>
-          </form>
-        `;
-        showModal();
-        document.querySelector("#vehicleForm").addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const currentKm = Number(document.querySelector("#vehicleCurrentKm").value || 0);
-          if (currentKm < 0) return alert("Kilometer tidak boleh negatif.");
-          const values = {
-            name: document.querySelector("#vehicleName").value.trim(),
-            brand: document.querySelector("#vehicleBrand").value.trim(),
-            model: document.querySelector("#vehicleModel").value.trim(),
-            year: document.querySelector("#vehicleYear").value,
-            plate: document.querySelector("#vehiclePlate").value.trim(),
-            type: document.querySelector("#vehicleType").value,
-            transmission: document.querySelector("#vehicleTransmission").value.trim(),
-            currentKm,
-            purchaseDate: document.querySelector("#vehiclePurchaseDate").value,
-            note: document.querySelector("#vehicleNote").value.trim(),
-          };
-          if (editing) Object.assign(editing, values);
-          else state.vehicles.push({ id: id(), ...values });
-          closeModal();
-          await persistChanges("Data kendaraan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-          openView("vehicles");
-        });
-      }
-
-      function requireVehicleData() {
-        if (state.vehicles.length) return true;
-        alert("Tambahkan data kendaraan terlebih dahulu.");
-        openVehicleForm();
-        return false;
+        vehicleFormController.openVehicleForm(vehicleId);
       }
 
       function openVehicleServiceForm(recordId = "") {
-        if (!requirePrimaryAccount() || !requireVehicleData()) return;
-        const editing = recordId ? state.vehicleServices.find((item) => item.id === recordId) : null;
-        document.querySelector("#modalTitle").textContent = editing ? "Edit Riwayat Service" : "Tambah Riwayat Service";
-        document.querySelector("#modalBody").innerHTML = `
-          <form class="form" id="vehicleServiceForm">
-            <details class="form-step" open>
-              <summary>1. Service</summary>
-              <div class="field"><label for="serviceVehicle">Kendaraan</label><select id="serviceVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
-              <div class="field"><label for="serviceWallet">Dompet</label><select id="serviceWallet" required>${walletOptions(editing?.walletId || defaultWalletId())}</select></div>
-              <div class="form-grid"><div class="field"><label for="serviceDate">Tanggal service</label><input id="serviceDate" type="date" value="${editing?.serviceDate || todayDate()}" required /></div><div class="field"><label for="serviceKm">Kilometer</label><input id="serviceKm" type="number" min="0" value="${editing?.serviceKm || ""}" required /></div></div>
-            </details>
-            <details class="form-step">
-              <summary>2. Biaya dan catatan</summary>
-              <div class="form-grid"><div class="field"><label for="serviceType">Jenis service</label><input id="serviceType" required value="${escapeHtml(editing?.serviceType || "")}" placeholder="Service berkala" /></div><div class="field"><label for="serviceWorkshop">Nama bengkel</label><input id="serviceWorkshop" value="${escapeHtml(editing?.workshop || "")}" placeholder="Nama bengkel" /></div></div>
-              <div class="field"><label for="serviceCost">Biaya service</label>${rupiahInputHtml("serviceCost", editing?.cost ?? "")}</div>
-              <div class="field"><label for="serviceNote">Catatan service</label><textarea id="serviceNote">${escapeHtml(editing?.note || "")}</textarea></div>
-            </details>
-            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Service"}</button></div>
-          </form>
-        `;
-        showModal();
-        attachRupiahInput("#serviceCost");
-        document.querySelector("#vehicleServiceForm").addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const cost = parseFormattedNumber(document.querySelector("#serviceCost").value);
-          const serviceKm = Number(document.querySelector("#serviceKm").value || 0);
-          if (cost < 0 || serviceKm < 0) return alert("Biaya dan kilometer tidak boleh negatif.");
-          const record = editing || { id: id() };
-          Object.assign(record, { vehicleId: document.querySelector("#serviceVehicle").value, walletId: document.querySelector("#serviceWallet").value, serviceDate: document.querySelector("#serviceDate").value, serviceKm, serviceType: document.querySelector("#serviceType").value.trim(), workshop: document.querySelector("#serviceWorkshop").value.trim(), cost, note: document.querySelector("#serviceNote").value.trim() });
-          record.transactionId = upsertVehicleTransaction(record, "Service", cost, record.serviceDate, record.note || record.serviceType);
-          if (!editing) state.vehicleServices.push(record);
-          closeModal();
-          await persistChanges("Riwayat service tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-        });
+        vehicleFormController.openVehicleServiceForm(recordId);
       }
 
       function openVehicleOilForm(recordId = "") {
-        if (!requirePrimaryAccount() || !requireVehicleData()) return;
-        const editing = recordId ? state.vehicleOilChanges.find((item) => item.id === recordId) : null;
-        document.querySelector("#modalTitle").textContent = editing ? "Edit Jadwal Ganti Oli" : "Tambah Jadwal Ganti Oli";
-        document.querySelector("#modalBody").innerHTML = `
-          <form class="form" id="vehicleOilForm">
-            <details class="form-step" open>
-              <summary>1. Data terakhir</summary>
-              <div class="field"><label for="oilVehicle">Kendaraan</label><select id="oilVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
-              <div class="field"><label for="oilWallet">Dompet</label><select id="oilWallet" required>${walletOptions(editing?.walletId || defaultWalletId())}</select></div>
-              <div class="form-grid"><div class="field"><label for="oilDate">Tanggal terakhir ganti oli</label><input id="oilDate" type="date" value="${editing?.lastOilDate || todayDate()}" required /></div><div class="field"><label for="oilKm">Kilometer terakhir</label><input id="oilKm" type="number" min="0" value="${editing?.lastOilKm || ""}" required /></div></div>
-            </details>
-            <details class="form-step">
-              <summary>2. Interval berikutnya</summary>
-              <div class="form-grid"><div class="field"><label for="oilIntervalKm">Interval kilometer</label><input id="oilIntervalKm" type="number" min="0" value="${editing?.intervalKm || 5000}" required /></div><div class="field"><label for="oilIntervalMonths">Interval bulan</label><input id="oilIntervalMonths" type="number" min="0" value="${editing?.intervalMonths || 6}" required /></div></div>
-            </details>
-            <details class="form-step">
-              <summary>3. Biaya dan catatan</summary>
-              <div class="form-grid"><div class="field"><label for="oilBrand">Merk oli</label><input id="oilBrand" value="${escapeHtml(editing?.oilBrand || "")}" placeholder="Shell, Yamalube, dll" /></div><div class="field"><label for="oilCost">Biaya oli</label>${rupiahInputHtml("oilCost", editing?.cost ?? "")}</div></div></div>
-              <div class="field"><label for="oilNote">Catatan</label><textarea id="oilNote">${escapeHtml(editing?.note || "")}</textarea></div>
-            </details>
-            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Oli"}</button></div>
-          </form>
-        `;
-        showModal();
-        attachRupiahInput("#oilCost");
-        document.querySelector("#vehicleOilForm").addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const cost = parseFormattedNumber(document.querySelector("#oilCost").value);
-          const record = editing || { id: id() };
-          Object.assign(record, { vehicleId: document.querySelector("#oilVehicle").value, walletId: document.querySelector("#oilWallet").value, lastOilDate: document.querySelector("#oilDate").value, lastOilKm: Number(document.querySelector("#oilKm").value || 0), intervalKm: Number(document.querySelector("#oilIntervalKm").value || 0), intervalMonths: Number(document.querySelector("#oilIntervalMonths").value || 0), oilBrand: document.querySelector("#oilBrand").value.trim(), cost, note: document.querySelector("#oilNote").value.trim() });
-          if ([cost, record.lastOilKm, record.intervalKm, record.intervalMonths].some((value) => value < 0)) return alert("Biaya, kilometer, dan interval tidak boleh negatif.");
-          record.transactionId = upsertVehicleTransaction(record, "Oli", cost, record.lastOilDate, record.note || `Ganti oli ${record.oilBrand}`);
-          if (!editing) state.vehicleOilChanges.push(record);
-          closeModal();
-          await persistChanges("Jadwal oli tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-        });
+        vehicleFormController.openVehicleOilForm(recordId);
       }
 
       function openVehiclePartForm(recordId = "") {
-        if (!requirePrimaryAccount() || !requireVehicleData()) return;
-        const editing = recordId ? state.vehicleParts.find((item) => item.id === recordId) : null;
-        document.querySelector("#modalTitle").textContent = editing ? "Edit Penggantian Part" : "Tambah Penggantian Part";
-        document.querySelector("#modalBody").innerHTML = `
-          <form class="form" id="vehiclePartForm">
-            <details class="form-step" open>
-              <summary>1. Part dan tanggal</summary>
-              <div class="field"><label for="partVehicle">Kendaraan</label><select id="partVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
-              <div class="field"><label for="partWallet">Dompet</label><select id="partWallet" required>${walletOptions(editing?.walletId || defaultWalletId())}</select></div>
-              <div class="form-grid"><div class="field"><label for="partName">Nama part</label><input id="partName" required value="${escapeHtml(editing?.partName || "")}" placeholder="Ban, aki, kampas rem" /></div><div class="field"><label for="partDate">Tanggal penggantian</label><input id="partDate" type="date" value="${editing?.replacementDate || todayDate()}" required /></div></div>
-            </details>
-            <details class="form-step">
-              <summary>2. Umur part</summary>
-              <div class="form-grid"><div class="field"><label for="partKm">Kilometer saat diganti</label><input id="partKm" type="number" min="0" value="${editing?.replacementKm || ""}" required /></div><div class="field"><label for="partLifeKm">Estimasi umur kilometer</label><input id="partLifeKm" type="number" min="0" value="${editing?.lifeKm || 10000}" /></div></div>
-              <div class="field"><label for="partLifeMonths">Estimasi umur bulan</label><input id="partLifeMonths" type="number" min="0" value="${editing?.lifeMonths || 12}" /></div>
-            </details>
-            <details class="form-step">
-              <summary>3. Biaya dan catatan</summary>
-              <div class="field"><label for="partCost">Biaya part</label>${rupiahInputHtml("partCost", editing?.cost ?? "")}</div>
-              <div class="field"><label for="partNote">Catatan</label><textarea id="partNote">${escapeHtml(editing?.note || "")}</textarea></div>
-            </details>
-            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Part"}</button></div>
-          </form>
-        `;
-        showModal();
-        attachRupiahInput("#partCost");
-        document.querySelector("#vehiclePartForm").addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const cost = parseFormattedNumber(document.querySelector("#partCost").value);
-          const record = editing || { id: id() };
-          Object.assign(record, { vehicleId: document.querySelector("#partVehicle").value, walletId: document.querySelector("#partWallet").value, partName: document.querySelector("#partName").value.trim(), replacementDate: document.querySelector("#partDate").value, replacementKm: Number(document.querySelector("#partKm").value || 0), lifeKm: Number(document.querySelector("#partLifeKm").value || 0), lifeMonths: Number(document.querySelector("#partLifeMonths").value || 0), cost, note: document.querySelector("#partNote").value.trim() });
-          if ([cost, record.replacementKm, record.lifeKm, record.lifeMonths].some((value) => value < 0)) return alert("Biaya, kilometer, dan estimasi umur tidak boleh negatif.");
-          record.transactionId = upsertVehicleTransaction(record, "Spare Part", cost, record.replacementDate, record.note || `Ganti ${record.partName}`);
-          if (!editing) state.vehicleParts.push(record);
-          closeModal();
-          await persistChanges("Data part tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-        });
+        vehicleFormController.openVehiclePartForm(recordId);
       }
 
       function openVehicleTaxForm(recordId = "") {
-        if (!requirePrimaryAccount() || !requireVehicleData()) return;
-        const editing = recordId ? state.vehicleTaxes.find((item) => item.id === recordId) : null;
-        document.querySelector("#modalTitle").textContent = editing ? "Edit Pajak Kendaraan" : "Tambah Pajak Kendaraan";
-        document.querySelector("#modalBody").innerHTML = `
-          <form class="form" id="vehicleTaxForm">
-            <details class="form-step" open>
-              <summary>1. Jatuh tempo</summary>
-              <div class="field"><label for="taxVehicle">Kendaraan</label><select id="taxVehicle" required>${vehicleOptions(editing?.vehicleId || "")}</select></div>
-              <div class="field"><label for="taxWallet">Dompet</label><select id="taxWallet" required>${walletOptions(editing?.walletId || defaultWalletId())}</select></div>
-              <div class="form-grid"><div class="field"><label for="taxAnnualDue">Jatuh tempo tahunan</label><input id="taxAnnualDue" type="date" value="${editing?.annualDueDate || ""}" required /></div><div class="field"><label for="taxFiveYearDue">Jatuh tempo 5 tahunan</label><input id="taxFiveYearDue" type="date" value="${editing?.fiveYearDueDate || ""}" /></div></div>
-            </details>
-            <details class="form-step">
-              <summary>2. Pembayaran</summary>
-              <div class="form-grid"><div class="field"><label for="taxCost">Estimasi biaya pajak</label>${rupiahInputHtml("taxCost", editing?.estimatedCost ?? "")}</div><div class="field"><label for="taxStatus">Status pembayaran</label><select id="taxStatus"><option value="unpaid" ${editing?.status !== "paid" ? "selected" : ""}>Belum dibayar</option><option value="paid" ${editing?.status === "paid" ? "selected" : ""}>Sudah dibayar</option></select></div></div>
-              <div class="field"><label for="taxPaidDate">Tanggal pembayaran</label><input id="taxPaidDate" type="date" value="${editing?.paidDate || ""}" /></div>
-            </details>
-            <details class="form-step">
-              <summary>3. Catatan</summary>
-              <div class="field"><label for="taxNote">Catatan</label><textarea id="taxNote">${escapeHtml(editing?.note || "")}</textarea></div>
-            </details>
-            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan Pajak"}</button></div>
-          </form>
-        `;
-        showModal();
-        attachRupiahInput("#taxCost");
-        document.querySelector("#vehicleTaxForm").addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const estimatedCost = parseFormattedNumber(document.querySelector("#taxCost").value);
-          if (estimatedCost < 0) return alert("Biaya pajak tidak boleh negatif.");
-          const record = editing || { id: id() };
-          Object.assign(record, { vehicleId: document.querySelector("#taxVehicle").value, walletId: document.querySelector("#taxWallet").value, annualDueDate: document.querySelector("#taxAnnualDue").value, fiveYearDueDate: document.querySelector("#taxFiveYearDue").value, estimatedCost, status: document.querySelector("#taxStatus").value, paidDate: document.querySelector("#taxPaidDate").value, note: document.querySelector("#taxNote").value.trim() });
-          if (record.status === "paid" && !record.paidDate) return alert("Tanggal pembayaran wajib diisi jika pajak sudah dibayar.");
-          if (record.status === "paid") record.transactionId = upsertVehicleTransaction(record, "Pajak", estimatedCost, record.paidDate, record.note || "Pajak kendaraan");
-          else removeVehicleTransaction(record);
-          if (!editing) state.vehicleTaxes.push(record);
-          closeModal();
-          await persistChanges("Data pajak tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-        });
+        vehicleFormController.openVehicleTaxForm(recordId);
       }
 
       function openVehicleExpenseForm() {
-        if (!requirePrimaryAccount() || !requireVehicleData()) return;
-        document.querySelector("#modalTitle").textContent = "Tambah Biaya Kendaraan";
-        document.querySelector("#modalBody").innerHTML = `
-          <form class="form" id="vehicleExpenseForm">
-            <div class="form-grid"><div class="field"><label for="expenseVehicle">Kendaraan</label><select id="expenseVehicle" required>${vehicleOptions()}</select></div><div class="field"><label for="expenseType">Jenis biaya</label><select id="expenseType"><option>Bensin</option><option>Lainnya</option></select></div></div>
-            <div class="field"><label for="expenseWallet">Dompet</label><select id="expenseWallet" required>${walletOptions(defaultWalletId())}</select></div>
-            <div class="form-grid"><div class="field"><label for="expenseDate">Tanggal</label><input id="expenseDate" type="date" value="${todayDate()}" required /></div><div class="field"><label for="expenseAmount">Nominal</label>${rupiahInputHtml("expenseAmount", "", "required")}</div></div>
-            <div class="field"><label for="expenseNote">Catatan</label><textarea id="expenseNote" placeholder="Contoh: Bensin full tank"></textarea></div>
-            <div class="row-actions"><button class="button" type="button" data-close-modal>Batal</button><button class="button primary" type="submit">Simpan Biaya</button></div>
-          </form>
-        `;
-        showModal();
-        attachRupiahInput("#expenseAmount");
-        document.querySelector("#vehicleExpenseForm").addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const amount = parseFormattedNumber(document.querySelector("#expenseAmount").value);
-          if (amount <= 0) return alert("Nominal biaya wajib lebih dari 0.");
-          const record = { id: id(), vehicleId: document.querySelector("#expenseVehicle").value, walletId: document.querySelector("#expenseWallet").value };
-          upsertVehicleTransaction(record, document.querySelector("#expenseType").value, amount, document.querySelector("#expenseDate").value, document.querySelector("#expenseNote").value.trim() || document.querySelector("#expenseType").value);
-          closeModal();
-          await persistChanges("Biaya kendaraan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-        });
+        vehicleFormController.openVehicleExpenseForm();
       }
-
       function openPinForm() {
         if (!requirePrimaryAccount()) return;
         document.querySelector("#modalTitle").textContent = "Atur PIN";
@@ -3205,548 +2871,125 @@
         URL.revokeObjectURL(url);
       }
 
-      async function showApp() {
-        document.querySelector("#splashScreen").classList.add("hidden");
-        document.querySelector("#authScreen").classList.add("hidden");
-        document.querySelector("#appShell").classList.remove("hidden");
-        hydrateStoredStateForCurrentUser();
-        if (!isGuest() && isCloudSyncAllowed()) {
-          const shouldUploadLocal = !isChildUser() && hasUnsyncedChanges;
-          await loadCloudState({ saveAfterLoad: shouldUploadLocal });
-          if (isChildUser()) {
-            hasUnsyncedChanges = false;
-            setLocalSyncStatus("synced");
-          } else if (shouldUploadLocal && !cloudSync.lastError) {
-            hasUnsyncedChanges = false;
-            setLocalSyncStatus("synced");
-          } else if (shouldUploadLocal) {
-            setLocalSyncStatus("failed");
-          }
-        }
-        if (!isGuest() && isCloudSyncAllowed()) startCloudRealtimeSync();
-        renderAll();
-        startIdleLogoutTimer();
-        maybeShowWalletOnboarding();
-      }
+      const authController = window.AppAuthController.createController({
+        accountService,
+        appConfig,
+        appIcon,
+        applyRememberedLogin,
+        applyState,
+        authStorageKey,
+        clearRememberedLogin,
+        clearSyncRetry,
+        closeModal,
+        cloudSync,
+        deletedAccountsKey,
+        demoState,
+        emptyState,
+        getCurrentUser: () => currentUser,
+        getHasUnsyncedChanges: () => hasUnsyncedChanges,
+        hydrateStoredStateForCurrentUser,
+        id,
+        isChildUser,
+        isCloudSyncAllowed,
+        isGuest,
+        loadCloudState,
+        loadRememberedLogin,
+        loadUsers,
+        localSplashQuotes,
+        openView,
+        rememberedLoginKey,
+        renderAll,
+        replaceState,
+        requirePrimaryAccount,
+        resetFailedLogin,
+        router,
+        saveRememberedLogin,
+        saveUsers,
+        sessionStorageKey,
+        setCurrentUser: (user) => {
+          currentUser = user;
+        },
+        setGuestTransactionAdds: (value) => {
+          guestTransactionAdds = value;
+        },
+        setHasUnsyncedChanges: (value) => {
+          hasUnsyncedChanges = value;
+        },
+        setLocalSyncStatus,
+        setUsers: (nextUsers) => {
+          users = nextUsers;
+        },
+        setupCloudClient,
+        showModal,
+        splashReadDelay,
+        startCloudRealtimeSync,
+        startIdleLogoutTimer,
+        state,
+        stopCloudRealtimeSync,
+        stopIdleLogoutTimer,
+        storageKey,
+        updateForgotPasswordVisibility,
+      });
 
-      function maybeShowWalletOnboarding() {
-        if (!currentUser || isGuest() || isChildUser()) return;
-        const key = `dompify_onboarding_wallet_${currentUser.username || currentUser.id}`;
-        if (sessionStorage.getItem(key)) return;
-        if (state.transactions.length || state.wallets.length > 2) return;
-        sessionStorage.setItem(key, "1");
-        document.querySelector("#modalTitle").textContent = "Mulai dari Dompet";
-        document.querySelector("#modalBody").innerHTML = `
-          <div class="form">
-            <div class="empty">
-              <p>Buat atau sesuaikan dompet pertama agar saldo transaksi lebih rapi sejak awal.</p>
-              <button class="button primary" type="button" data-open-form="wallet">Atur Dompet</button>
-              <button class="button" type="button" data-close-modal>Nanti</button>
-            </div>
-          </div>
-        `;
-        showModal();
+      async function showApp() {
+        return authController.showApp();
       }
 
       function showLogin() {
-        stopIdleLogoutTimer();
-        document.querySelector("#splashScreen").classList.add("hidden");
-        document.querySelector("#authScreen").classList.remove("hidden");
-        document.querySelector("#appShell").classList.add("hidden");
-        applyRememberedLogin();
-        updateForgotPasswordVisibility();
-      }
-
-      function setSplashQuote(quote, author, source = "Internet") {
-        document.querySelector("#splashQuote").textContent = `"${quote}"`;
-        document.querySelector("#splashQuoteSource").textContent = author ? `Sumber: ${source} - ${author}` : `Sumber: ${source}`;
-      }
-
-      function setLocalSplashQuote() {
-        const item = localSplashQuotes[Math.floor(Math.random() * localSplashQuotes.length)];
-        setSplashQuote(item.quote, item.author, "Quote lokal");
-      }
-
-      function loadSplashQuote() {
-        const quotes = Array.isArray(globalThis.SPLASH_QUOTES) && globalThis.SPLASH_QUOTES.length
-          ? globalThis.SPLASH_QUOTES
-          : localSplashQuotes;
-        const item = quotes[Math.floor(Math.random() * quotes.length)];
-        setSplashQuote(item.quote, item.author, "Quote lokal");
+        authController.showLogin();
       }
 
       function showSplash() {
-        document.querySelector("#splashScreen").classList.remove("hidden");
-        document.querySelector("#authScreen").classList.add("hidden");
-        document.querySelector("#appShell").classList.add("hidden");
-        loadSplashQuote();
-        const button = document.querySelector("#continueToLoginButton");
-        const status = document.querySelector("#splashReadStatus");
-        button.disabled = true;
-        button.textContent = "Baca sebentar...";
-        status.textContent = "Quote ditampilkan sebentar agar bisa dibaca.";
-        window.setTimeout(() => {
-          button.disabled = false;
-          button.textContent = "Mulai Mencatat";
-          status.textContent = "Silakan lanjut jika sudah siap.";
-        }, splashReadDelay);
+        authController.showSplash();
       }
 
       async function enterGuestMode() {
-        guestTransactionAdds = 0;
-        currentUser = {
-          id: "guest",
-          username: "guest",
-          password: "",
-          role: "guest",
-          name: "Tamu",
-          email: "Mode percobaan",
-        };
-        replaceState(demoState());
-        await showApp();
+        return authController.enterGuestMode();
       }
 
       function login(username, password) {
-        const user = loadUsers().find((item) => item.username === username && item.password === password);
-        if (!user) return false;
-        currentUser = user;
-        localStorage.setItem(sessionStorageKey, JSON.stringify({ username: user.username, signedInAt: new Date().toISOString() }));
-        return true;
-      }
-
-      function passwordResetRedirectUrl() {
-        const configuredUrl = appConfig.resetPasswordRedirectUrl || appConfig.publicUrl || appConfig.appUrl || "";
-        const baseUrl = configuredUrl || `${location.origin}${location.pathname}`;
-        const url = new URL(baseUrl, location.href);
-        url.searchParams.set("reset-password", "1");
-        url.hash = "";
-        return url.toString();
-      }
-
-      function buildUserFromCloud(user) {
-        const profile = user.user_metadata || {};
-        return {
-          id: user.id,
-          cloudId: user.id,
-          username: user.email,
-          password: "",
-          role: profile.role || "user",
-          name: profile.name || user.email?.split("@")[0] || "User",
-          email: user.email || "",
-          phone: profile.phone || "",
-        };
-      }
-
-      async function resolveFamilyAccess(user) {
-        const client = setupCloudClient();
-        if (!client || !user?.email) return null;
-        const { data, error } = await client
-          .from("family_members")
-          .select("parent_user_id, child_user_id, child_email, child_name, phone, status")
-          .eq("child_email", user.email.trim().toLowerCase())
-          .eq("status", "active")
-          .order("updated_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (error || !data?.parent_user_id) return null;
-        return data;
-      }
-
-      async function applyFamilyAccess(user) {
-        cloudSync.readOnly = false;
-        const access = await resolveFamilyAccess(user);
-        cloudSync.readOnly = Boolean(access);
-        if (!access) return;
-        currentUser = {
-          ...currentUser,
-          role: "child",
-          familyParentId: access.parent_user_id,
-          dataOwnerId: access.parent_user_id,
-          name: currentUser.name || access.child_name || currentUser.email?.split("@")[0] || "Anggota Keluarga",
-          phone: currentUser.phone || access.phone || "",
-        };
+        return authController.login(username, password);
       }
 
       async function loginCloud(email, password) {
-        const client = setupCloudClient();
-        if (!client) return { ok: false, message: "Koneksi login cloud belum aktif. Tutup lalu buka ulang aplikasi, atau perbarui aplikasi dari browser." };
-        const { data, error } = await client.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
-        if (error || !data?.user) return { ok: false, message: error?.message || "Email atau password salah." };
-        currentUser = buildUserFromCloud(data.user);
-        await applyFamilyAccess(data.user);
-        return { ok: true };
-      }
-
-      async function registerCloud({ name, phone, email, password }) {
-        const client = setupCloudClient();
-        if (!client) return { ok: false, message: "Cloud belum aktif. Isi config.js terlebih dahulu." };
-        const normalizedEmail = email.trim().toLowerCase();
-        const { data, error } = await client.auth.signUp({
-          email: normalizedEmail,
-          password,
-          options: {
-            data: { name, phone, role: "user" },
-            emailRedirectTo: location.href.split("#")[0],
-          },
-        });
-        if (error) return { ok: false, message: error.message };
-        if (data?.user && data?.session) {
-          currentUser = buildUserFromCloud(data.user);
-          return { ok: true, signedIn: true, message: "Registrasi berhasil. Kamu sudah login." };
-        }
-
-        const loginResult = await loginCloud(normalizedEmail, password);
-        if (loginResult.ok) {
-          return { ok: true, signedIn: true, message: "Registrasi berhasil. Kamu sudah login." };
-        }
-
-        return {
-          ok: true,
-          signedIn: false,
-          message: "Registrasi berhasil, tetapi akun belum bisa login otomatis. Jika Supabase meminta konfirmasi email, buka Supabase > Authentication > Providers > Email lalu matikan Confirm email agar akun baru bisa langsung login.",
-        };
-      }
-
-      function registerLocal({ name, phone, email, password }) {
-        const users = loadUsers();
-        if (window.AppAuth.isAccountDeleted(deletedAccountsKey, email)) {
-          return { ok: false, message: "Akun ini sudah dihapus permanen dan tidak dapat digunakan kembali." };
-        }
-        if (users.some((user) => user.username.toLowerCase() === email.toLowerCase())) {
-          return { ok: false, message: "Email sudah terdaftar." };
-        }
-        const user = {
-          id: id(),
-          username: email,
-          password,
-          role: "user",
-          name,
-          email,
-          phone,
-        };
-        users.push(user);
-        saveUsers(users);
-        currentUser = user;
-        localStorage.setItem(sessionStorageKey, JSON.stringify({ username: user.username, signedInAt: new Date().toISOString() }));
-        replaceState(emptyState());
-        return { ok: true, signedIn: true, message: "Registrasi berhasil." };
+        return authController.loginCloud(email, password);
       }
 
       async function loginWithGoogle() {
-        const client = setupCloudClient();
-        if (!client) {
-          alert("Login Google membutuhkan koneksi Supabase di config.js.");
-          return;
-        }
-        const { error } = await client.auth.signInWithOAuth({
-          provider: "google",
-          options: { redirectTo: location.href.split("#")[0] },
-        });
-        if (error) alert(error.message);
+        return authController.loginWithGoogle();
       }
 
       function openResetPasswordRequestForm() {
-        document.querySelector("#modalTitle").textContent = "Reset Password";
-        document.querySelector("#modalBody").innerHTML = `
-          <form class="form" id="resetPasswordRequestForm">
-            <p class="form-status">Masukkan email akun kamu. Jika email terdaftar, link reset password akan dikirimkan.</p>
-            <div class="field">
-              <label for="resetEmail">Email</label>
-              <input id="resetEmail" type="email" autocomplete="email" required />
-            </div>
-            <p class="form-status hidden" id="resetRequestStatus"></p>
-            <div class="row-actions">
-              <button class="button" type="button" data-close-modal>Batal</button>
-              <button class="button primary" type="submit">Kirim Link Reset Password</button>
-            </div>
-          </form>
-        `;
-        showModal();
-        const loginEmail = document.querySelector("#loginUsername").value.trim();
-        if (loginEmail) document.querySelector("#resetEmail").value = loginEmail;
-        document.querySelector("#resetPasswordRequestForm").addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const submitButton = event.submitter || document.querySelector("#resetPasswordRequestForm .button.primary");
-          const status = document.querySelector("#resetRequestStatus");
-          const email = document.querySelector("#resetEmail").value.trim().toLowerCase();
-          submitButton.disabled = true;
-          submitButton.textContent = "Mengirim...";
-          status.className = "form-status";
-          status.textContent = "Memproses permintaan reset password...";
-          try {
-            const client = setupCloudClient();
-            if (client) {
-              const { error } = await client.auth.resetPasswordForEmail(email, {
-                redirectTo: passwordResetRedirectUrl(),
-              });
-              if (error) throw error;
-            }
-            status.className = "form-status success";
-            status.textContent = "Jika email terdaftar, link reset password akan dikirimkan.";
-          } catch {
-            status.className = "form-status success";
-            status.textContent = "Jika email terdaftar, link reset password akan dikirimkan.";
-          } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = "Kirim Link Reset Password";
-          }
-        });
-      }
-
-      function clearPasswordResetUrl() {
-        if (!history.replaceState) return;
-        const cleanUrl = location.origin === "null" ? location.pathname : `${location.origin}${location.pathname}`;
-        history.replaceState({}, document.title, cleanUrl);
+        authController.openResetPasswordRequestForm();
       }
 
       function openNewPasswordForm() {
-        showLogin();
-        document.querySelector("#modalTitle").textContent = "Buat Password Baru";
-        document.querySelector("#modalBody").innerHTML = `
-          <form class="form" id="newPasswordForm">
-            <p class="form-status">Masukkan password baru untuk akun kamu.</p>
-            <div class="field">
-              <label for="newPassword">Password baru</label>
-              <div class="password-wrap">
-                <input id="newPassword" type="password" autocomplete="new-password" minlength="8" required />
-                <button class="password-toggle" type="button" data-toggle-password="newPassword" aria-label="Tampilkan password">
-                  ${appIcon("eye", 19)}
-                </button>
-              </div>
-            </div>
-            <div class="field">
-              <label for="confirmNewPassword">Konfirmasi password baru</label>
-              <div class="password-wrap">
-                <input id="confirmNewPassword" type="password" autocomplete="new-password" minlength="8" required />
-                <button class="password-toggle" type="button" data-toggle-password="confirmNewPassword" aria-label="Tampilkan password">
-                  ${appIcon("eye", 19)}
-                </button>
-              </div>
-            </div>
-            <p class="form-status hidden" id="newPasswordStatus"></p>
-            <div class="row-actions">
-              <button class="button primary" type="submit">Reset Password</button>
-            </div>
-          </form>
-        `;
-        showModal();
-        document.querySelector("#newPasswordForm").addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const submitButton = event.submitter || document.querySelector("#newPasswordForm .button.primary");
-          const status = document.querySelector("#newPasswordStatus");
-          const password = document.querySelector("#newPassword").value;
-          const confirmation = document.querySelector("#confirmNewPassword").value;
-          status.className = "form-status error";
-          if (password.length < 8) {
-            status.textContent = "Password minimal 8 karakter.";
-            return;
-          }
-          if (password !== confirmation) {
-            status.textContent = "Password dan konfirmasi password harus sama.";
-            return;
-          }
-          submitButton.disabled = true;
-          submitButton.textContent = "Mereset...";
-          status.className = "form-status";
-          status.textContent = "Memproses password baru...";
-          try {
-            const client = setupCloudClient();
-            if (!client) throw new Error("Cloud belum aktif.");
-            const { error } = await client.auth.updateUser({ password });
-            if (error) throw error;
-            await client.auth.signOut();
-            currentUser = null;
-            clearRememberedLogin();
-            resetFailedLogin();
-            clearPasswordResetUrl();
-            closeModal();
-            showLogin();
-            alert("Password berhasil direset. Silakan login menggunakan password baru.");
-          } catch (error) {
-            status.className = "form-status error";
-            status.textContent = error.message || "Password belum bisa direset. Coba buka ulang link reset password.";
-            submitButton.disabled = false;
-            submitButton.textContent = "Reset Password";
-          }
-        });
-      }
-
-      function isPasswordRecoveryUrl() {
-        const params = new URLSearchParams(location.search);
-        const hashParams = new URLSearchParams(location.hash.replace(/^#/, ""));
-        return params.get("reset-password") === "1" || params.get("type") === "recovery" || hashParams.get("type") === "recovery";
+        authController.openNewPasswordForm();
       }
 
       async function handlePasswordRecoveryLink() {
-        if (!cloudSync.enabled || !isPasswordRecoveryUrl()) return false;
-        const client = setupCloudClient();
-        if (!client) return false;
-        const params = new URLSearchParams(location.search);
-        const hashParams = new URLSearchParams(location.hash.replace(/^#/, ""));
-        const code = params.get("code");
-        const accessToken = hashParams.get("access_token");
-        const refreshToken = hashParams.get("refresh_token");
-        try {
-          if (code) {
-            const { error } = await client.auth.exchangeCodeForSession(code);
-            if (error) throw error;
-          } else if (accessToken && refreshToken) {
-            const { error } = await client.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-            if (error) throw error;
-          }
-
-          const { data, error } = await client.auth.getSession();
-          if (error || !data?.session) throw error || new Error("Sesi reset password tidak tersedia.");
-        } catch {
-          showLogin();
-          clearPasswordResetUrl();
-          alert("Link reset password tidak valid atau sudah kedaluwarsa. Minta link baru dari menu Lupa password.");
-          return true;
-        }
-        openNewPasswordForm();
-        return true;
+        return authController.handlePasswordRecoveryLink();
       }
 
       function openRegisterForm() {
-        document.querySelector("#modalTitle").textContent = "Registrasi Akun";
-        document.querySelector("#modalBody").innerHTML = `
-          <form class="form" id="registerForm">
-            <div class="field">
-              <label for="registerName">Nama</label>
-              <input id="registerName" type="text" autocomplete="name" required />
-            </div>
-            <div class="field">
-              <label for="registerPhone">Nomor HP</label>
-              <input id="registerPhone" type="tel" autocomplete="tel" inputmode="tel" required />
-            </div>
-            <div class="field">
-              <label for="registerEmail">Email</label>
-              <input id="registerEmail" type="email" autocomplete="email" required />
-            </div>
-            <div class="field">
-              <label for="registerPassword">Password</label>
-              <div class="password-wrap">
-                <input id="registerPassword" type="password" autocomplete="new-password" minlength="6" required />
-                <button class="password-toggle" type="button" data-toggle-password="registerPassword" aria-label="Tampilkan password">
-                  ${appIcon("eye", 19)}
-                </button>
-              </div>
-            </div>
-            <div class="row-actions">
-              <button class="button" type="button" data-close-modal>Batal</button>
-              <button class="button primary" type="submit">Daftar</button>
-            </div>
-          </form>
-        `;
-        showModal();
-        document.querySelector("#registerForm").addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const submitButton = event.submitter || document.querySelector("#registerForm .button.primary");
-          submitButton.disabled = true;
-          submitButton.textContent = "Mendaftarkan...";
-          const payload = {
-            name: document.querySelector("#registerName").value.trim(),
-            phone: document.querySelector("#registerPhone").value.trim(),
-            email: document.querySelector("#registerEmail").value.trim(),
-            password: document.querySelector("#registerPassword").value,
-          };
-          const result = cloudSync.enabled ? await registerCloud(payload) : registerLocal(payload);
-          if (!result.ok) {
-            submitButton.disabled = false;
-            submitButton.textContent = "Daftar";
-            alert(result.message);
-            return;
-          }
-          closeModal();
-          saveRememberedLogin(payload.email.trim().toLowerCase(), payload.password);
-          alert(result.message);
-          if (result.signedIn && currentUser) await showApp();
-        });
+        authController.openRegisterForm();
       }
 
       async function loadCloudSessionUser() {
-        const client = setupCloudClient();
-        if (!client) return null;
-        const { data } = await client.auth.getSession();
-        const user = data?.session?.user;
-        if (!user) return null;
-        currentUser = buildUserFromCloud(user);
-        await applyFamilyAccess(user);
-        return currentUser;
+        return authController.loadCloudSessionUser();
       }
 
       async function logout(message = "") {
-        const logoutMessage = typeof message === "string" ? message : "";
-        stopIdleLogoutTimer();
-        localStorage.removeItem(sessionStorageKey);
-        stopCloudRealtimeSync();
-        cloudSync.readOnly = false;
-        if (cloudSync.enabled) {
-          try {
-            await setupCloudClient()?.auth.signOut();
-          } catch {
-            // User is leaving the app session; keep logout flow moving even if cloud sign out is temporarily unavailable.
-          }
-        }
-        currentUser = null;
-        applyState(emptyState());
-        router.clearHistory();
-        openView("home", { replace: true });
-        showLogin();
-        if (logoutMessage) alert(logoutMessage);
+        return authController.logout(message);
       }
 
       async function autoLoginRememberedUser() {
-        const saved = loadRememberedLogin();
-        if (!saved) return false;
-        const result = cloudSync.enabled ? await loginCloud(saved.email, saved.password) : { ok: login(saved.email, saved.password), message: "" };
-        if (!result.ok) {
-          clearRememberedLogin();
-          return false;
-        }
-        resetFailedLogin();
-        await showApp();
-        return true;
+        return authController.autoLoginRememberedUser();
       }
 
       async function deleteCurrentAccount() {
-        if (!requirePrimaryAccount()) return;
-        const deletingUser = currentUser;
-        const storedUsers = loadUsers();
-        const remainingAdmins = storedUsers.filter((user) => user.role === "admin" && user.username !== deletingUser.username);
-        if (!deletingUser.cloudId && deletingUser.role === "admin" && !remainingAdmins.length) {
-          alert("Tidak bisa menghapus admin terakhir.");
-          return;
-        }
-        if (!confirm(`Hapus akun ${deletingUser.username} secara permanen?\n\nSemua data lokal dan cloud akun ini akan dihapus. Akun tidak dapat digunakan untuk login kembali.`)) return;
-        const deleteButton = document.querySelector("#deleteAccountButton");
-        deleteButton.disabled = true;
-        deleteButton.textContent = "Menghapus...";
-        clearTimeout(cloudSync.saveTimer);
-        cloudSync.saveTimer = null;
-        clearSyncRetry();
-        const result = await accountService.deleteCurrentAccountPermanently();
-        if (!result.ok) {
-          deleteButton.disabled = false;
-          deleteButton.textContent = "Hapus";
-          alert(result.message);
-          return;
-        }
-        users = window.AppAuth.deleteLocalAccountData({
-          authStorageKey,
-          deletedAccountsKey,
-          rememberedLoginKey,
-          sessionStorageKey,
-          storageKey,
-          username: deletingUser.username,
-        });
-        hasUnsyncedChanges = false;
-        await logout("Akun dan seluruh data terkait berhasil dihapus permanen.");
+        return authController.deleteCurrentAccount();
       }
-
       document.querySelector("#todayText").textContent = new Intl.DateTimeFormat("id-ID", {
         weekday: "long",
         day: "numeric",

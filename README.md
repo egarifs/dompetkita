@@ -49,6 +49,10 @@ Orkestrasi state lokal sudah dipisah ke `js/core/store.js`. Modul ini menangani 
 
 Koordinasi sinkronisasi sudah dipisah ke `js/core/sync.js`. Modul ini menangani merge snapshot, antrean simpan, retry, konflik, flush, status sinkronisasi, dan realtime, sedangkan `js/core/cloud.js` tetap menjadi adapter Supabase.
 
+Lifecycle autentikasi dan session UI sudah dipisah ke `js/features/auth/auth.controller.js`. Modul ini menangani splash, login lokal/cloud, registrasi, akses child, reset password, logout, dan penghapusan akun.
+
+Form mutation mulai dipisah per domain. `js/features/wallets/wallet.form.js` menangani form dompet, `js/features/savings/savings.form.js` menangani form tujuan dan transaksi tabungan, sedangkan `js/features/vehicles/vehicle.form.js` menangani form kendaraan, service, oli, part, pajak, dan biaya kendaraan.
+
 Modul fitur yang sudah tersedia:
 
 - `js/features/dashboard/`
