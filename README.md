@@ -53,6 +53,8 @@ Lifecycle autentikasi dan session UI sudah dipisah ke `js/features/auth/auth.con
 
 Form mutation mulai dipisah per domain. `js/features/wallets/wallet.form.js` menangani form dompet, `js/features/savings/savings.form.js` menangani form tujuan dan transaksi tabungan, sedangkan `js/features/vehicles/vehicle.form.js` menangani form kendaraan, service, oli, part, pajak, dan biaya kendaraan.
 
+Registrasi event statis mulai dipisah ke `js/events`. Modul navigation, modal, auth, dan filter menangani wiring DOM tanpa mengambil alih logic domain.
+
 Modul fitur yang sudah tersedia:
 
 - `js/features/dashboard/`

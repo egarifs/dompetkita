@@ -2998,18 +2998,7 @@
       }).format(new Date());
       window.AppIcons.hydrate();
 
-      document.querySelectorAll("[data-view]").forEach((button) => {
-        button.addEventListener("click", () => openView(button.dataset.view));
-        if (button.getAttribute("role") === "button") {
-          button.addEventListener("keydown", (event) => {
-            if (event.key !== "Enter" && event.key !== " ") return;
-            event.preventDefault();
-            openView(button.dataset.view);
-          });
-        }
-      });
-
-      document.querySelector("#backButton").addEventListener("click", goBackView);
+      window.AppNavigationEvents.register({ goBackView, openView });
 
       document.body.addEventListener("pointerdown", (event) => {
         const moneyCalculatorTrigger = event.target.closest("[data-open-money-calculator]");
@@ -3613,46 +3602,22 @@
         reader.readAsDataURL(file);
       });
 
-      document.body.addEventListener("input", (event) => {
-        if (event.target.closest("#moneyCalculatorExpression")) updateMoneyCalculatorResult();
+      window.AppModalEvents.register({ closeModal, updateMoneyCalculatorResult });
+      window.AppAuthEvents.register({
+        clearRememberedLogin,
+        cloudSync,
+        enterGuestMode,
+        login,
+        loginCloud,
+        loginWithGoogle,
+        openRegisterForm,
+        openResetPasswordRequestForm,
+        recordFailedLogin,
+        resetFailedLogin,
+        saveRememberedLogin,
+        showApp,
+        showLogin,
       });
-
-      document.querySelector("#closeModalButton").addEventListener("click", closeModal);
-      document.querySelector("#modal").addEventListener("click", (event) => {
-        if (event.target.id === "modal") closeModal();
-      });
-
-      document.addEventListener("invalid", (event) => {
-        const step = event.target.closest?.(".form-step");
-        if (step) step.open = true;
-      }, true);
-
-      document.querySelector("#loginForm").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const username = document.querySelector("#loginUsername").value.trim();
-        const password = document.querySelector("#loginPassword").value;
-        const result = cloudSync.enabled ? await loginCloud(username, password) : { ok: login(username, password), message: "Email atau password salah." };
-        if (!result.ok) {
-          recordFailedLogin();
-          alert(result.message);
-          return;
-        }
-        resetFailedLogin();
-        if (document.querySelector("#rememberLogin").checked) {
-          saveRememberedLogin(username.toLowerCase(), password);
-        } else {
-          clearRememberedLogin();
-        }
-        document.querySelector("#loginPassword").value = "";
-        await showApp();
-      });
-      document.querySelector("#continueToLoginButton").addEventListener("click", showLogin);
-      document.querySelector("#skipSplashButton")?.addEventListener("click", showLogin);
-      document.querySelector("#forgotPasswordButton").addEventListener("click", openResetPasswordRequestForm);
-      document.querySelector("#registerButton").addEventListener("click", openRegisterForm);
-      document.querySelector("#googleLoginButton").addEventListener("click", loginWithGoogle);
-      document.querySelector("#accessRequestButton").addEventListener("click", openRegisterForm);
-      document.querySelector("#guestLoginButton").addEventListener("click", enterGuestMode);
       document.querySelector("#copyBcaButton").addEventListener("click", async () => {
         await copyText(document.querySelector("#bcaAccountNumber").textContent.trim());
         alert("Nomor rekening BCA berhasil disalin.");
@@ -3734,30 +3699,17 @@
         await persistChanges("Anggaran tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
       });
 
-      document.querySelector("#searchInput").addEventListener("input", () => {
-        renderTransactions();
+      window.AppFilterEvents.register({
+        renderBudgetProgress,
+        renderCategoryBreakdown,
+        renderDailyExpenses,
+        renderTransactions,
+        renderVehicleExpenses,
+        renderWalletDetail,
+        setQuickTransactionRange: (value) => {
+          quickTransactionRange = value;
+        },
       });
-      document.querySelector("#monthFilter").addEventListener("change", () => {
-        quickTransactionRange = document.querySelector("#monthFilter").value === "all" ? "all" : "month";
-        document.querySelectorAll("[data-quick-range]").forEach((button) => button.classList.toggle("active", button.dataset.quickRange === quickTransactionRange));
-        renderTransactions();
-        renderCategoryBreakdown();
-        renderDailyExpenses();
-      });
-      document.querySelector("#budgetProgressMonth").addEventListener("change", renderBudgetProgress);
-      document.querySelector("#budgetProgressYear").addEventListener("change", renderBudgetProgress);
-      document.querySelector("#typeFilter").addEventListener("change", (event) => {
-        document.querySelectorAll("[data-transaction-type-tab]").forEach((button) => button.classList.toggle("active", button.dataset.transactionTypeTab === event.target.value));
-        renderTransactions();
-      });
-      document.querySelector("#walletFilter").addEventListener("change", renderTransactions);
-      ["#walletMutationSearch", "#walletMutationMonth", "#walletMutationStartDate", "#walletMutationEndDate"].forEach((selector) => {
-        document.querySelector(selector)?.addEventListener("input", renderWalletDetail);
-        document.querySelector(selector)?.addEventListener("change", renderWalletDetail);
-      });
-      document.querySelector("#vehicleExpenseVehicleFilter").addEventListener("change", renderVehicleExpenses);
-      document.querySelector("#vehicleExpenseMonthFilter").addEventListener("change", renderVehicleExpenses);
-      document.querySelector("#vehicleExpenseTypeFilter").addEventListener("change", renderVehicleExpenses);
       document.querySelector("#exportCsvButton").addEventListener("click", exportCsv);
       document.querySelector("#exportJsonButton").addEventListener("click", exportJson);
       document.querySelector("#importJsonFile").addEventListener("change", importJson);
