@@ -45,6 +45,8 @@ Dompify adalah aplikasi pencatatan keuangan personal/keluarga berbasis web stati
 
 Catatan struktur saat ini: logic utama sudah dipisah ke `js/core`, `js/utils`, `js/components`, dan `js/features`. File `app.js` masih menjadi compat layer dan glue code untuk event/form yang belum diekstrak penuh, sedangkan bootstrap aplikasi ada di `js/main.js`.
 
+Orkestrasi state lokal sudah dipisah ke `js/core/store.js`. Modul ini menangani persistence, hydration, status perubahan lokal, tombstone data terhapus, restore, dan alur delete-with-undo.
+
 Modul fitur yang sudah tersedia:
 
 - `js/features/dashboard/`
