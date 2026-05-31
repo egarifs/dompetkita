@@ -47,6 +47,8 @@ Catatan struktur saat ini: logic utama sudah dipisah ke `js/core`, `js/utils`, `
 
 Orkestrasi state lokal sudah dipisah ke `js/core/store.js`. Modul ini menangani persistence, hydration, status perubahan lokal, tombstone data terhapus, restore, dan alur delete-with-undo.
 
+Koordinasi sinkronisasi sudah dipisah ke `js/core/sync.js`. Modul ini menangani merge snapshot, antrean simpan, retry, konflik, flush, status sinkronisasi, dan realtime, sedangkan `js/core/cloud.js` tetap menjadi adapter Supabase.
+
 Modul fitur yang sudah tersedia:
 
 - `js/features/dashboard/`

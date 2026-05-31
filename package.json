@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "build": "node build.js",
-    "test": "npm run build && npm run test:critical && npm run test:sync-context",
+    "test": "npm run build && npm run test:critical && npm run test:sync-context && npm run test:sync-coordinator",
     "test:all": "npm test && npm run test:browser",
     "test:auth": "node test/auth-flow.spec.mjs",
     "test:browser": "npm run test:auth && npm run test:ui && npm run test:guest-sync && npm run test:logout-sync && npm run test:wallet-relogin && npm run test:category-ui && npm run test:delete-account-ui && npm run test:budget-progress-ui",
@@ -17,6 +17,7 @@
     "test:guest": "node test/guest-login.spec.mjs",
     "test:guest-sync": "node test/guest-sync-disabled.spec.mjs",
     "test:sync-context": "node test/sync-helper-context.spec.mjs",
+    "test:sync-coordinator": "node test/sync-coordinator.spec.mjs",
     "test:wallet-relogin": "node test/wallet-relogin.spec.mjs",
     "test:logout-sync": "node test/logout-sync.spec.mjs",
     "test:ui": "npm run test:splash && npm run test:guest"
