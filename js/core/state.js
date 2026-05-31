@@ -291,6 +291,14 @@ window.AppState = {
     return { id, title, category, amount: window.AppState.toNumber(amount), dueDate, note, status };
   },
 
+  normalizeBillReminder(item = {}) {
+    return {
+      ...item,
+      amount: window.AppState.toNumber(item.amount),
+      status: item.status === "paid" ? "paid" : "unpaid",
+    };
+  },
+
   normalizeState(data, deps) {
     const { defaultCategories, translations } = deps;
     const deleted = {
@@ -315,7 +323,7 @@ window.AppState = {
       budgets: window.AppState.withoutDeleted(Array.isArray(data.budgets) ? data.budgets : [], deleted.budgets).map(window.AppState.normalizeBudget),
       debts: window.AppState.withoutDeleted(Array.isArray(data.debts) ? data.debts : [], deleted.debts).map(window.AppState.normalizeDebt),
       savings: window.AppState.withoutDeleted(Array.isArray(data.savings) ? data.savings : [], deleted.savings).map(window.AppState.normalizeSavingsGoal),
-      billReminders: window.AppState.withoutDeleted(Array.isArray(data.billReminders) ? data.billReminders : [], deleted.billReminders),
+      billReminders: window.AppState.withoutDeleted(Array.isArray(data.billReminders) ? data.billReminders : [], deleted.billReminders).map(window.AppState.normalizeBillReminder),
       recurring: window.AppState.withoutDeleted(Array.isArray(data.recurring) ? data.recurring : [], deleted.recurring),
       wallets: window.AppState.withoutDeleted(Array.isArray(data.wallets) ? data.wallets : [], deleted.wallets).map(window.AppState.normalizeWallet),
       vehicles: window.AppState.withoutDeleted(Array.isArray(data.vehicles) ? data.vehicles : [], deleted.vehicles),

@@ -13,7 +13,7 @@ window.AppRouter = {
     }
 
     function navViewFor(view) {
-      if (["finance", "wallets", "walletDetail", "budgets", "debts", "savings", "balanceSheet", "analytics"].includes(view)) return "finance";
+      if (["finance", "wallets", "walletDetail", "budgets", "debts", "billReminders", "savings", "balanceSheet", "analytics"].includes(view)) return "finance";
       if (["vehicles"].includes(view)) return "vehicles";
       if (["reports"].includes(view)) return "reports";
       return view;

@@ -55,6 +55,8 @@ Form mutation mulai dipisah per domain. `js/features/wallets/wallet.form.js` men
 
 Registrasi event statis mulai dipisah ke `js/events`. Modul navigation, modal, auth, filter, dan account menangani wiring DOM tanpa mengambil alih logic domain.
 
+Fitur tagihan jatuh tempo berada di `js/features/bills`. Modul ini menangani status jatuh tempo, summary tagihan belum dibayar, card list responsive, serta nominal awal reminder dari budget aktif.
+
 Modul fitur yang sudah tersedia:
 
 - `js/features/dashboard/`

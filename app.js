@@ -121,6 +121,7 @@
           analytics: ["Analitik", "Pantau pola pengeluaran per kategori dan per hari."],
           budgets: ["Anggaran", "Atur batas pengeluaran bulanan per kategori."],
           debts: ["Hutang & Piutang", "Pantau kewajiban, piutang, pembayaran, dan riwayat pelunasan."],
+          billReminders: ["Tagihan Jatuh Tempo", "Pantau tagihan sebelum jatuh tempo."],
           wallets: ["Dompet", "Kelola saldo Cash, Bank, E-Wallet, dan sumber uang lainnya."],
           walletDetail: ["Detail Dompet", "Lihat saldo dan mutasi transaksi pada dompet yang dipilih."],
           balanceSheet: ["Neraca Keuangan", "Lihat total aset, kewajiban, dan kekayaan bersih keluarga."],
@@ -136,6 +137,7 @@
           analytics: ["Analytics", "Monitor spending patterns by category and by day."],
           budgets: ["Budget", "Set monthly spending limits by category."],
           debts: ["Debts & Receivables", "Track obligations, receivables, payments, and settlement history."],
+          billReminders: ["Due Bills", "Track bills before their due date."],
           wallets: ["Wallets", "Manage Cash, Bank, E-Wallet, and other money sources."],
           walletDetail: ["Wallet Detail", "Review balance and transaction mutations for the selected wallet."],
           balanceSheet: ["Balance Sheet", "Review total assets, liabilities, and family net worth."],
@@ -454,6 +456,19 @@
         editIcon,
         escapeHtml,
         money,
+        trashIcon,
+      });
+      const billReminderService = window.AppBillReminderService.createService({
+        currentMonthKey,
+        getState: () => state,
+        todayDate,
+      });
+      const billReminderRenderer = window.AppBillReminderRender.createRenderer({
+        appIcon,
+        editIcon,
+        escapeHtml,
+        money,
+        service: billReminderService,
         trashIcon,
       });
       const savingsService = window.AppSavingsService.createService({
@@ -1376,38 +1391,7 @@
       }
 
       function renderBillReminders() {
-        const reminders = [...state.billReminders].sort((a, b) => {
-          if (a.status !== b.status) return a.status === "unpaid" ? -1 : 1;
-          return (a.dueDate || "").localeCompare(b.dueDate || "");
-        });
-        const visible = reminders.slice(0, 5);
-        const billReminderSummary = document.querySelector("#billReminderSummary");
-        if (billReminderSummary) {
-          billReminderSummary.textContent = reminders.length
-            ? `${reminders.filter((item) => item.status !== "paid").length} tagihan belum lunas.`
-            : "Belum ada tagihan.";
-        }
-        document.querySelector("#billReminderList").innerHTML = visible.length
-          ? visible.map((item) => `
-            <article class="debt-row">
-              <div class="debt-row-top">
-                <strong>${escapeHtml(item.title)}</strong>
-                <span>${money(item.amount)}</span>
-              </div>
-              <p style="margin-top: 7px; color: var(--muted); font-size: .9rem">${escapeHtml(item.note || item.category || "-")}</p>
-              <div class="tags" style="display:flex; flex-wrap:wrap; gap:7px; margin-top:10px">
-                <span class="pill debt">Jatuh tempo ${escapeHtml(item.dueDate || "-")}</span>
-                <span class="pill">${escapeHtml(item.category || "Tagihan")}</span>
-                <span class="pill ${item.status === "paid" ? "income" : "expense"}">${item.status === "paid" ? "Lunas" : "Belum lunas"}</span>
-                <button class="button" type="button" data-toggle-bill="${item.id}">${item.status === "paid" ? "Batal Lunas" : "Tandai Lunas"}</button>
-                <button class="icon-button" type="button" title="Edit tagihan" data-edit-bill="${item.id}">${editIcon()}</button>
-                <button class="icon-button" type="button" title="Hapus tagihan" data-delete-bill="${item.id}">
-                  ${trashIcon()}
-                </button>
-              </div>
-            </article>
-          `).join("")
-          : `<div class="empty"><p>Belum ada reminder tagihan.</p><button class="button primary" type="button" data-open-form="billReminder">Tambah Tagihan</button></div>`;
+        billReminderRenderer.render();
       }
 
       function renderDebts() {
@@ -2113,57 +2097,26 @@
         });
       }
 
+      const billReminderFormController = window.AppBillReminderForm.createController({
+        attachRupiahInput,
+        billReminder,
+        categorySelectOptions,
+        closeModal,
+        escapeHtml,
+        formatRupiah,
+        openView,
+        parseFormattedNumber,
+        persistChanges,
+        requirePrimaryAccount,
+        rupiahInputHtml,
+        service: billReminderService,
+        showModal,
+        state,
+        todayDate,
+      });
+
       function openBillReminderForm(reminderId = "") {
-        if (!requirePrimaryAccount()) return;
-        const editing = reminderId ? state.billReminders.find((item) => item.id === reminderId) : null;
-        document.querySelector("#modalTitle").textContent = editing ? "Edit Reminder Tagihan" : "Tambah Reminder Tagihan";
-        document.querySelector("#modalBody").innerHTML = `
-          <form class="form" id="billReminderForm">
-            <div class="field">
-              <label for="billTitle">Nama tagihan</label>
-              <input id="billTitle" type="text" value="${escapeHtml(editing?.title || "")}" placeholder="Contoh: Internet, listrik, cicilan" required />
-            </div>
-            <div class="field">
-              <label for="billCategory">Kategori</label>
-              <select id="billCategory">
-                ${categorySelectOptions(editing?.category || "")}
-              </select>
-            </div>
-            <div class="field">
-              <label for="billAmount">Nominal</label>
-              ${rupiahInputHtml("billAmount", editing?.amount ?? "", "required")}
-            </div>
-            <div class="field">
-              <label for="billDueDate">Jatuh tempo</label>
-              <input id="billDueDate" type="date" value="${editing?.dueDate || todayDate()}" required />
-            </div>
-            <div class="field">
-              <label for="billNote">Catatan</label>
-              <input id="billNote" type="text" value="${escapeHtml(editing?.note || "")}" placeholder="Opsional" />
-            </div>
-            <div class="row-actions">
-              <button class="button" type="button" data-close-modal>Batal</button>
-              <button class="button primary" type="submit">${editing ? "Simpan Perubahan" : "Simpan"}</button>
-            </div>
-          </form>
-        `;
-        showModal();
-        attachRupiahInput("#billAmount");
-        document.querySelector("#billReminderForm").addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const values = {
-            title: document.querySelector("#billTitle").value.trim(),
-            category: document.querySelector("#billCategory").value,
-            amount: parseFormattedNumber(document.querySelector("#billAmount").value),
-            dueDate: document.querySelector("#billDueDate").value,
-            note: document.querySelector("#billNote").value.trim(),
-          };
-          if (values.amount <= 0) return alert("Nominal reminder tagihan wajib lebih dari 0.");
-          if (editing) Object.assign(editing, values);
-          else state.billReminders.push(billReminder(values.title, values.category, values.amount, values.dueDate, values.note, "unpaid"));
-          closeModal();
-          await persistChanges("Reminder tagihan tersimpan di perangkat, tetapi belum berhasil tersinkron ke database. Coba tekan Sync di menu Akun.");
-        });
+        billReminderFormController.openBillReminderForm(reminderId);
       }
 
       const walletFormController = window.AppWalletForm.createController({

@@ -291,6 +291,29 @@
           </section>
         </section>
 
+        <section class="view" id="billRemindersView">
+          <section class="bill-page">
+            <div class="bill-page-header">
+              <div>
+                <h3>Tagihan Jatuh Tempo</h3>
+                <p>Pantau tagihan sebelum jatuh tempo</p>
+              </div>
+              <button class="button primary" type="button" data-open-form="billReminder"><span data-lucide-icon="plus" data-icon-size="18"></span>Tambah</button>
+            </div>
+            <article class="bill-summary-card">
+              <span>Total Tagihan Belum Dibayar</span>
+              <strong id="billReminderTotalUnpaid">Rp0</strong>
+              <small><span data-lucide-icon="calendar-clock" data-icon-size="18"></span><span id="billReminderDueThisMonth">0 tagihan akan jatuh tempo bulan ini</span></small>
+            </article>
+            <div class="bill-legend" aria-label="Status jatuh tempo">
+              <span><i class="bill-dot bill-dot-overdue"></i>Terlambat</span>
+              <span><i class="bill-dot bill-dot-nearing"></i>Mendekati</span>
+              <span><i class="bill-dot bill-dot-safe"></i>Aman</span>
+            </div>
+            <div class="bill-list" id="billReminderPageList"></div>
+          </section>
+        </section>
+
         <section class="view" id="walletsView">
           <section class="panel">
             <div class="panel-header">
@@ -593,7 +616,7 @@
               </summary>
               <div class="finance-card-grid">
                 <button class="finance-menu-card" type="button" data-view="debts"><span data-lucide-icon="arrow-left-right" data-icon-size="26"></span><strong>Hutang & Piutang</strong><small>Bayar, terima, dan cek riwayat.</small></button>
-                <button class="finance-menu-card" type="button" data-open-form="billReminder"><span data-lucide-icon="bell-ring" data-icon-size="26"></span><strong>Reminder Tagihan</strong><small>Tambah pengingat jatuh tempo.</small></button>
+                <button class="finance-menu-card" type="button" data-view="billReminders"><span data-lucide-icon="bell-ring" data-icon-size="26"></span><strong>Tagihan Jatuh Tempo</strong><small>Pantau reminder sebelum jatuh tempo.</small></button>
               </div>
             </details>
 
@@ -1062,6 +1085,9 @@
     <script src="./js/features/savings/savings.service.js"></script>
     <script src="./js/features/savings/savings.render.js"></script>
     <script src="./js/features/savings/savings.form.js"></script>
+    <script src="./js/features/bills/bill.service.js"></script>
+    <script src="./js/features/bills/bill.render.js"></script>
+    <script src="./js/features/bills/bill.form.js"></script>
     <script src="./js/features/account/account.service.js"></script>
     <script src="./js/features/account/account.render.js"></script>
     <script src="./js/features/auth/auth.controller.js"></script>
