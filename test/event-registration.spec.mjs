@@ -39,6 +39,7 @@ await import("../js/events/navigation.events.js");
 await import("../js/events/modal.events.js");
 await import("../js/events/auth.events.js");
 await import("../js/events/filter.events.js");
+await import("../js/events/account.events.js");
 
 const navigationButton = element({ dataset: { view: "home" }, getAttribute: () => "button" });
 selectorLists.set("[data-view]", [navigationButton]);
@@ -81,5 +82,52 @@ window.AppFilterEvents.register({
 assert(getElement("#searchInput").listeners.includes("input"), "Search filter event tidak terdaftar.");
 assert(getElement("#monthFilter").listeners.includes("change"), "Month filter event tidak terdaftar.");
 assert(getElement("#vehicleExpenseTypeFilter").listeners.includes("change"), "Vehicle filter event tidak terdaftar.");
+
+const noop = () => {};
+window.AppAccountEvents.register({
+  applyRecurringThisMonth: noop,
+  applyState: noop,
+  cloudSync: {},
+  copyText: noop,
+  deleteCurrentAccount: noop,
+  demoState: () => ({}),
+  exportCsv: noop,
+  exportExcel: noop,
+  exportJson: noop,
+  getCategories: () => [],
+  getCurrentUser: () => null,
+  getHasUnsyncedChanges: () => false,
+  getState: () => ({ settings: {} }),
+  id: () => "id",
+  importJson: noop,
+  isCloudSyncAllowed: () => true,
+  isGuest: () => false,
+  loadCloudState: noop,
+  logout: noop,
+  normalizeState: (state) => state,
+  openDebtHistory: noop,
+  openSavingsHistory: noop,
+  openView: noop,
+  persistChanges: noop,
+  renderAll: noop,
+  renderDailyExpenses: noop,
+  renderStats: noop,
+  requireAdmin: () => true,
+  requirePrimaryAccount: () => true,
+  requireSignedIn: () => true,
+  saveState: noop,
+  setGuestTransactionAdds: noop,
+  setHasUnsyncedChanges: noop,
+  setLocalSyncStatus: noop,
+  setShowAllDailyExpenses: noop,
+  shareApp: noop,
+  showSnackbar: noop,
+  startCloudRealtimeSync: noop,
+  stopCloudRealtimeSync: noop,
+  syncCloudState: noop,
+});
+assert(getElement("#syncNowButton").listeners.includes("click"), "Account sync event tidak terdaftar.");
+assert(getElement("#darkModeToggle").listeners.includes("change"), "Dark mode event tidak terdaftar.");
+assert(getElement("#clearDataButton").listeners.includes("click"), "Clear data event tidak terdaftar.");
 
 console.log("Event registration OK");

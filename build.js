@@ -114,6 +114,7 @@ const requiredFiles = [
   "js/events/modal.events.js",
   "js/events/auth.events.js",
   "js/events/filter.events.js",
+  "js/events/account.events.js",
   "js/main.js",
   "icons/icon.svg",
 ];
@@ -171,6 +172,7 @@ for (const file of [
   "js/events/modal.events.js",
   "js/events/auth.events.js",
   "js/events/filter.events.js",
+  "js/events/account.events.js",
   "js/main.js",
   "app.js",
   "app-meta.js",
